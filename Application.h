@@ -1,20 +1,20 @@
 /**
  * This file is part of the "Learn WebGPU for C++" book.
  *   https://github.com/eliemichel/LearnWebGPU
- * 
+ *
  * MIT License
  * Copyright (c) 2022-2023 Elie Michel
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,13 +28,15 @@
 
 #include <webgpu/webgpu.hpp>
 #include <glm/glm.hpp>
+#include "ResourceManager.h"
 
 #include <array>
 
 // Forward declare
 struct GLFWwindow;
 
-class Application {
+class Application
+{
 public:
 	// A function called only once at the beginning. Returns false is init failed.
 	bool onInit();
@@ -69,6 +71,9 @@ private:
 	bool initRenderPipeline();
 	void terminateRenderPipeline();
 
+	bool initInstancingRenderPipeline();
+	void terminateInstancingRenderPipeline();
+
 	bool initTextures();
 	void terminateTextures();
 
@@ -92,8 +97,8 @@ private:
 	void updateViewMatrix();
 	void updateDragInertia();
 
-	bool initGui(); // called in onInit
-	void terminateGui(); // called in onFinish
+	bool initGui();										// called in onInit
+	void terminateGui();								// called in onFinish
 	void updateGui(wgpu::RenderPassEncoder renderPass); // called in onFrame
 
 private:
@@ -106,7 +111,8 @@ private:
 	/**
 	 * The same structure as in the shader, replicated in C++
 	 */
-	struct MyUniforms {
+	struct MyUniforms
+	{
 		// We add transform matrices
 		mat4x4 projectionMatrix;
 		mat4x4 viewMatrix;
@@ -118,7 +124,8 @@ private:
 	// Have the compiler check byte alignment
 	static_assert(sizeof(MyUniforms) % 16 == 0);
 
-	struct LightingUniforms {
+	struct LightingUniforms
+	{
 		std::array<vec4, 2> directions;
 		std::array<vec4, 2> colors;
 
@@ -131,15 +138,17 @@ private:
 	};
 	static_assert(sizeof(LightingUniforms) % 16 == 0);
 
-	struct CameraState {
+	struct CameraState
+	{
 		// angles.x is the rotation of the camera around the global vertical axis, affected by mouse.x
 		// angles.y is the rotation of the camera around its local horizontal axis, affected by mouse.y
-		vec2 angles = { 0.8f, 0.5f };
+		vec2 angles = {0.8f, 0.5f};
 		// zoom is the position of the camera along its local forward axis, affected by the scroll wheel
 		float zoom = -1.2f;
 	};
 
-	struct DragState {
+	struct DragState
+	{
 		// Whether a drag action is ongoing (i.e., we are between mouse press and mouse release)
 		bool active = false;
 		// The position of the mouse at the beginning of the drag action
@@ -152,13 +161,13 @@ private:
 		float scrollSensitivity = 0.1f;
 
 		// Inertia
-		vec2 velocity = { 0.0, 0.0 };
+		vec2 velocity = {0.0, 0.0};
 		vec2 previousDelta;
 		float intertia = 0.9f;
 	};
 
 	// Window and Device
-	GLFWwindow* m_window = nullptr;
+	GLFWwindow *m_window = nullptr;
 	wgpu::Instance m_instance = nullptr;
 	wgpu::Surface m_surface = nullptr;
 	wgpu::Device m_device = nullptr;
@@ -178,6 +187,8 @@ private:
 	// Render Pipeline
 	wgpu::ShaderModule m_shaderModule = nullptr;
 	wgpu::RenderPipeline m_pipeline = nullptr;
+	wgpu::ShaderModule m_instancingShaderModule = nullptr;
+	wgpu::RenderPipeline m_instancingPipeline = nullptr;
 
 	// Texture
 	wgpu::Sampler m_sampler = nullptr;
@@ -185,10 +196,17 @@ private:
 	wgpu::TextureView m_baseColorTextureView = nullptr;
 	wgpu::Texture m_normalTexture = nullptr;
 	wgpu::TextureView m_normalTextureView = nullptr;
-	
+
 	// Geometry
 	wgpu::Buffer m_vertexBuffer = nullptr;
+	wgpu::Buffer m_cubeVertexBuffer = nullptr;
+	wgpu::Buffer m_cubeIndexBuffer = nullptr;
 	int m_vertexCount = 0;
+	int m_cubeVertexCount = 0;
+	int m_cubeIndexCount = 0;
+	wgpu::Buffer m_instanceBuffer = nullptr;
+	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
+	int m_instanceCount = 0;
 
 	// Uniforms
 	wgpu::Buffer m_uniformBuffer = nullptr;

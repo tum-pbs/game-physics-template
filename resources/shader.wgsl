@@ -17,9 +17,9 @@ struct VertexOutput {
 	@location(5) bitangent: vec3f,
 };
 
-/**
- * A structure holding the value of our uniforms
- */
+// /**
+//  * A structure holding the value of our uniforms
+//  */
 struct MyUniforms {
 	projectionMatrix: mat4x4f,
 	viewMatrix: mat4x4f,
@@ -29,9 +29,10 @@ struct MyUniforms {
 	time: f32,
 };
 
-/**
- * A structure holding the lighting settings
- */
+// /**
+//  * A structure holding the lighting settings
+//  */
+
 struct LightingUniforms {
 	directions: array<vec4f, 2>,
 	colors: array<vec4f, 2>,
@@ -48,60 +49,60 @@ struct LightingUniforms {
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
-	var out: VertexOutput;
-	let worldPosition = uMyUniforms.modelMatrix * vec4<f32>(in.position, 1.0);
-	out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * worldPosition;
-	out.tangent = (uMyUniforms.modelMatrix * vec4f(in.tangent, 0.0)).xyz;
-	out.bitangent = (uMyUniforms.modelMatrix * vec4f(in.bitangent, 0.0)).xyz;
-	out.normal = (uMyUniforms.modelMatrix * vec4f(in.normal, 0.0)).xyz;
-	out.color = in.color;
-	out.uv = in.uv;
-	out.viewDirection = uMyUniforms.cameraWorldPosition - worldPosition.xyz;
-	return out;
+    var out: VertexOutput;
+    let worldPosition = uMyUniforms.modelMatrix * vec4<f32>(in.position, 1.0);
+    out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * worldPosition;
+    out.tangent = (uMyUniforms.modelMatrix * vec4f(in.tangent, 0.0)).xyz;
+    out.bitangent = (uMyUniforms.modelMatrix * vec4f(in.bitangent, 0.0)).xyz;
+    out.normal = (uMyUniforms.modelMatrix * vec4f(in.normal, 0.0)).xyz;
+    out.color = in.color;
+    out.uv = in.uv;
+    out.viewDirection = uMyUniforms.cameraWorldPosition - worldPosition.xyz;
+    return out;
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 	// Sample normal
-	let normalMapStrength = 1.0; // could be a uniform
-	let encodedN = textureSample(normalTexture, textureSampler, in.uv).rgb;
-	let localN = encodedN * 2.0 - 1.0;
+    let normalMapStrength = 1.0; // could be a uniform
+    let encodedN = textureSample(normalTexture, textureSampler, in.uv).rgb;
+    let localN = encodedN * 2.0 - 1.0;
 	// The TBN matrix converts directions from the local space to the world space
-	let localToWorld = mat3x3f(
-		normalize(in.tangent),
-		normalize(in.bitangent),
-		normalize(in.normal),
-	);
-	let worldN = localToWorld * localN;
-	let N = normalize(mix(in.normal, worldN, normalMapStrength));
+    let localToWorld = mat3x3f(
+        normalize(in.tangent),
+        normalize(in.bitangent),
+        normalize(in.normal),
+    );
+    let worldN = localToWorld * localN;
+    let N = normalize(mix(in.normal, worldN, normalMapStrength));
 
-	let V = normalize(in.viewDirection);
+    let V = normalize(in.viewDirection);
 
 	// Sample texture
-	let baseColor = textureSample(baseColorTexture, textureSampler, in.uv).rgb;
-	let kd = uLighting.kd;
-	let ks = uLighting.ks;
-	let hardness = uLighting.hardness;
+    let baseColor = textureSample(baseColorTexture, textureSampler, in.uv).rgb;
+    let kd = uLighting.kd;
+    let ks = uLighting.ks;
+    let hardness = uLighting.hardness;
 
 	// Compute shading
-	var color = vec3f(0.0);
-	for (var i: i32 = 0; i < 2; i++) {
-		let lightColor = uLighting.colors[i].rgb;
-		let L = normalize(uLighting.directions[i].xyz);
-		let R = reflect(-L, N); // equivalent to 2.0 * dot(N, L) * N - L
+    var color = vec3f(0.0);
+    for (var i: i32 = 0; i < 2; i++) {
+        let lightColor = uLighting.colors[i].rgb;
+        let L = normalize(uLighting.directions[i].xyz);
+        let R = reflect(-L, N); // equivalent to 2.0 * dot(N, L) * N - L
 
-		let diffuse = max(0.0, dot(L, N)) * lightColor;
+        let diffuse = max(0.0, dot(L, N)) * lightColor;
 
 		// We clamp the dot product to 0 when it is negative
-		let RoV = max(0.0, dot(R, V));
-		let specular = pow(RoV, hardness);
+        let RoV = max(0.0, dot(R, V));
+        let specular = pow(RoV, hardness);
 
-		color += baseColor * kd * diffuse + ks * specular;
-	}
+        color += baseColor * kd * diffuse + ks * specular;
+    }
 
 	//color = N * 0.5 + 0.5;
 	
 	// Gamma-correction
-	let corrected_color = pow(color, vec3f(2.2));
-	return vec4f(corrected_color, uMyUniforms.color.a);
+    let corrected_color = pow(color, vec3f(2.2));
+    return vec4f(corrected_color, uMyUniforms.color.a);
 }

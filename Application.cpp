@@ -1,20 +1,20 @@
 /**
  * This file is part of the "Learn WebGPU for C++" book.
  *   https://github.com/eliemichel/LearnWebGPU
- * 
+ *
  * MIT License
  * Copyright (c) 2022-2023 Elie Michel
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -49,38 +49,57 @@
 
 using namespace wgpu;
 using VertexAttributes = ResourceManager::VertexAttributes;
+using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
+using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
 
 constexpr float PI = 3.14159265358979323846f;
 
 // Custom ImGui widgets
-namespace ImGui {
-bool DragDirection(const char* label, glm::vec4& direction) {
-	glm::vec2 angles = glm::degrees(glm::polar(glm::vec3(direction)));
-	bool changed = ImGui::DragFloat2(label, glm::value_ptr(angles));
-	direction = glm::vec4(glm::euclidean(glm::radians(angles)), direction.w);
-	return changed;
-}
+namespace ImGui
+{
+	bool DragDirection(const char *label, glm::vec4 &direction)
+	{
+		glm::vec2 angles = glm::degrees(glm::polar(glm::vec3(direction)));
+		bool changed = ImGui::DragFloat2(label, glm::value_ptr(angles));
+		direction = glm::vec4(glm::euclidean(glm::radians(angles)), direction.w);
+		return changed;
+	}
 } // namespace ImGui
 
 ///////////////////////////////////////////////////////////////////////////////
 // Public methods
 
-bool Application::onInit() {
-	if (!initWindowAndDevice()) return false;
-	if (!initSwapChain()) return false;
-	if (!initDepthBuffer()) return false;
-	if (!initBindGroupLayout()) return false;
-	if (!initRenderPipeline()) return false;
-	if (!initTextures()) return false;
-	if (!initGeometry()) return false;
-	if (!initUniforms()) return false;
-	if (!initLightingUniforms()) return false;
-	if (!initBindGroup()) return false;
-	if (!initGui()) return false;
+bool Application::onInit()
+{
+	if (!initWindowAndDevice())
+		return false;
+	if (!initSwapChain())
+		return false;
+	if (!initDepthBuffer())
+		return false;
+	if (!initBindGroupLayout())
+		return false;
+	if (!initRenderPipeline())
+		return false;
+	if (!initInstancingRenderPipeline())
+		return false;
+	if (!initTextures())
+		return false;
+	if (!initGeometry())
+		return false;
+	if (!initUniforms())
+		return false;
+	if (!initLightingUniforms())
+		return false;
+	if (!initBindGroup())
+		return false;
+	if (!initGui())
+		return false;
 	return true;
 }
 
-void Application::onFrame() {
+void Application::onFrame()
+{
 	glfwPollEvents();
 	updateDragInertia();
 	updateLightingUniforms();
@@ -88,9 +107,11 @@ void Application::onFrame() {
 	// Update uniform buffer
 	m_uniforms.time = static_cast<float>(glfwGetTime());
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
-	
+	m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), m_cubes.size() * sizeof(InstancedVertexAttributes));
+
 	TextureView nextTexture = m_swapChain.getCurrentTextureView();
-	if (!nextTexture) {
+	if (!nextTexture)
+	{
 		std::cerr << "Cannot acquire next swap chain texture" << std::endl;
 		return;
 	}
@@ -98,7 +119,7 @@ void Application::onFrame() {
 	CommandEncoderDescriptor commandEncoderDesc;
 	commandEncoderDesc.label = "Command Encoder";
 	CommandEncoder encoder = m_device.createCommandEncoder(commandEncoderDesc);
-	
+
 	RenderPassDescriptor renderPassDesc{};
 
 	RenderPassColorAttachment renderPassColorAttachment{};
@@ -106,7 +127,7 @@ void Application::onFrame() {
 	renderPassColorAttachment.resolveTarget = nullptr;
 	renderPassColorAttachment.loadOp = LoadOp::Clear;
 	renderPassColorAttachment.storeOp = StoreOp::Store;
-	renderPassColorAttachment.clearValue = Color{ 0.05, 0.05, 0.05, 1.0 };
+	renderPassColorAttachment.clearValue = Color{0.05, 0.05, 0.05, 1.0};
 	renderPassDesc.colorAttachmentCount = 1;
 	renderPassDesc.colorAttachments = &renderPassColorAttachment;
 
@@ -139,14 +160,26 @@ void Application::onFrame() {
 	// Set binding group
 	renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
 
-	renderPass.draw(m_vertexCount, 1, 0, 0);
+	// renderPass.draw(m_vertexCount, 1, 0, 0);
+
+	renderPass.setPipeline(m_instancingPipeline);
+
+	renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexCount * sizeof(PrimitiveVertexAttributes));
+	renderPass.setVertexBuffer(1, m_instanceBuffer, 0, m_instanceCount * sizeof(InstancedVertexAttributes));
+	renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexCount * sizeof(uint16_t));
+
+	// Set binding group
+	// renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
+
+	// renderPass.draw(m_vertexCount, 1, 0, 0);
+	renderPass.drawIndexed(m_cubeIndexCount, m_instanceCount, 0, 0, 0);
 
 	// We add the GUI drawing commands to the render pass
 	updateGui(renderPass);
 
 	renderPass.end();
 	renderPass.release();
-	
+
 	nextTexture.release();
 
 	CommandBufferDescriptor cmdBufferDescriptor{};
@@ -164,7 +197,8 @@ void Application::onFrame() {
 #endif
 }
 
-void Application::onFinish() {
+void Application::onFinish()
+{
 	terminateGui();
 	terminateBindGroup();
 	terminateLightingUniforms();
@@ -172,17 +206,20 @@ void Application::onFinish() {
 	terminateGeometry();
 	terminateTextures();
 	terminateRenderPipeline();
+	terminateInstancingRenderPipeline();
 	terminateBindGroupLayout();
 	terminateDepthBuffer();
 	terminateSwapChain();
 	terminateWindowAndDevice();
 }
 
-bool Application::isRunning() {
+bool Application::isRunning()
+{
 	return !glfwWindowShouldClose(m_window);
 }
 
-void Application::onResize() {
+void Application::onResize()
+{
 	// Terminate in reverse order
 	terminateDepthBuffer();
 	terminateSwapChain();
@@ -194,8 +231,10 @@ void Application::onResize() {
 	updateProjectionMatrix();
 }
 
-void Application::onMouseMove(double xpos, double ypos) {
-	if (m_drag.active) {
+void Application::onMouseMove(double xpos, double ypos)
+{
+	if (m_drag.active)
+	{
 		vec2 currentMouse = vec2(-(float)xpos, (float)ypos);
 		vec2 delta = (currentMouse - m_drag.startMouse) * m_drag.sensitivity;
 		m_cameraState.angles = m_drag.startCameraState.angles + delta;
@@ -209,16 +248,20 @@ void Application::onMouseMove(double xpos, double ypos) {
 	}
 }
 
-void Application::onMouseButton(int button, int action, int /* modifiers */) {
-	ImGuiIO& io = ImGui::GetIO();
-	if (io.WantCaptureMouse) {
+void Application::onMouseButton(int button, int action, int /* modifiers */)
+{
+	ImGuiIO &io = ImGui::GetIO();
+	if (io.WantCaptureMouse)
+	{
 		// Don't rotate the camera if the mouse is already captured by an ImGui
 		// interaction at this frame.
 		return;
 	}
 
-	if (button == GLFW_MOUSE_BUTTON_LEFT) {
-		switch (action) {
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	{
+		switch (action)
+		{
 		case GLFW_PRESS:
 			m_drag.active = true;
 			double xpos, ypos;
@@ -233,7 +276,8 @@ void Application::onMouseButton(int button, int action, int /* modifiers */) {
 	}
 }
 
-void Application::onScroll(double /* xoffset */, double yoffset) {
+void Application::onScroll(double /* xoffset */, double yoffset)
+{
 	m_cameraState.zoom += m_drag.scrollSensitivity * static_cast<float>(yoffset);
 	m_cameraState.zoom = glm::clamp(m_cameraState.zoom, -2.0f, 2.0f);
 	updateViewMatrix();
@@ -242,14 +286,17 @@ void Application::onScroll(double /* xoffset */, double yoffset) {
 ///////////////////////////////////////////////////////////////////////////////
 // Private methods
 
-bool Application::initWindowAndDevice() {
+bool Application::initWindowAndDevice()
+{
 	m_instance = createInstance(InstanceDescriptor{});
-	if (!m_instance) {
+	if (!m_instance)
+	{
 		std::cerr << "Could not initialize WebGPU!" << std::endl;
 		return false;
 	}
 
-	if (!glfwInit()) {
+	if (!glfwInit())
+	{
 		std::cerr << "Could not initialize GLFW!" << std::endl;
 		return false;
 	}
@@ -257,7 +304,8 @@ bool Application::initWindowAndDevice() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	m_window = glfwCreateWindow(640, 480, "Learn WebGPU", NULL, NULL);
-	if (!m_window) {
+	if (!m_window)
+	{
 		std::cerr << "Could not open window!" << std::endl;
 		return false;
 	}
@@ -275,14 +323,12 @@ bool Application::initWindowAndDevice() {
 	std::cout << "Requesting device..." << std::endl;
 	RequiredLimits requiredLimits = Default;
 	requiredLimits.limits.maxVertexAttributes = 6;
-	//                                          ^ This was a 4
-	requiredLimits.limits.maxVertexBuffers = 1;
+	requiredLimits.limits.maxVertexBuffers = 3;
 	requiredLimits.limits.maxBufferSize = 150000 * sizeof(VertexAttributes);
 	requiredLimits.limits.maxVertexBufferArrayStride = sizeof(VertexAttributes);
 	requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;
 	requiredLimits.limits.minUniformBufferOffsetAlignment = supportedLimits.limits.minUniformBufferOffsetAlignment;
 	requiredLimits.limits.maxInterStageShaderComponents = 17;
-	//                                                    ^^ This was a 11
 	requiredLimits.limits.maxBindGroups = 2;
 	requiredLimits.limits.maxUniformBuffersPerShaderStage = 2;
 	requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
@@ -303,11 +349,11 @@ bool Application::initWindowAndDevice() {
 	std::cout << "Got device: " << m_device << std::endl;
 
 	// Add an error callback for more debug info
-	m_errorCallbackHandle = m_device.setUncapturedErrorCallback([](ErrorType type, char const* message) {
+	m_errorCallbackHandle = m_device.setUncapturedErrorCallback([](ErrorType type, char const *message)
+																{
 		std::cout << "Device error: type " << type;
 		if (message) std::cout << " (message: " << message << ")";
-		std::cout << std::endl;
-	});
+		std::cout << std::endl; });
 
 	m_queue = m_device.getQueue();
 
@@ -320,28 +366,29 @@ bool Application::initWindowAndDevice() {
 	// Add window callbacks
 	// Set the user pointer to be "this"
 	glfwSetWindowUserPointer(m_window, this);
-	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* window, int, int) {
+	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow *window, int, int)
+								   {
 		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-		if (that != nullptr) that->onResize();
-	});
-	glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {
+		if (that != nullptr) that->onResize(); });
+	glfwSetCursorPosCallback(m_window, [](GLFWwindow *window, double xpos, double ypos)
+							 {
 		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-		if (that != nullptr) that->onMouseMove(xpos, ypos);
-	});
-	glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int mods) {
+		if (that != nullptr) that->onMouseMove(xpos, ypos); });
+	glfwSetMouseButtonCallback(m_window, [](GLFWwindow *window, int button, int action, int mods)
+							   {
 		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-		if (that != nullptr) that->onMouseButton(button, action, mods);
-	});
-	glfwSetScrollCallback(m_window, [](GLFWwindow* window, double xoffset, double yoffset) {
+		if (that != nullptr) that->onMouseButton(button, action, mods); });
+	glfwSetScrollCallback(m_window, [](GLFWwindow *window, double xoffset, double yoffset)
+						  {
 		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-		if (that != nullptr) that->onScroll(xoffset, yoffset);
-	});
+		if (that != nullptr) that->onScroll(xoffset, yoffset); });
 
 	adapter.release();
 	return m_device != nullptr;
 }
 
-void Application::terminateWindowAndDevice() {
+void Application::terminateWindowAndDevice()
+{
 	m_queue.release();
 	m_device.release();
 	m_surface.release();
@@ -351,8 +398,8 @@ void Application::terminateWindowAndDevice() {
 	glfwTerminate();
 }
 
-
-bool Application::initSwapChain() {
+bool Application::initSwapChain()
+{
 	// Get the current size of the window's framebuffer:
 	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
@@ -369,12 +416,13 @@ bool Application::initSwapChain() {
 	return m_swapChain != nullptr;
 }
 
-void Application::terminateSwapChain() {
+void Application::terminateSwapChain()
+{
 	m_swapChain.release();
 }
 
-
-bool Application::initDepthBuffer() {
+bool Application::initDepthBuffer()
+{
 	// Get the current size of the window's framebuffer:
 	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
@@ -385,10 +433,10 @@ bool Application::initDepthBuffer() {
 	depthTextureDesc.format = m_depthTextureFormat;
 	depthTextureDesc.mipLevelCount = 1;
 	depthTextureDesc.sampleCount = 1;
-	depthTextureDesc.size = { static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1 };
+	depthTextureDesc.size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
 	depthTextureDesc.usage = TextureUsage::RenderAttachment;
 	depthTextureDesc.viewFormatCount = 1;
-	depthTextureDesc.viewFormats = (WGPUTextureFormat*)&m_depthTextureFormat;
+	depthTextureDesc.viewFormats = (WGPUTextureFormat *)&m_depthTextureFormat;
 	m_depthTexture = m_device.createTexture(depthTextureDesc);
 	std::cout << "Depth texture: " << m_depthTexture << std::endl;
 
@@ -407,14 +455,134 @@ bool Application::initDepthBuffer() {
 	return m_depthTextureView != nullptr;
 }
 
-void Application::terminateDepthBuffer() {
+void Application::terminateDepthBuffer()
+{
 	m_depthTextureView.release();
 	m_depthTexture.destroy();
 	m_depthTexture.release();
 }
+bool Application::initInstancingRenderPipeline()
+{
+	std::cout << "Creating instancing shader module..." << std::endl;
+	m_instancingShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", m_device);
+	std::cout << "Instancing shader module: " << m_instancingShaderModule << std::endl;
 
+	std::cout << "Creating instancing render pipeline..." << std::endl;
+	RenderPipelineDescriptor pipelineDesc;
 
-bool Application::initRenderPipeline() {
+	// This is for instanced rendering
+	std::vector<VertexAttribute> primitiveVertexAttribs(2);
+
+	// Position attribute
+	primitiveVertexAttribs[0].shaderLocation = 0;
+	primitiveVertexAttribs[0].format = VertexFormat::Float32x3;
+	primitiveVertexAttribs[0].offset = offsetof(PrimitiveVertexAttributes, position);
+
+	// Normal attribute
+	primitiveVertexAttribs[1].shaderLocation = 1;
+	primitiveVertexAttribs[1].format = VertexFormat::Float32x3;
+	primitiveVertexAttribs[1].offset = offsetof(PrimitiveVertexAttributes, normal);
+
+	VertexBufferLayout primitiveVertexBufferLayout;
+	primitiveVertexBufferLayout.attributeCount = (uint32_t)primitiveVertexAttribs.size();
+	primitiveVertexBufferLayout.attributes = primitiveVertexAttribs.data();
+	primitiveVertexBufferLayout.arrayStride = sizeof(PrimitiveVertexAttributes);
+	primitiveVertexBufferLayout.stepMode = VertexStepMode::Vertex;
+
+	// position, rotation, scale, color
+	std::vector<VertexAttribute> instanceAttribs(4);
+
+	// Position attribute
+	instanceAttribs[0].shaderLocation = 2;
+	instanceAttribs[0].format = VertexFormat::Float32x3;
+	instanceAttribs[0].offset = offsetof(InstancedVertexAttributes, position);
+
+	// Rotation attribute
+	instanceAttribs[1].shaderLocation = 3;
+	instanceAttribs[1].format = VertexFormat::Float32x4;
+	instanceAttribs[1].offset = offsetof(InstancedVertexAttributes, rotation);
+
+	// Scale attribute
+	instanceAttribs[2].shaderLocation = 4;
+	instanceAttribs[2].format = VertexFormat::Float32x3;
+	instanceAttribs[2].offset = offsetof(InstancedVertexAttributes, scale);
+
+	// Color attribute
+	instanceAttribs[3].shaderLocation = 5;
+	instanceAttribs[3].format = VertexFormat::Float32x3;
+	instanceAttribs[3].offset = offsetof(InstancedVertexAttributes, color);
+
+	VertexBufferLayout instanceBufferLayout;
+	instanceBufferLayout.attributeCount = (uint32_t)instanceAttribs.size();
+	instanceBufferLayout.attributes = instanceAttribs.data();
+	instanceBufferLayout.arrayStride = sizeof(InstancedVertexAttributes);
+	instanceBufferLayout.stepMode = VertexStepMode::Instance;
+
+	std::vector<VertexBufferLayout> vertexBufferLayouts = {primitiveVertexBufferLayout, instanceBufferLayout};
+
+	pipelineDesc.vertex.bufferCount = static_cast<uint32_t>(vertexBufferLayouts.size());
+	pipelineDesc.vertex.buffers = vertexBufferLayouts.data();
+
+	pipelineDesc.vertex.module = m_instancingShaderModule;
+	pipelineDesc.vertex.entryPoint = "vs_main";
+	pipelineDesc.vertex.constantCount = 0;
+	pipelineDesc.vertex.constants = nullptr;
+
+	pipelineDesc.primitive.topology = PrimitiveTopology::TriangleList;
+	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
+	pipelineDesc.primitive.cullMode = CullMode::None;
+
+	FragmentState fragmentState;
+	pipelineDesc.fragment = &fragmentState;
+	fragmentState.module = m_instancingShaderModule;
+	fragmentState.entryPoint = "fs_main";
+	fragmentState.constantCount = 0;
+	fragmentState.constants = nullptr;
+
+	BlendState blendState;
+	blendState.color.srcFactor = BlendFactor::SrcAlpha;
+	blendState.color.dstFactor = BlendFactor::OneMinusSrcAlpha;
+	blendState.color.operation = BlendOperation::Add;
+	blendState.alpha.srcFactor = BlendFactor::Zero;
+	blendState.alpha.dstFactor = BlendFactor::One;
+	blendState.alpha.operation = BlendOperation::Add;
+
+	ColorTargetState colorTarget;
+	colorTarget.format = m_swapChainFormat;
+	colorTarget.blend = &blendState;
+	colorTarget.writeMask = ColorWriteMask::All;
+
+	fragmentState.targetCount = 1;
+	fragmentState.targets = &colorTarget;
+
+	DepthStencilState depthStencilState = Default;
+	depthStencilState.depthCompare = CompareFunction::Less;
+	depthStencilState.depthWriteEnabled = true;
+	depthStencilState.format = m_depthTextureFormat;
+	depthStencilState.stencilReadMask = 0;
+	depthStencilState.stencilWriteMask = 0;
+
+	pipelineDesc.depthStencil = &depthStencilState;
+
+	pipelineDesc.multisample.count = 1;
+	pipelineDesc.multisample.mask = ~0u;
+	pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+	// Create the pipeline layout
+	PipelineLayoutDescriptor layoutDesc{};
+	layoutDesc.bindGroupLayoutCount = 1;
+	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_bindGroupLayout;
+	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
+	pipelineDesc.layout = layout;
+
+	m_instancingPipeline = m_device.createRenderPipeline(pipelineDesc);
+	std::cout << "Render pipeline: " << m_instancingPipeline << std::endl;
+
+	return m_instancingPipeline != nullptr;
+}
+
+bool Application::initRenderPipeline()
+{
 	std::cout << "Creating shader module..." << std::endl;
 	m_shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/shader.wgsl", m_device);
 	std::cout << "Shader module: " << m_shaderModule << std::endl;
@@ -513,7 +681,7 @@ bool Application::initRenderPipeline() {
 	// Create the pipeline layout
 	PipelineLayoutDescriptor layoutDesc{};
 	layoutDesc.bindGroupLayoutCount = 1;
-	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&m_bindGroupLayout;
+	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_bindGroupLayout;
 	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
 	pipelineDesc.layout = layout;
 
@@ -523,13 +691,20 @@ bool Application::initRenderPipeline() {
 	return m_pipeline != nullptr;
 }
 
-void Application::terminateRenderPipeline() {
+void Application::terminateRenderPipeline()
+{
 	m_pipeline.release();
 	m_shaderModule.release();
 }
 
+void Application::terminateInstancingRenderPipeline()
+{
+	m_instancingPipeline.release();
+	m_instancingShaderModule.release();
+}
 
-bool Application::initTextures() {
+bool Application::initTextures()
+{
 	// Create a sampler
 	SamplerDescriptor samplerDesc;
 	samplerDesc.addressModeU = AddressMode::Repeat;
@@ -546,15 +721,17 @@ bool Application::initTextures() {
 
 	// Create textures
 	m_baseColorTexture = ResourceManager::loadTexture(RESOURCE_DIR "/cobblestone_floor_08_diff_2k.jpg", m_device, &m_baseColorTextureView);
-	//m_baseColorTexture = ResourceManager::loadTexture(RESOURCE_DIR "/fourareen2K_albedo.jpg", m_device, &m_baseColorTextureView);
-	if (!m_baseColorTexture) {
+	// m_baseColorTexture = ResourceManager::loadTexture(RESOURCE_DIR "/fourareen2K_albedo.jpg", m_device, &m_baseColorTextureView);
+	if (!m_baseColorTexture)
+	{
 		std::cerr << "Could not load base color texture!" << std::endl;
 		return false;
 	}
 
 	m_normalTexture = ResourceManager::loadTexture(RESOURCE_DIR "/cobblestone_floor_08_nor_gl_2k.png", m_device, &m_normalTextureView);
-	//m_normalTexture = ResourceManager::loadTexture(RESOURCE_DIR "/fourareen2K_normals.png", m_device, &m_normalTextureView);
-	if (!m_normalTexture) {
+	// m_normalTexture = ResourceManager::loadTexture(RESOURCE_DIR "/fourareen2K_normals.png", m_device, &m_normalTextureView);
+	if (!m_normalTexture)
+	{
 		std::cerr << "Could not load normal texture!" << std::endl;
 		return false;
 	}
@@ -562,7 +739,8 @@ bool Application::initTextures() {
 	return m_baseColorTextureView != nullptr && m_normalTextureView != nullptr;
 }
 
-void Application::terminateTextures() {
+void Application::terminateTextures()
+{
 	m_baseColorTextureView.release();
 	m_baseColorTexture.destroy();
 	m_baseColorTexture.release();
@@ -572,13 +750,15 @@ void Application::terminateTextures() {
 	m_sampler.release();
 }
 
-
-bool Application::initGeometry() {
+bool Application::initGeometry()
+{
 	// Load mesh data from OBJ file
 	std::vector<VertexAttributes> vertexData;
 	bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR "/cylinder.obj", vertexData);
-	//bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR "/fourareen.obj", vertexData);
-	if (!success) {
+
+	// bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR "/fourareen.obj", vertexData);
+	if (!success)
+	{
 		std::cerr << "Could not load geometry!" << std::endl;
 		return false;
 	}
@@ -593,17 +773,101 @@ bool Application::initGeometry() {
 
 	m_vertexCount = static_cast<int>(vertexData.size());
 
-	return m_vertexBuffer != nullptr;
+	std::vector<PrimitiveVertexAttributes> cubeVertexData = {
+		// left handed coordinates: z is away, x is right and y is up, position and normals
+		// front face
+		{{-0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
+		{{0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
+		{{0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
+		{{-0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
+		// left face
+		{{-0.5, -0.5, -0.5}, {-1.0, 0.0, 0.0}},
+		{{-0.5, 0.5, -0.5}, {-1.0, 0.0, 0.0}},
+		{{-0.5, 0.5, 0.5}, {-1.0, 0.0, 0.0}},
+		{{-0.5, -0.5, 0.5}, {-1.0, 0.0, 0.0}},
+		// right face
+		{{0.5, -0.5, -0.5}, {1.0, 0.0, 0.0}},
+		{{0.5, 0.5, -0.5}, {1.0, 0.0, 0.0}},
+		{{0.5, 0.5, 0.5}, {1.0, 0.0, 0.0}},
+		{{0.5, -0.5, 0.5}, {1.0, 0.0, 0.0}},
+		// back face
+		{{-0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
+		{{0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
+		{{0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
+		{{-0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
+		// top face
+		{{-0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
+		{{0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
+		{{0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
+		{{-0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
+		// bottom face
+		{{-0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
+		{{0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
+		{{0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
+		{{-0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
+	};
+
+	m_cubeVertexCount = static_cast<int>(cubeVertexData.size());
+
+	std::vector<uint16_t> cubeIndexData = {
+		0, 1, 2, 0, 2, 3,		// front face
+		4, 5, 6, 4, 6, 7,		// left face
+		8, 9, 10, 8, 10, 11,	// right face
+		12, 13, 14, 12, 14, 15, // back face
+		16, 17, 18, 16, 18, 19, // top face
+		20, 21, 22, 20, 22, 23, // bottom face
+	};
+
+	m_cubeIndexCount = static_cast<int>(cubeIndexData.size());
+
+	BufferDescriptor cubeVertexBufferDesc;
+	cubeVertexBufferDesc.size = cubeVertexData.size() * sizeof(PrimitiveVertexAttributes);
+	cubeVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
+	cubeVertexBufferDesc.mappedAtCreation = false;
+	m_cubeVertexBuffer = m_device.createBuffer(cubeVertexBufferDesc);
+	m_queue.writeBuffer(m_cubeVertexBuffer, 0, cubeVertexData.data(), cubeVertexBufferDesc.size);
+
+	BufferDescriptor cubeIndexBufferDesc;
+	cubeIndexBufferDesc.size = cubeIndexData.size() * sizeof(uint16_t);
+	cubeIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
+	cubeIndexBufferDesc.mappedAtCreation = false;
+	m_cubeIndexBuffer = m_device.createBuffer(cubeIndexBufferDesc);
+	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cubeIndexData.data(), cubeIndexBufferDesc.size);
+
+	m_cubes = {// position, rotation, scale, color
+			   {{-1, 0, 0}, {0, 0, 0}, {2, 1, 1}, {1, 0, 0}},
+			   {{1, 0, 0}, {0, 0, 45}, {1, 2, 1}, {0, 1, 0}}};
+	m_instanceCount = static_cast<int>(m_cubes.size());
+
+	BufferDescriptor instanceBufferDesc;
+	instanceBufferDesc.size = sizeof(InstancedVertexAttributes) * m_instanceCount;
+	instanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+	instanceBufferDesc.mappedAtCreation = false;
+	m_instanceBuffer = m_device.createBuffer(instanceBufferDesc);
+	m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), instanceBufferDesc.size);
+
+	return m_vertexBuffer != nullptr && m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr;
 }
 
-void Application::terminateGeometry() {
+void Application::terminateGeometry()
+{
 	m_vertexBuffer.destroy();
 	m_vertexBuffer.release();
 	m_vertexCount = 0;
+
+	m_cubeVertexBuffer.destroy();
+	m_cubeVertexBuffer.release();
+	m_cubeIndexBuffer.destroy();
+	m_cubeIndexBuffer.release();
+	m_instanceBuffer.destroy();
+	m_instanceBuffer.release();
+	m_cubeVertexCount = 0;
+	m_cubeIndexCount = 0;
+	m_instanceCount = 0;
 }
 
-
-bool Application::initUniforms() {
+bool Application::initUniforms()
+{
 	// Create uniform buffer
 	BufferDescriptor bufferDesc;
 	bufferDesc.size = sizeof(MyUniforms);
@@ -616,7 +880,7 @@ bool Application::initUniforms() {
 	m_uniforms.viewMatrix = glm::lookAt(vec3(-2.0f, -3.0f, 2.0f), vec3(0.0f), vec3(0, 0, 1));
 	m_uniforms.projectionMatrix = glm::perspective(45 * PI / 180, 640.0f / 480.0f, 0.01f, 100.0f);
 	m_uniforms.time = 1.0f;
-	m_uniforms.color = { 0.0f, 1.0f, 0.4f, 1.0f };
+	m_uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
 	m_queue.writeBuffer(m_uniformBuffer, 0, &m_uniforms, sizeof(MyUniforms));
 
 	updateProjectionMatrix();
@@ -625,13 +889,14 @@ bool Application::initUniforms() {
 	return m_uniformBuffer != nullptr;
 }
 
-void Application::terminateUniforms() {
+void Application::terminateUniforms()
+{
 	m_uniformBuffer.destroy();
 	m_uniformBuffer.release();
 }
 
-
-bool Application::initLightingUniforms() {
+bool Application::initLightingUniforms()
+{
 	// Create uniform buffer
 	BufferDescriptor bufferDesc;
 	bufferDesc.size = sizeof(LightingUniforms);
@@ -640,63 +905,66 @@ bool Application::initLightingUniforms() {
 	m_lightingUniformBuffer = m_device.createBuffer(bufferDesc);
 
 	// Initial values
-	m_lightingUniforms.directions[0] = { 0.5f, -0.9f, 0.1f, 0.0f };
-	m_lightingUniforms.directions[1] = { 0.2f, 0.4f, 0.3f, 0.0f };
-	m_lightingUniforms.colors[0] = { 1.0f, 0.9f, 0.6f, 1.0f };
-	m_lightingUniforms.colors[1] = { 0.6f, 0.9f, 1.0f, 1.0f };
+	m_lightingUniforms.directions[0] = {0.5f, -0.9f, 0.1f, 0.0f};
+	m_lightingUniforms.directions[1] = {0.2f, 0.4f, 0.3f, 0.0f};
+	m_lightingUniforms.colors[0] = {1.0f, 0.9f, 0.6f, 1.0f};
+	m_lightingUniforms.colors[1] = {0.6f, 0.9f, 1.0f, 1.0f};
 
 	updateLightingUniforms();
 
 	return m_lightingUniformBuffer != nullptr;
 }
 
-void Application::terminateLightingUniforms() {
+void Application::terminateLightingUniforms()
+{
 	m_lightingUniformBuffer.destroy();
 	m_lightingUniformBuffer.release();
 }
 
-void Application::updateLightingUniforms() {
-	if (m_lightingUniformsChanged) {
+void Application::updateLightingUniforms()
+{
+	if (m_lightingUniformsChanged)
+	{
 		m_queue.writeBuffer(m_lightingUniformBuffer, 0, &m_lightingUniforms, sizeof(LightingUniforms));
 		m_lightingUniformsChanged = false;
 	}
 }
 
-
-bool Application::initBindGroupLayout() {
+bool Application::initBindGroupLayout()
+{
 	std::vector<BindGroupLayoutEntry> bindingLayoutEntries(5, Default);
 	//                                                     ^ This was a 4
 
 	// The uniform buffer binding
-	BindGroupLayoutEntry& bindingLayout = bindingLayoutEntries[0];
+	BindGroupLayoutEntry &bindingLayout = bindingLayoutEntries[0];
 	bindingLayout.binding = 0;
 	bindingLayout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
 	bindingLayout.buffer.type = BufferBindingType::Uniform;
 	bindingLayout.buffer.minBindingSize = sizeof(MyUniforms);
 
 	// The base color texture binding
-	BindGroupLayoutEntry& textureBindingLayout = bindingLayoutEntries[1];
+	BindGroupLayoutEntry &textureBindingLayout = bindingLayoutEntries[1];
 	textureBindingLayout.binding = 1;
 	textureBindingLayout.visibility = ShaderStage::Fragment;
 	textureBindingLayout.texture.sampleType = TextureSampleType::Float;
 	textureBindingLayout.texture.viewDimension = TextureViewDimension::_2D;
 
 	// The normal map binding
-	BindGroupLayoutEntry& normalTextureBindingLayout = bindingLayoutEntries[2];
+	BindGroupLayoutEntry &normalTextureBindingLayout = bindingLayoutEntries[2];
 	normalTextureBindingLayout.binding = 2;
 	normalTextureBindingLayout.visibility = ShaderStage::Fragment;
 	normalTextureBindingLayout.texture.sampleType = TextureSampleType::Float;
 	normalTextureBindingLayout.texture.viewDimension = TextureViewDimension::_2D;
 
 	// The texture sampler binding
-	BindGroupLayoutEntry& samplerBindingLayout = bindingLayoutEntries[3];
+	BindGroupLayoutEntry &samplerBindingLayout = bindingLayoutEntries[3];
 	samplerBindingLayout.binding = 3;
 	//                             ^ This was a 2
 	samplerBindingLayout.visibility = ShaderStage::Fragment;
 	samplerBindingLayout.sampler.type = SamplerBindingType::Filtering;
 
 	// The lighting uniform buffer binding
-	BindGroupLayoutEntry& lightingUniformLayout = bindingLayoutEntries[4];
+	BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[4];
 	lightingUniformLayout.binding = 4;
 	//                              ^ This was a 3
 	lightingUniformLayout.visibility = ShaderStage::Fragment; // only Fragment is needed
@@ -712,12 +980,13 @@ bool Application::initBindGroupLayout() {
 	return m_bindGroupLayout != nullptr;
 }
 
-void Application::terminateBindGroupLayout() {
+void Application::terminateBindGroupLayout()
+{
 	m_bindGroupLayout.release();
 }
 
-
-bool Application::initBindGroup() {
+bool Application::initBindGroup()
+{
 	// Create a binding
 	std::vector<BindGroupEntry> bindings(5);
 	//                                   ^ This was a 4
@@ -735,13 +1004,11 @@ bool Application::initBindGroup() {
 
 	bindings[3].binding = 3;
 	bindings[3].sampler = m_sampler;
-	//       ^ This was a 2
 
 	bindings[4].binding = 4;
 	bindings[4].buffer = m_lightingUniformBuffer;
 	bindings[4].offset = 0;
 	bindings[4].size = sizeof(LightingUniforms);
-	//       ^ This was a 3
 
 	BindGroupDescriptor bindGroupDesc;
 	bindGroupDesc.layout = m_bindGroupLayout;
@@ -752,11 +1019,13 @@ bool Application::initBindGroup() {
 	return m_bindGroup != nullptr;
 }
 
-void Application::terminateBindGroup() {
+void Application::terminateBindGroup()
+{
 	m_bindGroup.release();
 }
 
-void Application::updateProjectionMatrix() {
+void Application::updateProjectionMatrix()
+{
 	// Update projection matrix
 	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
@@ -766,11 +1035,11 @@ void Application::updateProjectionMatrix() {
 		m_uniformBuffer,
 		offsetof(MyUniforms, projectionMatrix),
 		&m_uniforms.projectionMatrix,
-		sizeof(MyUniforms::projectionMatrix)
-	);
+		sizeof(MyUniforms::projectionMatrix));
 }
 
-void Application::updateViewMatrix() {
+void Application::updateViewMatrix()
+{
 	float cx = cos(m_cameraState.angles.x);
 	float sx = sin(m_cameraState.angles.x);
 	float cy = cos(m_cameraState.angles.y);
@@ -781,23 +1050,24 @@ void Application::updateViewMatrix() {
 		m_uniformBuffer,
 		offsetof(MyUniforms, viewMatrix),
 		&m_uniforms.viewMatrix,
-		sizeof(MyUniforms::viewMatrix)
-	);
+		sizeof(MyUniforms::viewMatrix));
 	m_uniforms.cameraWorldPosition = position;
 	m_queue.writeBuffer(
 		m_uniformBuffer,
 		offsetof(MyUniforms, cameraWorldPosition),
 		&m_uniforms.cameraWorldPosition,
-		sizeof(MyUniforms::cameraWorldPosition)
-	);
+		sizeof(MyUniforms::cameraWorldPosition));
 }
 
-void Application::updateDragInertia() {
+void Application::updateDragInertia()
+{
 	constexpr float eps = 1e-4f;
 	// Apply inertia only when the user released the click.
-	if (!m_drag.active) {
+	if (!m_drag.active)
+	{
 		// Avoid updating the matrix when the velocity is no longer noticeable
-		if (std::abs(m_drag.velocity.x) < eps && std::abs(m_drag.velocity.y) < eps) {
+		if (std::abs(m_drag.velocity.x) < eps && std::abs(m_drag.velocity.y) < eps)
+		{
 			return;
 		}
 		m_cameraState.angles += m_drag.velocity;
@@ -809,7 +1079,8 @@ void Application::updateDragInertia() {
 	}
 }
 
-bool Application::initGui() {
+bool Application::initGui()
+{
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -821,12 +1092,14 @@ bool Application::initGui() {
 	return true;
 }
 
-void Application::terminateGui() {
+void Application::terminateGui()
+{
 	ImGui_ImplGlfw_Shutdown();
 	ImGui_ImplWGPU_Shutdown();
 }
 
-void Application::updateGui(RenderPassEncoder renderPass) {
+void Application::updateGui(RenderPassEncoder renderPass)
+{
 	// Start the Dear ImGui frame
 	ImGui_ImplWGPU_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -845,6 +1118,12 @@ void Application::updateGui(RenderPassEncoder renderPass) {
 		changed = ImGui::SliderFloat("K Specular", &m_lightingUniforms.ks, 0.0f, 1.0f) || changed;
 		ImGui::End();
 		m_lightingUniformsChanged = changed;
+		ImGui::Begin("Primitives");
+		ImGui::ColorEdit3("Color", glm::value_ptr(m_cubes[0].color));
+		ImGui::DragFloat3("Position", glm::value_ptr(m_cubes[0].position), 0.01f);
+		ImGui::DragFloat3("Rotation", glm::value_ptr(m_cubes[0].rotation), 0.1f);
+		ImGui::DragFloat3("Scale", glm::value_ptr(m_cubes[0].scale), 0.01f);
+		ImGui::End();
 	}
 
 	// Draw the UI
