@@ -27,25 +27,22 @@ struct MyUniforms {
 
 @group(0) @binding(0) var<uniform> uMyUniforms: MyUniforms;
 
-fn rotationX(angle: f32) -> mat4x4f {
-    return mat4x4f(1.0, 0.0, 0.0, 0.0,
-        0.0, cos(angle), -sin(angle), 0.0,
-        0.0, sin(angle), cos(angle), 0.0,
-        0.0, 0.0, 0.0, 1.0);
+fn rotationX(angle: f32) -> mat3x3f {
+    return mat3x3f(1.0, 0.0, 0.0,
+        0.0, cos(angle), -sin(angle),
+        0.0, sin(angle), cos(angle));
 }
 
-fn rotationY(angle: f32) -> mat4x4f {
-    return mat4x4f(cos(angle), 0.0, sin(angle), 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        -sin(angle), 0.0, cos(angle), 0.0,
-        0.0, 0.0, 0.0, 1.0);
+fn rotationY(angle: f32) -> mat3x3f {
+    return mat3x3f(cos(angle), 0.0, sin(angle),
+        0.0, 1.0, 0.0,
+        -sin(angle), 0.0, cos(angle));
 }
 
-fn rotationZ(angle: f32) -> mat4x4f {
-    return mat4x4f(cos(angle), -sin(angle), 0.0, 0.0,
-        sin(angle), cos(angle), 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0);
+fn rotationZ(angle: f32) -> mat3x3f {
+    return mat3x3f(cos(angle), -sin(angle), 0.0,
+        sin(angle), cos(angle), 0.0,
+        0.0, 0.0, 1.0);
 }
 
 @vertex
@@ -56,23 +53,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     let rotZ = rotationZ(radians(in.rotation.z));
     let rot = rotZ * rotY * rotX;
 
-    let trans = mat4x4f(
-        1.0, 0.0, 0.0, in.world_pos.x,
-        0.0, 1.0, 0.0, in.world_pos.y,
-        0.0, 0.0, 1.0, in.world_pos.z,
-        0.0, 0.0, 0.0, 1.0
-    );
-
-    let scale = mat4x4f(
-        in.scale.x, 0.0, 0.0, 0.0,
-        0.0, in.scale.y, 0.0, 0.0,
-        0.0, 0.0, in.scale.z, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    );
-    let model = rot * scale;
-
-    out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * (model * vec4f(in.position, 1.0) + vec4f(in.world_pos, 0.0));
-    out.normal = (model * vec4f(in.normal, 0.0)).xyz;
+    out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * vec4f(rot * (in.position * in.scale) + in.world_pos, 1.0);
+    out.normal = rot * in.normal;
     out.color = in.color;
     return out;
 }
