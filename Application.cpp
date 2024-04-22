@@ -100,10 +100,10 @@ bool Application::onInit()
 
 void Application::onFrame()
 {
+
 	glfwPollEvents();
 	updateDragInertia();
 	updateLightingUniforms();
-
 	// Update uniform buffer
 	m_uniforms.time = static_cast<float>(glfwGetTime());
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
@@ -303,7 +303,7 @@ bool Application::initWindowAndDevice()
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	m_window = glfwCreateWindow(640, 480, "Learn WebGPU", NULL, NULL);
+	m_window = glfwCreateWindow(640, 480, "Game Physics Template", NULL, NULL);
 	if (!m_window)
 	{
 		std::cerr << "Could not open window!" << std::endl;
@@ -410,7 +410,7 @@ bool Application::initSwapChain()
 	swapChainDesc.height = static_cast<uint32_t>(height);
 	swapChainDesc.usage = TextureUsage::RenderAttachment;
 	swapChainDesc.format = m_swapChainFormat;
-	swapChainDesc.presentMode = PresentMode::Fifo;
+	swapChainDesc.presentMode = PresentMode::Immediate;
 	m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
 	std::cout << "Swapchain: " << m_swapChain << std::endl;
 	return m_swapChain != nullptr;
@@ -530,7 +530,7 @@ bool Application::initInstancingRenderPipeline()
 
 	pipelineDesc.primitive.topology = PrimitiveTopology::TriangleList;
 	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
-	pipelineDesc.primitive.cullMode = CullMode::None;
+	pipelineDesc.primitive.cullMode = CullMode::Back;
 
 	FragmentState fragmentState;
 	pipelineDesc.fragment = &fragmentState;
@@ -810,11 +810,11 @@ bool Application::initGeometry()
 	m_cubeVertexCount = static_cast<int>(cubeVertexData.size());
 
 	std::vector<uint16_t> cubeIndexData = {
-		0, 1, 2, 0, 2, 3,		// front face
-		4, 5, 6, 4, 6, 7,		// left face
+		0, 2, 1, 0, 3, 2,		// front face
+		4, 6, 5, 4, 7, 6,		// left face
 		8, 9, 10, 8, 10, 11,	// right face
 		12, 13, 14, 12, 14, 15, // back face
-		16, 17, 18, 16, 18, 19, // top face
+		16, 18, 17, 16, 19, 18, // top face
 		20, 21, 22, 20, 22, 23, // bottom face
 	};
 
@@ -837,6 +837,16 @@ bool Application::initGeometry()
 	m_cubes = {// position, rotation, scale, color
 			   {{-1, 0, 0}, {0, 0, 0}, {2, 1, 1}, {1, 0, 0}},
 			   {{1, 0, 0}, {0, 0, 45}, {1, 2, 1}, {0, 1, 0}}};
+	// for (float x = -10; x < 10; x++)
+	// {
+	// 	for (float y = -10; y < 10; y++)
+	// 	{
+	// 		for (float z = -10; z < 10; z++)
+	// 		{
+	// 			m_cubes.push_back({{x, y, z}, {0, 0, 0}, {0.5, 0.5, 0.5}, {1, 0, 0}});
+	// 		}
+	// 	}
+	// }
 	m_instanceCount = static_cast<int>(m_cubes.size());
 
 	BufferDescriptor instanceBufferDesc;
@@ -1108,17 +1118,18 @@ void Application::updateGui(RenderPassEncoder renderPass)
 	// Build our UI
 	{
 		bool changed = false;
-		ImGui::Begin("Lighting");
-		changed = ImGui::ColorEdit3("Color #0", glm::value_ptr(m_lightingUniforms.colors[0])) || changed;
-		changed = ImGui::DragDirection("Direction #0", m_lightingUniforms.directions[0]) || changed;
-		changed = ImGui::ColorEdit3("Color #1", glm::value_ptr(m_lightingUniforms.colors[1])) || changed;
-		changed = ImGui::DragDirection("Direction #1", m_lightingUniforms.directions[1]) || changed;
-		changed = ImGui::SliderFloat("Hardness", &m_lightingUniforms.hardness, 1.0f, 100.0f) || changed;
-		changed = ImGui::SliderFloat("K Diffuse", &m_lightingUniforms.kd, 0.0f, 1.0f) || changed;
-		changed = ImGui::SliderFloat("K Specular", &m_lightingUniforms.ks, 0.0f, 1.0f) || changed;
-		ImGui::End();
+		// ImGui::Begin("Lighting");
+		// changed = ImGui::ColorEdit3("Color #0", glm::value_ptr(m_lightingUniforms.colors[0])) || changed;
+		// changed = ImGui::DragDirection("Direction #0", m_lightingUniforms.directions[0]) || changed;
+		// changed = ImGui::ColorEdit3("Color #1", glm::value_ptr(m_lightingUniforms.colors[1])) || changed;
+		// changed = ImGui::DragDirection("Direction #1", m_lightingUniforms.directions[1]) || changed;
+		// changed = ImGui::SliderFloat("Hardness", &m_lightingUniforms.hardness, 1.0f, 100.0f) || changed;
+		// changed = ImGui::SliderFloat("K Diffuse", &m_lightingUniforms.kd, 0.0f, 1.0f) || changed;
+		// changed = ImGui::SliderFloat("K Specular", &m_lightingUniforms.ks, 0.0f, 1.0f) || changed;
+		// ImGui::End();
 		m_lightingUniformsChanged = changed;
 		ImGui::Begin("Primitives");
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		ImGui::ColorEdit3("Color", glm::value_ptr(m_cubes[0].color));
 		ImGui::DragFloat3("Position", glm::value_ptr(m_cubes[0].position), 0.01f);
 		ImGui::DragFloat3("Rotation", glm::value_ptr(m_cubes[0].rotation), 0.1f);
