@@ -65,7 +65,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
     // Basic phong shading
 
-    let light_dir = normalize(vec3f(1.0, 1.0, 1.0));
+    let light_dir = normalize(vec3f(2.0, 0.5, 1.0));
     let normal = normalize(in.normal);
     let diffuse = max(dot(normal, light_dir), 0.0);
     let ambient = 0.1;
