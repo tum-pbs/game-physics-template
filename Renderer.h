@@ -29,15 +29,16 @@
 #include <webgpu/webgpu.hpp>
 #include <glm/glm.hpp>
 #include "ResourceManager.h"
-
+#include <functional>
 #include <array>
 
 // Forward declare
 struct GLFWwindow;
 
-class Application
+class Renderer
 {
 public:
+	void drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
 	// A function called only once at the beginning. Returns false is init failed.
 	bool onInit();
 
@@ -57,6 +58,8 @@ public:
 	void onMouseMove(double xpos, double ypos);
 	void onMouseButton(int button, int action, int mods);
 	void onScroll(double xoffset, double yoffset);
+	void clearScene();
+	std::function<void()> defineGUI = nullptr;
 
 private:
 	bool initWindowAndDevice();
@@ -206,7 +209,6 @@ private:
 	int m_cubeIndexCount = 0;
 	wgpu::Buffer m_instanceBuffer = nullptr;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
-	int m_instanceCount = 0;
 
 	// Uniforms
 	wgpu::Buffer m_uniformBuffer = nullptr;

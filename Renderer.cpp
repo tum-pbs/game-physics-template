@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-#include "Application.h"
+#include "Renderer.h"
 #include "ResourceManager.h"
 
 #include <glfw3webgpu.h>
@@ -54,22 +54,10 @@ using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
 
 constexpr float PI = 3.14159265358979323846f;
 
-// Custom ImGui widgets
-namespace ImGui
-{
-	bool DragDirection(const char *label, glm::vec4 &direction)
-	{
-		glm::vec2 angles = glm::degrees(glm::polar(glm::vec3(direction)));
-		bool changed = ImGui::DragFloat2(label, glm::value_ptr(angles));
-		direction = glm::vec4(glm::euclidean(glm::radians(angles)), direction.w);
-		return changed;
-	}
-} // namespace ImGui
-
 ///////////////////////////////////////////////////////////////////////////////
 // Public methods
 
-bool Application::onInit()
+bool Renderer::onInit()
 {
 	if (!initWindowAndDevice())
 		return false;
@@ -98,7 +86,7 @@ bool Application::onInit()
 	return true;
 }
 
-void Application::onFrame()
+void Renderer::onFrame()
 {
 
 	glfwPollEvents();
@@ -107,7 +95,17 @@ void Application::onFrame()
 	// Update uniform buffer
 	m_uniforms.time = static_cast<float>(glfwGetTime());
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
-	m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), m_cubes.size() * sizeof(InstancedVertexAttributes));
+
+	int cubeInstances = static_cast<int>(m_cubes.size());
+
+	if (m_instanceBuffer != nullptr)
+		m_instanceBuffer.destroy();
+	BufferDescriptor instanceBufferDesc;
+	instanceBufferDesc.size = sizeof(InstancedVertexAttributes) * cubeInstances;
+	instanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+	instanceBufferDesc.mappedAtCreation = false;
+	m_instanceBuffer = m_device.createBuffer(instanceBufferDesc);
+	m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), instanceBufferDesc.size);
 
 	TextureView nextTexture = m_swapChain.getCurrentTextureView();
 	if (!nextTexture)
@@ -153,9 +151,9 @@ void Application::onFrame()
 	renderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
-	renderPass.setPipeline(m_pipeline);
+	// renderPass.setPipeline(m_pipeline);
 
-	renderPass.setVertexBuffer(0, m_vertexBuffer, 0, m_vertexCount * sizeof(VertexAttributes));
+	// renderPass.setVertexBuffer(0, m_vertexBuffer, 0, m_vertexCount * sizeof(VertexAttributes));
 
 	// Set binding group
 	renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
@@ -165,14 +163,12 @@ void Application::onFrame()
 	renderPass.setPipeline(m_instancingPipeline);
 
 	renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexCount * sizeof(PrimitiveVertexAttributes));
-	renderPass.setVertexBuffer(1, m_instanceBuffer, 0, m_instanceCount * sizeof(InstancedVertexAttributes));
+	renderPass.setVertexBuffer(1, m_instanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
 	renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexCount * sizeof(uint16_t));
 
 	// Set binding group
-	// renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
 
-	// renderPass.draw(m_vertexCount, 1, 0, 0);
-	renderPass.drawIndexed(m_cubeIndexCount, m_instanceCount, 0, 0, 0);
+	renderPass.drawIndexed(m_cubeIndexCount, cubeInstances, 0, 0, 0);
 
 	// We add the GUI drawing commands to the render pass
 	updateGui(renderPass);
@@ -197,7 +193,7 @@ void Application::onFrame()
 #endif
 }
 
-void Application::onFinish()
+void Renderer::onFinish()
 {
 	terminateGui();
 	terminateBindGroup();
@@ -213,12 +209,12 @@ void Application::onFinish()
 	terminateWindowAndDevice();
 }
 
-bool Application::isRunning()
+bool Renderer::isRunning()
 {
 	return !glfwWindowShouldClose(m_window);
 }
 
-void Application::onResize()
+void Renderer::onResize()
 {
 	// Terminate in reverse order
 	terminateDepthBuffer();
@@ -231,7 +227,7 @@ void Application::onResize()
 	updateProjectionMatrix();
 }
 
-void Application::onMouseMove(double xpos, double ypos)
+void Renderer::onMouseMove(double xpos, double ypos)
 {
 	if (m_drag.active)
 	{
@@ -248,7 +244,7 @@ void Application::onMouseMove(double xpos, double ypos)
 	}
 }
 
-void Application::onMouseButton(int button, int action, int /* modifiers */)
+void Renderer::onMouseButton(int button, int action, int /* modifiers */)
 {
 	ImGuiIO &io = ImGui::GetIO();
 	if (io.WantCaptureMouse)
@@ -276,7 +272,7 @@ void Application::onMouseButton(int button, int action, int /* modifiers */)
 	}
 }
 
-void Application::onScroll(double /* xoffset */, double yoffset)
+void Renderer::onScroll(double /* xoffset */, double yoffset)
 {
 	m_cameraState.zoom += m_drag.scrollSensitivity * static_cast<float>(yoffset);
 	m_cameraState.zoom = glm::clamp(m_cameraState.zoom, -2.0f, 2.0f);
@@ -286,7 +282,7 @@ void Application::onScroll(double /* xoffset */, double yoffset)
 ///////////////////////////////////////////////////////////////////////////////
 // Private methods
 
-bool Application::initWindowAndDevice()
+bool Renderer::initWindowAndDevice()
 {
 	m_instance = createInstance(InstanceDescriptor{});
 	if (!m_instance)
@@ -368,26 +364,26 @@ bool Application::initWindowAndDevice()
 	glfwSetWindowUserPointer(m_window, this);
 	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow *window, int, int)
 								   {
-		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 		if (that != nullptr) that->onResize(); });
 	glfwSetCursorPosCallback(m_window, [](GLFWwindow *window, double xpos, double ypos)
 							 {
-		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 		if (that != nullptr) that->onMouseMove(xpos, ypos); });
 	glfwSetMouseButtonCallback(m_window, [](GLFWwindow *window, int button, int action, int mods)
 							   {
-		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 		if (that != nullptr) that->onMouseButton(button, action, mods); });
 	glfwSetScrollCallback(m_window, [](GLFWwindow *window, double xoffset, double yoffset)
 						  {
-		auto that = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 		if (that != nullptr) that->onScroll(xoffset, yoffset); });
 
 	adapter.release();
 	return m_device != nullptr;
 }
 
-void Application::terminateWindowAndDevice()
+void Renderer::terminateWindowAndDevice()
 {
 	m_queue.release();
 	m_device.release();
@@ -398,7 +394,7 @@ void Application::terminateWindowAndDevice()
 	glfwTerminate();
 }
 
-bool Application::initSwapChain()
+bool Renderer::initSwapChain()
 {
 	// Get the current size of the window's framebuffer:
 	int width, height;
@@ -416,12 +412,12 @@ bool Application::initSwapChain()
 	return m_swapChain != nullptr;
 }
 
-void Application::terminateSwapChain()
+void Renderer::terminateSwapChain()
 {
 	m_swapChain.release();
 }
 
-bool Application::initDepthBuffer()
+bool Renderer::initDepthBuffer()
 {
 	// Get the current size of the window's framebuffer:
 	int width, height;
@@ -455,13 +451,13 @@ bool Application::initDepthBuffer()
 	return m_depthTextureView != nullptr;
 }
 
-void Application::terminateDepthBuffer()
+void Renderer::terminateDepthBuffer()
 {
 	m_depthTextureView.release();
 	m_depthTexture.destroy();
 	m_depthTexture.release();
 }
-bool Application::initInstancingRenderPipeline()
+bool Renderer::initInstancingRenderPipeline()
 {
 	std::cout << "Creating instancing shader module..." << std::endl;
 	m_instancingShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", m_device);
@@ -581,7 +577,7 @@ bool Application::initInstancingRenderPipeline()
 	return m_instancingPipeline != nullptr;
 }
 
-bool Application::initRenderPipeline()
+bool Renderer::initRenderPipeline()
 {
 	std::cout << "Creating shader module..." << std::endl;
 	m_shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/shader.wgsl", m_device);
@@ -691,19 +687,23 @@ bool Application::initRenderPipeline()
 	return m_pipeline != nullptr;
 }
 
-void Application::terminateRenderPipeline()
+void Renderer::terminateRenderPipeline()
 {
 	m_pipeline.release();
 	m_shaderModule.release();
 }
 
-void Application::terminateInstancingRenderPipeline()
+void Renderer::terminateInstancingRenderPipeline()
 {
 	m_instancingPipeline.release();
 	m_instancingShaderModule.release();
 }
+void Renderer::clearScene()
+{
+	m_cubes.clear();
+}
 
-bool Application::initTextures()
+bool Renderer::initTextures()
 {
 	// Create a sampler
 	SamplerDescriptor samplerDesc;
@@ -739,7 +739,7 @@ bool Application::initTextures()
 	return m_baseColorTextureView != nullptr && m_normalTextureView != nullptr;
 }
 
-void Application::terminateTextures()
+void Renderer::terminateTextures()
 {
 	m_baseColorTextureView.release();
 	m_baseColorTexture.destroy();
@@ -750,7 +750,7 @@ void Application::terminateTextures()
 	m_sampler.release();
 }
 
-bool Application::initGeometry()
+bool Renderer::initGeometry()
 {
 	// Load mesh data from OBJ file
 	std::vector<VertexAttributes> vertexData;
@@ -834,32 +834,10 @@ bool Application::initGeometry()
 	m_cubeIndexBuffer = m_device.createBuffer(cubeIndexBufferDesc);
 	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cubeIndexData.data(), cubeIndexBufferDesc.size);
 
-	m_cubes = {// position, rotation, scale, color
-			   {{-1, 0, 0}, {0, 0, 0}, {2, 1, 1}, {1, 0, 0}},
-			   {{1, 0, 0}, {0, 0, 45}, {1, 2, 1}, {0, 1, 0}}};
-	// for (float x = -10; x < 10; x++)
-	// {
-	// 	for (float y = -10; y < 10; y++)
-	// 	{
-	// 		for (float z = -10; z < 10; z++)
-	// 		{
-	// 			m_cubes.push_back({{x, y, z}, {0, 0, 0}, {0.5, 0.5, 0.5}, {1, 0, 0}});
-	// 		}
-	// 	}
-	// }
-	m_instanceCount = static_cast<int>(m_cubes.size());
-
-	BufferDescriptor instanceBufferDesc;
-	instanceBufferDesc.size = sizeof(InstancedVertexAttributes) * m_instanceCount;
-	instanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-	instanceBufferDesc.mappedAtCreation = false;
-	m_instanceBuffer = m_device.createBuffer(instanceBufferDesc);
-	m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), instanceBufferDesc.size);
-
 	return m_vertexBuffer != nullptr && m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr;
 }
 
-void Application::terminateGeometry()
+void Renderer::terminateGeometry()
 {
 	m_vertexBuffer.destroy();
 	m_vertexBuffer.release();
@@ -873,10 +851,9 @@ void Application::terminateGeometry()
 	m_instanceBuffer.release();
 	m_cubeVertexCount = 0;
 	m_cubeIndexCount = 0;
-	m_instanceCount = 0;
 }
 
-bool Application::initUniforms()
+bool Renderer::initUniforms()
 {
 	// Create uniform buffer
 	BufferDescriptor bufferDesc;
@@ -899,13 +876,13 @@ bool Application::initUniforms()
 	return m_uniformBuffer != nullptr;
 }
 
-void Application::terminateUniforms()
+void Renderer::terminateUniforms()
 {
 	m_uniformBuffer.destroy();
 	m_uniformBuffer.release();
 }
 
-bool Application::initLightingUniforms()
+bool Renderer::initLightingUniforms()
 {
 	// Create uniform buffer
 	BufferDescriptor bufferDesc;
@@ -925,13 +902,13 @@ bool Application::initLightingUniforms()
 	return m_lightingUniformBuffer != nullptr;
 }
 
-void Application::terminateLightingUniforms()
+void Renderer::terminateLightingUniforms()
 {
 	m_lightingUniformBuffer.destroy();
 	m_lightingUniformBuffer.release();
 }
 
-void Application::updateLightingUniforms()
+void Renderer::updateLightingUniforms()
 {
 	if (m_lightingUniformsChanged)
 	{
@@ -940,7 +917,7 @@ void Application::updateLightingUniforms()
 	}
 }
 
-bool Application::initBindGroupLayout()
+bool Renderer::initBindGroupLayout()
 {
 	std::vector<BindGroupLayoutEntry> bindingLayoutEntries(5, Default);
 	//                                                     ^ This was a 4
@@ -990,12 +967,12 @@ bool Application::initBindGroupLayout()
 	return m_bindGroupLayout != nullptr;
 }
 
-void Application::terminateBindGroupLayout()
+void Renderer::terminateBindGroupLayout()
 {
 	m_bindGroupLayout.release();
 }
 
-bool Application::initBindGroup()
+bool Renderer::initBindGroup()
 {
 	// Create a binding
 	std::vector<BindGroupEntry> bindings(5);
@@ -1029,12 +1006,12 @@ bool Application::initBindGroup()
 	return m_bindGroup != nullptr;
 }
 
-void Application::terminateBindGroup()
+void Renderer::terminateBindGroup()
 {
 	m_bindGroup.release();
 }
 
-void Application::updateProjectionMatrix()
+void Renderer::updateProjectionMatrix()
 {
 	// Update projection matrix
 	int width, height;
@@ -1048,7 +1025,7 @@ void Application::updateProjectionMatrix()
 		sizeof(MyUniforms::projectionMatrix));
 }
 
-void Application::updateViewMatrix()
+void Renderer::updateViewMatrix()
 {
 	float cx = cos(m_cameraState.angles.x);
 	float sx = sin(m_cameraState.angles.x);
@@ -1069,7 +1046,7 @@ void Application::updateViewMatrix()
 		sizeof(MyUniforms::cameraWorldPosition));
 }
 
-void Application::updateDragInertia()
+void Renderer::updateDragInertia()
 {
 	constexpr float eps = 1e-4f;
 	// Apply inertia only when the user released the click.
@@ -1089,7 +1066,7 @@ void Application::updateDragInertia()
 	}
 }
 
-bool Application::initGui()
+bool Renderer::initGui()
 {
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -1102,40 +1079,26 @@ bool Application::initGui()
 	return true;
 }
 
-void Application::terminateGui()
+void Renderer::terminateGui()
 {
 	ImGui_ImplGlfw_Shutdown();
 	ImGui_ImplWGPU_Shutdown();
 }
 
-void Application::updateGui(RenderPassEncoder renderPass)
+void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+{
+	m_cubes.push_back({position, rotation, scale, color});
+}
+
+void Renderer::updateGui(RenderPassEncoder renderPass)
 {
 	// Start the Dear ImGui frame
 	ImGui_ImplWGPU_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	// Build our UI
-	{
-		bool changed = false;
-		// ImGui::Begin("Lighting");
-		// changed = ImGui::ColorEdit3("Color #0", glm::value_ptr(m_lightingUniforms.colors[0])) || changed;
-		// changed = ImGui::DragDirection("Direction #0", m_lightingUniforms.directions[0]) || changed;
-		// changed = ImGui::ColorEdit3("Color #1", glm::value_ptr(m_lightingUniforms.colors[1])) || changed;
-		// changed = ImGui::DragDirection("Direction #1", m_lightingUniforms.directions[1]) || changed;
-		// changed = ImGui::SliderFloat("Hardness", &m_lightingUniforms.hardness, 1.0f, 100.0f) || changed;
-		// changed = ImGui::SliderFloat("K Diffuse", &m_lightingUniforms.kd, 0.0f, 1.0f) || changed;
-		// changed = ImGui::SliderFloat("K Specular", &m_lightingUniforms.ks, 0.0f, 1.0f) || changed;
-		// ImGui::End();
-		m_lightingUniformsChanged = changed;
-		ImGui::Begin("Primitives");
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		ImGui::ColorEdit3("Color", glm::value_ptr(m_cubes[0].color));
-		ImGui::DragFloat3("Position", glm::value_ptr(m_cubes[0].position), 0.01f);
-		ImGui::DragFloat3("Rotation", glm::value_ptr(m_cubes[0].rotation), 0.1f);
-		ImGui::DragFloat3("Scale", glm::value_ptr(m_cubes[0].scale), 0.01f);
-		ImGui::End();
-	}
+	// simulator.onGUI();
+	defineGUI();
 
 	// Draw the UI
 	ImGui::EndFrame();

@@ -16,49 +16,50 @@ add_subdirectory(webgpu)
 add_subdirectory(glfw3webgpu)
 add_subdirectory(imgui)
 
-add_executable(App
+add_executable(Template
 	main.cpp
-	Application.h
-	Application.cpp
+	Renderer.h
+	Renderer.cpp
 	ResourceManager.h
 	ResourceManager.cpp
 	implementations.cpp
+	Simulator.cpp
 )
 
 if(DEV_MODE)
 	# In dev mode, we load resources from the source tree, so that when we
 	# dynamically edit resources (like shaders), these are correctly
 	# versionned.
-	target_compile_definitions(App PRIVATE
+	target_compile_definitions(Template PRIVATE
 		RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
 	)
 else()
 	# In release mode, we just load resources relatively to wherever the
 	# executable is launched from, so that the binary is portable
-	target_compile_definitions(App PRIVATE
+	target_compile_definitions(Template PRIVATE
 		RESOURCE_DIR="./resources"
 	)
 endif()
 
-target_include_directories(App PRIVATE .)
+target_include_directories(Template PRIVATE .)
 
-target_link_libraries(App PRIVATE glfw webgpu glfw3webgpu imgui)
+target_link_libraries(Template PRIVATE glfw webgpu glfw3webgpu imgui)
 
-set_target_properties(App PROPERTIES
+set_target_properties(Template PROPERTIES
 	CXX_STANDARD 17
 	VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1"
 )
-target_treat_all_warnings_as_errors(App)
-target_copy_webgpu_binaries(App)
+target_treat_all_warnings_as_errors(Template)
+target_copy_webgpu_binaries(Template)
 
 if (MSVC)
 	# Ignore a warning that GLM requires to bypass
 	# Disable warning C4201: nonstandard extension used: nameless struct/union
-	target_compile_options(App PUBLIC /wd4201)
+	target_compile_options(Template PUBLIC /wd4201)
 	# Disable warning C4305: truncation from 'int' to 'bool' in 'if' condition
-	target_compile_options(App PUBLIC /wd4305)
+	target_compile_options(Template PUBLIC /wd4305)
 
 	# Ignore a warning that stb_image requires to bypass
 	# Disable warning C4244: conversion from 'int' to 'short', possible loss of data
-	target_compile_options(App PUBLIC /wd4244)
+	target_compile_options(Template PUBLIC /wd4244)
 endif (MSVC)
