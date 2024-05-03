@@ -1,42 +1,40 @@
 #include "ResourceManager.h"
 #include <vector>
+#include <utility>
+
+typedef std::vector<ResourceManager::PrimitiveVertexAttributes> VertexList;
+typedef std::vector<uint16_t> IndexList;
 
 namespace cube
 {
-    const std::vector<ResourceManager::PrimitiveVertexAttributes> vertices = {
-        // left handed coordinates: z is away, x is right and y is up, position and normals
-        // front face
+    // positions and normals
+    const VertexList vertices = {
         {{-0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
         {{0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
         {{0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
         {{-0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
-        // left face
         {{-0.5, -0.5, -0.5}, {-1.0, 0.0, 0.0}},
         {{-0.5, 0.5, -0.5}, {-1.0, 0.0, 0.0}},
         {{-0.5, 0.5, 0.5}, {-1.0, 0.0, 0.0}},
         {{-0.5, -0.5, 0.5}, {-1.0, 0.0, 0.0}},
-        // right face
         {{0.5, -0.5, -0.5}, {1.0, 0.0, 0.0}},
         {{0.5, 0.5, -0.5}, {1.0, 0.0, 0.0}},
         {{0.5, 0.5, 0.5}, {1.0, 0.0, 0.0}},
         {{0.5, -0.5, 0.5}, {1.0, 0.0, 0.0}},
-        // back face
         {{-0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
         {{0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
         {{0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
         {{-0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
-        // top face
         {{-0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
         {{0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
         {{0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
         {{-0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
-        // bottom face
         {{-0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
         {{0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
         {{0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
         {{-0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
     };
-    const std::vector<uint16_t> indices = {
+    const IndexList indices = {
         0, 2, 1, 0, 3, 2,       // front face
         4, 6, 5, 4, 7, 6,       // left face
         8, 9, 10, 8, 10, 11,    // right face
