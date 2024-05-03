@@ -305,7 +305,6 @@ void Renderer::onMouseButton(int button, int action, int /* modifiers */)
 void Renderer::onScroll(double /* xoffset */, double yoffset)
 {
 	m_cameraState.zoom += m_drag.scrollSensitivity * static_cast<float>(yoffset);
-	m_cameraState.zoom = glm::clamp(m_cameraState.zoom, -2.0f, 2.0f);
 	updateViewMatrix();
 }
 
@@ -329,6 +328,7 @@ bool Renderer::initWindowAndDevice()
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 	m_window = glfwCreateWindow(640, 480, "Game Physics Template", NULL, NULL);
 	if (!m_window)
 	{
