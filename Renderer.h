@@ -39,6 +39,8 @@ class Renderer
 {
 public:
 	void drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
+	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
+	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
 	// A function called only once at the beginning. Returns false is init failed.
 	bool onInit();
 
@@ -76,6 +78,9 @@ private:
 
 	bool initInstancingRenderPipeline();
 	void terminateInstancingRenderPipeline();
+
+	bool initLinePipeline();
+	void terminateLinePipeline();
 
 	bool initTextures();
 	void terminateTextures();
@@ -192,6 +197,8 @@ private:
 	wgpu::RenderPipeline m_pipeline = nullptr;
 	wgpu::ShaderModule m_instancingShaderModule = nullptr;
 	wgpu::RenderPipeline m_instancingPipeline = nullptr;
+	wgpu::ShaderModule m_lineShaderModule = nullptr;
+	wgpu::RenderPipeline m_linePipeline = nullptr;
 
 	// Texture
 	wgpu::Sampler m_sampler = nullptr;
@@ -204,11 +211,13 @@ private:
 	wgpu::Buffer m_vertexBuffer = nullptr;
 	wgpu::Buffer m_cubeVertexBuffer = nullptr;
 	wgpu::Buffer m_cubeIndexBuffer = nullptr;
+	wgpu::Buffer m_lineVertexBuffer = nullptr;
 	int m_vertexCount = 0;
 	int m_cubeVertexCount = 0;
 	int m_cubeIndexCount = 0;
 	wgpu::Buffer m_instanceBuffer = nullptr;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
+	std::vector<ResourceManager::LineVertexAttributes> m_lines;
 
 	// Uniforms
 	wgpu::Buffer m_uniformBuffer = nullptr;

@@ -51,6 +51,7 @@ using namespace wgpu;
 using VertexAttributes = ResourceManager::VertexAttributes;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
 using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
+using LineVertexAttributes = ResourceManager::LineVertexAttributes;
 
 constexpr float PI = 3.14159265358979323846f;
 
@@ -70,6 +71,8 @@ bool Renderer::onInit()
 	if (!initRenderPipeline())
 		return false;
 	if (!initInstancingRenderPipeline())
+		return false;
+	if (!initLinePipeline())
 		return false;
 	if (!initTextures())
 		return false;
@@ -97,15 +100,36 @@ void Renderer::onFrame()
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
 
 	int cubeInstances = static_cast<int>(m_cubes.size());
-
 	if (m_instanceBuffer != nullptr)
+	{
 		m_instanceBuffer.destroy();
+		m_instanceBuffer = nullptr;
+	}
 	BufferDescriptor instanceBufferDesc;
-	instanceBufferDesc.size = sizeof(InstancedVertexAttributes) * cubeInstances;
-	instanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-	instanceBufferDesc.mappedAtCreation = false;
-	m_instanceBuffer = m_device.createBuffer(instanceBufferDesc);
-	m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), instanceBufferDesc.size);
+	if (cubeInstances > 0)
+	{
+		instanceBufferDesc.size = sizeof(InstancedVertexAttributes) * cubeInstances;
+		instanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+		instanceBufferDesc.mappedAtCreation = false;
+		m_instanceBuffer = m_device.createBuffer(instanceBufferDesc);
+		m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), instanceBufferDesc.size);
+	}
+
+	int lines = static_cast<int>(m_lines.size());
+	if (m_lineVertexBuffer != nullptr)
+	{
+		m_lineVertexBuffer.destroy();
+		m_lineVertexBuffer = nullptr;
+	}
+	BufferDescriptor lineBufferDesc;
+	if (lines > 0)
+	{
+		lineBufferDesc.size = sizeof(LineVertexAttributes) * lines;
+		lineBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+		lineBufferDesc.mappedAtCreation = false;
+		m_lineVertexBuffer = m_device.createBuffer(lineBufferDesc);
+		m_queue.writeBuffer(m_lineVertexBuffer, 0, m_lines.data(), lineBufferDesc.size);
+	}
 
 	TextureView nextTexture = m_swapChain.getCurrentTextureView();
 	if (!nextTexture)
@@ -159,17 +183,22 @@ void Renderer::onFrame()
 	renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
 
 	// renderPass.draw(m_vertexCount, 1, 0, 0);
+	if (cubeInstances > 0)
+	{
+		renderPass.setPipeline(m_instancingPipeline);
+		renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexCount * sizeof(PrimitiveVertexAttributes));
+		renderPass.setVertexBuffer(1, m_instanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
+		renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexCount * sizeof(uint16_t));
+		renderPass.drawIndexed(m_cubeIndexCount, cubeInstances, 0, 0, 0);
+	}
 
-	renderPass.setPipeline(m_instancingPipeline);
+	if (lines > 0)
+	{
+		renderPass.setPipeline(m_linePipeline);
+		renderPass.setVertexBuffer(0, m_lineVertexBuffer, 0, lines * sizeof(LineVertexAttributes));
 
-	renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexCount * sizeof(PrimitiveVertexAttributes));
-	renderPass.setVertexBuffer(1, m_instanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
-	renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexCount * sizeof(uint16_t));
-
-	// Set binding group
-
-	renderPass.drawIndexed(m_cubeIndexCount, cubeInstances, 0, 0, 0);
-
+		renderPass.draw(lines, 1, 0, 0);
+	}
 	// We add the GUI drawing commands to the render pass
 	updateGui(renderPass);
 
@@ -203,6 +232,7 @@ void Renderer::onFinish()
 	terminateTextures();
 	terminateRenderPipeline();
 	terminateInstancingRenderPipeline();
+	terminateLinePipeline();
 	terminateBindGroupLayout();
 	terminateDepthBuffer();
 	terminateSwapChain();
@@ -457,6 +487,98 @@ void Renderer::terminateDepthBuffer()
 	m_depthTexture.destroy();
 	m_depthTexture.release();
 }
+
+bool Renderer::initLinePipeline()
+{
+	std::cout << "Creating line shader module..." << std::endl;
+	m_lineShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", m_device);
+	std::cout << "Line shader module: " << m_lineShaderModule << std::endl;
+
+	std::cout << "Creating line render pipeline..." << std::endl;
+	RenderPipelineDescriptor pipelineDesc;
+
+	// This is for instanced rendering
+	std::vector<VertexAttribute> primitiveVertexAttribs(2);
+
+	// Position attribute
+	primitiveVertexAttribs[0].shaderLocation = 0;
+	primitiveVertexAttribs[0].format = VertexFormat::Float32x3;
+	primitiveVertexAttribs[0].offset = offsetof(LineVertexAttributes, position);
+
+	// Color attribute
+	primitiveVertexAttribs[1].shaderLocation = 1;
+	primitiveVertexAttribs[1].format = VertexFormat::Float32x3;
+	primitiveVertexAttribs[1].offset = offsetof(LineVertexAttributes, color);
+
+	VertexBufferLayout lineVertexBufferLayout;
+	lineVertexBufferLayout.attributeCount = (uint32_t)primitiveVertexAttribs.size();
+	lineVertexBufferLayout.attributes = primitiveVertexAttribs.data();
+	lineVertexBufferLayout.arrayStride = sizeof(LineVertexAttributes);
+	lineVertexBufferLayout.stepMode = VertexStepMode::Vertex;
+
+	std::vector<VertexBufferLayout> vertexBufferLayouts = {lineVertexBufferLayout};
+
+	pipelineDesc.vertex.bufferCount = static_cast<uint32_t>(vertexBufferLayouts.size());
+	pipelineDesc.vertex.buffers = vertexBufferLayouts.data();
+
+	pipelineDesc.vertex.module = m_lineShaderModule;
+	pipelineDesc.vertex.entryPoint = "vs_main";
+	pipelineDesc.vertex.constantCount = 0;
+	pipelineDesc.vertex.constants = nullptr;
+
+	pipelineDesc.primitive.topology = PrimitiveTopology::LineList;
+	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
+	pipelineDesc.primitive.cullMode = CullMode::Back;
+
+	FragmentState fragmentState;
+	pipelineDesc.fragment = &fragmentState;
+	fragmentState.module = m_lineShaderModule;
+	fragmentState.entryPoint = "fs_main";
+	fragmentState.constantCount = 0;
+	fragmentState.constants = nullptr;
+
+	BlendState blendState;
+	blendState.color.srcFactor = BlendFactor::SrcAlpha;
+	blendState.color.dstFactor = BlendFactor::OneMinusSrcAlpha;
+	blendState.color.operation = BlendOperation::Add;
+	blendState.alpha.srcFactor = BlendFactor::Zero;
+	blendState.alpha.dstFactor = BlendFactor::One;
+	blendState.alpha.operation = BlendOperation::Add;
+
+	ColorTargetState colorTarget;
+	colorTarget.format = m_swapChainFormat;
+	colorTarget.blend = &blendState;
+	colorTarget.writeMask = ColorWriteMask::All;
+
+	fragmentState.targetCount = 1;
+	fragmentState.targets = &colorTarget;
+
+	DepthStencilState depthStencilState = Default;
+	depthStencilState.depthCompare = CompareFunction::Less;
+	depthStencilState.depthWriteEnabled = true;
+	depthStencilState.format = m_depthTextureFormat;
+	depthStencilState.stencilReadMask = 0;
+	depthStencilState.stencilWriteMask = 0;
+
+	pipelineDesc.depthStencil = &depthStencilState;
+
+	pipelineDesc.multisample.count = 1;
+	pipelineDesc.multisample.mask = ~0u;
+	pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+	// Create the pipeline layout
+	PipelineLayoutDescriptor layoutDesc{};
+	layoutDesc.bindGroupLayoutCount = 1;
+	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_bindGroupLayout;
+	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
+	pipelineDesc.layout = layout;
+
+	m_linePipeline = m_device.createRenderPipeline(pipelineDesc);
+	std::cout << "Render pipeline: " << m_linePipeline << std::endl;
+
+	return m_linePipeline != nullptr;
+}
+
 bool Renderer::initInstancingRenderPipeline()
 {
 	std::cout << "Creating instancing shader module..." << std::endl;
@@ -467,21 +589,21 @@ bool Renderer::initInstancingRenderPipeline()
 	RenderPipelineDescriptor pipelineDesc;
 
 	// This is for instanced rendering
-	std::vector<VertexAttribute> primitiveVertexAttribs(2);
+	std::vector<VertexAttribute> lineVertexAttribs(2);
 
 	// Position attribute
-	primitiveVertexAttribs[0].shaderLocation = 0;
-	primitiveVertexAttribs[0].format = VertexFormat::Float32x3;
-	primitiveVertexAttribs[0].offset = offsetof(PrimitiveVertexAttributes, position);
+	lineVertexAttribs[0].shaderLocation = 0;
+	lineVertexAttribs[0].format = VertexFormat::Float32x3;
+	lineVertexAttribs[0].offset = offsetof(PrimitiveVertexAttributes, position);
 
 	// Normal attribute
-	primitiveVertexAttribs[1].shaderLocation = 1;
-	primitiveVertexAttribs[1].format = VertexFormat::Float32x3;
-	primitiveVertexAttribs[1].offset = offsetof(PrimitiveVertexAttributes, normal);
+	lineVertexAttribs[1].shaderLocation = 1;
+	lineVertexAttribs[1].format = VertexFormat::Float32x3;
+	lineVertexAttribs[1].offset = offsetof(PrimitiveVertexAttributes, normal);
 
 	VertexBufferLayout primitiveVertexBufferLayout;
-	primitiveVertexBufferLayout.attributeCount = (uint32_t)primitiveVertexAttribs.size();
-	primitiveVertexBufferLayout.attributes = primitiveVertexAttribs.data();
+	primitiveVertexBufferLayout.attributeCount = (uint32_t)lineVertexAttribs.size();
+	primitiveVertexBufferLayout.attributes = lineVertexAttribs.data();
 	primitiveVertexBufferLayout.arrayStride = sizeof(PrimitiveVertexAttributes);
 	primitiveVertexBufferLayout.stepMode = VertexStepMode::Vertex;
 
@@ -837,6 +959,12 @@ bool Renderer::initGeometry()
 	return m_vertexBuffer != nullptr && m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr;
 }
 
+void Renderer::terminateLinePipeline()
+{
+	m_linePipeline.release();
+	m_lineShaderModule.release();
+}
+
 void Renderer::terminateGeometry()
 {
 	m_vertexBuffer.destroy();
@@ -847,8 +975,16 @@ void Renderer::terminateGeometry()
 	m_cubeVertexBuffer.release();
 	m_cubeIndexBuffer.destroy();
 	m_cubeIndexBuffer.release();
-	m_instanceBuffer.destroy();
-	m_instanceBuffer.release();
+	if (m_instanceBuffer != nullptr)
+	{
+		m_instanceBuffer.destroy();
+		m_instanceBuffer.release();
+	}
+	if (m_lineVertexBuffer != nullptr)
+	{
+		m_lineVertexBuffer.destroy();
+		m_lineVertexBuffer.release();
+	}
 	m_cubeVertexCount = 0;
 	m_cubeIndexCount = 0;
 }
@@ -1089,6 +1225,16 @@ void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale,
 {
 	m_cubes.push_back({position, rotation, scale, color});
 }
+void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
+{
+	m_lines.push_back({position1, color1});
+	m_lines.push_back({position2, color2});
+}
+
+void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color)
+{
+	drawLine(position1, position2, color, color);
+}
 
 void Renderer::updateGui(RenderPassEncoder renderPass)
 {
@@ -1097,7 +1243,6 @@ void Renderer::updateGui(RenderPassEncoder renderPass)
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	// simulator.onGUI();
 	defineGUI();
 
 	// Draw the UI

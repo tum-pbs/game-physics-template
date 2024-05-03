@@ -34,14 +34,15 @@ void Simulator::onGUI()
 void Simulator::onDraw()
 {
     drawCoordinatesAxes();
-    for (float x = -10; x < 10; x++)
-    {
-        for (float y = -10; y < 10; y++)
-        {
-            for (float z = -10; z < 10; z++)
-            {
-                renderer.drawCube({x, y, z}, rotation, scale, color);
-            }
-        }
-    }
+    renderer.drawLine({-1, 0, 1}, {1, 0, 1}, {1, 0, 0}, {0, 0, 1});
+    // for (float x = -10; x < 10; x++)
+    // {
+    //     for (float y = -10; y < 10; y++)
+    //     {
+    //         for (float z = -10; z < 10; z++)
+    //         {
+    //             renderer.drawCube({x, y, z}, rotation, scale, color);
+    //         }
+    //     }
+    // }
 };

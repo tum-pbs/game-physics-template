@@ -47,6 +47,12 @@ public:
 		vec3 normal;
 	};
 
+	struct LineVertexAttributes
+	{
+		vec3 position;
+		vec3 color;
+	};
+
 	struct InstancedVertexAttributes
 	{
 		vec3 position;
