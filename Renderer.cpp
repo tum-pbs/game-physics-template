@@ -70,13 +70,9 @@ bool Renderer::onInit()
 		return false;
 	if (!initBindGroupLayout())
 		return false;
-	if (!initRenderPipeline())
-		return false;
 	if (!initInstancingRenderPipeline())
 		return false;
 	if (!initLinePipeline())
-		return false;
-	if (!initTextures())
 		return false;
 	if (!initGeometry())
 		return false;
@@ -231,8 +227,6 @@ void Renderer::onFinish()
 	terminateLightingUniforms();
 	terminateUniforms();
 	terminateGeometry();
-	terminateTextures();
-	terminateRenderPipeline();
 	terminateInstancingRenderPipeline();
 	terminateLinePipeline();
 	terminateBindGroupLayout();
@@ -683,118 +677,6 @@ bool Renderer::initInstancingRenderPipeline()
 	return m_instancingPipeline != nullptr;
 }
 
-bool Renderer::initRenderPipeline()
-{
-	m_shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/shader.wgsl", m_device);
-
-	RenderPipelineDescriptor pipelineDesc;
-
-	// Vertex fetch
-	std::vector<VertexAttribute> vertexAttribs(6);
-
-	// Position attribute
-	vertexAttribs[0].shaderLocation = 0;
-	vertexAttribs[0].format = VertexFormat::Float32x3;
-	vertexAttribs[0].offset = 0;
-
-	// Normal attribute
-	vertexAttribs[1].shaderLocation = 1;
-	vertexAttribs[1].format = VertexFormat::Float32x3;
-	vertexAttribs[1].offset = offsetof(VertexAttributes, normal);
-
-	// Color attribute
-	vertexAttribs[2].shaderLocation = 2;
-	vertexAttribs[2].format = VertexFormat::Float32x3;
-	vertexAttribs[2].offset = offsetof(VertexAttributes, color);
-
-	// UV attribute
-	vertexAttribs[3].shaderLocation = 3;
-	vertexAttribs[3].format = VertexFormat::Float32x2;
-	vertexAttribs[3].offset = offsetof(VertexAttributes, uv);
-
-	// Tangent attribute
-	vertexAttribs[4].shaderLocation = 4;
-	vertexAttribs[4].format = VertexFormat::Float32x3;
-	vertexAttribs[4].offset = offsetof(VertexAttributes, tangent);
-
-	// Bitangent attribute
-	vertexAttribs[5].shaderLocation = 5;
-	vertexAttribs[5].format = VertexFormat::Float32x3;
-	vertexAttribs[5].offset = offsetof(VertexAttributes, bitangent);
-
-	VertexBufferLayout vertexBufferLayout;
-	vertexBufferLayout.attributeCount = (uint32_t)vertexAttribs.size();
-	vertexBufferLayout.attributes = vertexAttribs.data();
-	vertexBufferLayout.arrayStride = sizeof(VertexAttributes);
-	vertexBufferLayout.stepMode = VertexStepMode::Vertex;
-
-	pipelineDesc.vertex.bufferCount = 1;
-	pipelineDesc.vertex.buffers = &vertexBufferLayout;
-
-	pipelineDesc.vertex.module = m_shaderModule;
-	pipelineDesc.vertex.entryPoint = "vs_main";
-	pipelineDesc.vertex.constantCount = 0;
-	pipelineDesc.vertex.constants = nullptr;
-
-	pipelineDesc.primitive.topology = PrimitiveTopology::TriangleList;
-	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
-	pipelineDesc.primitive.frontFace = FrontFace::CCW;
-	pipelineDesc.primitive.cullMode = CullMode::None;
-
-	FragmentState fragmentState;
-	pipelineDesc.fragment = &fragmentState;
-	fragmentState.module = m_shaderModule;
-	fragmentState.entryPoint = "fs_main";
-	fragmentState.constantCount = 0;
-	fragmentState.constants = nullptr;
-
-	BlendState blendState;
-	blendState.color.srcFactor = BlendFactor::SrcAlpha;
-	blendState.color.dstFactor = BlendFactor::OneMinusSrcAlpha;
-	blendState.color.operation = BlendOperation::Add;
-	blendState.alpha.srcFactor = BlendFactor::Zero;
-	blendState.alpha.dstFactor = BlendFactor::One;
-	blendState.alpha.operation = BlendOperation::Add;
-
-	ColorTargetState colorTarget;
-	colorTarget.format = m_swapChainFormat;
-	colorTarget.blend = &blendState;
-	colorTarget.writeMask = ColorWriteMask::All;
-
-	fragmentState.targetCount = 1;
-	fragmentState.targets = &colorTarget;
-
-	DepthStencilState depthStencilState = Default;
-	depthStencilState.depthCompare = CompareFunction::Less;
-	depthStencilState.depthWriteEnabled = true;
-	depthStencilState.format = m_depthTextureFormat;
-	depthStencilState.stencilReadMask = 0;
-	depthStencilState.stencilWriteMask = 0;
-
-	pipelineDesc.depthStencil = &depthStencilState;
-
-	pipelineDesc.multisample.count = 1;
-	pipelineDesc.multisample.mask = ~0u;
-	pipelineDesc.multisample.alphaToCoverageEnabled = false;
-
-	// Create the pipeline layout
-	PipelineLayoutDescriptor layoutDesc{};
-	layoutDesc.bindGroupLayoutCount = 1;
-	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_bindGroupLayout;
-	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
-	pipelineDesc.layout = layout;
-
-	m_pipeline = m_device.createRenderPipeline(pipelineDesc);
-
-	return m_pipeline != nullptr;
-}
-
-void Renderer::terminateRenderPipeline()
-{
-	m_pipeline.release();
-	m_shaderModule.release();
-}
-
 void Renderer::terminateInstancingRenderPipeline()
 {
 	m_instancingPipeline.release();
@@ -806,75 +688,9 @@ void Renderer::clearScene()
 	m_lines.clear();
 }
 
-bool Renderer::initTextures()
-{
-	// Create a sampler
-	SamplerDescriptor samplerDesc;
-	samplerDesc.addressModeU = AddressMode::Repeat;
-	samplerDesc.addressModeV = AddressMode::Repeat;
-	samplerDesc.addressModeW = AddressMode::Repeat;
-	samplerDesc.magFilter = FilterMode::Linear;
-	samplerDesc.minFilter = FilterMode::Linear;
-	samplerDesc.mipmapFilter = MipmapFilterMode::Linear;
-	samplerDesc.lodMinClamp = 0.0f;
-	samplerDesc.lodMaxClamp = 8.0f;
-	samplerDesc.compare = CompareFunction::Undefined;
-	samplerDesc.maxAnisotropy = 1;
-	m_sampler = m_device.createSampler(samplerDesc);
-
-	// Create textures
-	m_baseColorTexture = ResourceManager::loadTexture(RESOURCE_DIR "/cobblestone_floor_08_diff_2k.jpg", m_device, &m_baseColorTextureView);
-	// m_baseColorTexture = ResourceManager::loadTexture(RESOURCE_DIR "/fourareen2K_albedo.jpg", m_device, &m_baseColorTextureView);
-	if (!m_baseColorTexture)
-	{
-		std::cerr << "Could not load base color texture!" << std::endl;
-		return false;
-	}
-
-	m_normalTexture = ResourceManager::loadTexture(RESOURCE_DIR "/cobblestone_floor_08_nor_gl_2k.png", m_device, &m_normalTextureView);
-	// m_normalTexture = ResourceManager::loadTexture(RESOURCE_DIR "/fourareen2K_normals.png", m_device, &m_normalTextureView);
-	if (!m_normalTexture)
-	{
-		std::cerr << "Could not load normal texture!" << std::endl;
-		return false;
-	}
-
-	return m_baseColorTextureView != nullptr && m_normalTextureView != nullptr;
-}
-
-void Renderer::terminateTextures()
-{
-	m_baseColorTextureView.release();
-	m_baseColorTexture.destroy();
-	m_baseColorTexture.release();
-	m_normalTextureView.release();
-	m_normalTexture.destroy();
-	m_normalTexture.release();
-	m_sampler.release();
-}
-
 bool Renderer::initGeometry()
 {
-	// Load mesh data from OBJ file
-	std::vector<VertexAttributes> vertexData;
-	bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR "/cylinder.obj", vertexData);
-
 	// bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR "/fourareen.obj", vertexData);
-	if (!success)
-	{
-		std::cerr << "Could not load geometry!" << std::endl;
-		return false;
-	}
-
-	// Create vertex buffer
-	BufferDescriptor bufferDesc;
-	bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
-	bufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-	bufferDesc.mappedAtCreation = false;
-	m_vertexBuffer = m_device.createBuffer(bufferDesc);
-	m_queue.writeBuffer(m_vertexBuffer, 0, vertexData.data(), bufferDesc.size);
-
-	m_vertexCount = static_cast<int>(vertexData.size());
 
 	BufferDescriptor cubeVertexBufferDesc;
 	cubeVertexBufferDesc.size = cube::vertices.size() * sizeof(PrimitiveVertexAttributes);
@@ -890,7 +706,7 @@ bool Renderer::initGeometry()
 	m_cubeIndexBuffer = m_device.createBuffer(cubeIndexBufferDesc);
 	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cube::indices.data(), cubeIndexBufferDesc.size);
 
-	return m_vertexBuffer != nullptr && m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr;
+	return m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr;
 }
 
 void Renderer::terminateLinePipeline()
@@ -901,9 +717,6 @@ void Renderer::terminateLinePipeline()
 
 void Renderer::terminateGeometry()
 {
-	m_vertexBuffer.destroy();
-	m_vertexBuffer.release();
-	m_vertexCount = 0;
 
 	m_cubeVertexBuffer.destroy();
 	m_cubeVertexBuffer.release();
@@ -987,8 +800,7 @@ void Renderer::updateLightingUniforms()
 
 bool Renderer::initBindGroupLayout()
 {
-	std::vector<BindGroupLayoutEntry> bindingLayoutEntries(5, Default);
-	//                                                     ^ This was a 4
+	std::vector<BindGroupLayoutEntry> bindingLayoutEntries(2, Default);
 
 	// The uniform buffer binding
 	BindGroupLayoutEntry &bindingLayout = bindingLayoutEntries[0];
@@ -997,31 +809,9 @@ bool Renderer::initBindGroupLayout()
 	bindingLayout.buffer.type = BufferBindingType::Uniform;
 	bindingLayout.buffer.minBindingSize = sizeof(MyUniforms);
 
-	// The base color texture binding
-	BindGroupLayoutEntry &textureBindingLayout = bindingLayoutEntries[1];
-	textureBindingLayout.binding = 1;
-	textureBindingLayout.visibility = ShaderStage::Fragment;
-	textureBindingLayout.texture.sampleType = TextureSampleType::Float;
-	textureBindingLayout.texture.viewDimension = TextureViewDimension::_2D;
-
-	// The normal map binding
-	BindGroupLayoutEntry &normalTextureBindingLayout = bindingLayoutEntries[2];
-	normalTextureBindingLayout.binding = 2;
-	normalTextureBindingLayout.visibility = ShaderStage::Fragment;
-	normalTextureBindingLayout.texture.sampleType = TextureSampleType::Float;
-	normalTextureBindingLayout.texture.viewDimension = TextureViewDimension::_2D;
-
-	// The texture sampler binding
-	BindGroupLayoutEntry &samplerBindingLayout = bindingLayoutEntries[3];
-	samplerBindingLayout.binding = 3;
-	//                             ^ This was a 2
-	samplerBindingLayout.visibility = ShaderStage::Fragment;
-	samplerBindingLayout.sampler.type = SamplerBindingType::Filtering;
-
 	// The lighting uniform buffer binding
-	BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[4];
-	lightingUniformLayout.binding = 4;
-	//                              ^ This was a 3
+	BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[1];
+	lightingUniformLayout.binding = 1;
 	lightingUniformLayout.visibility = ShaderStage::Fragment; // only Fragment is needed
 	lightingUniformLayout.buffer.type = BufferBindingType::Uniform;
 	lightingUniformLayout.buffer.minBindingSize = sizeof(LightingUniforms);
@@ -1043,8 +833,7 @@ void Renderer::terminateBindGroupLayout()
 bool Renderer::initBindGroup()
 {
 	// Create a binding
-	std::vector<BindGroupEntry> bindings(5);
-	//                                   ^ This was a 4
+	std::vector<BindGroupEntry> bindings(2);
 
 	bindings[0].binding = 0;
 	bindings[0].buffer = m_uniformBuffer;
@@ -1052,18 +841,9 @@ bool Renderer::initBindGroup()
 	bindings[0].size = sizeof(MyUniforms);
 
 	bindings[1].binding = 1;
-	bindings[1].textureView = m_baseColorTextureView;
-
-	bindings[2].binding = 2;
-	bindings[2].textureView = m_normalTextureView;
-
-	bindings[3].binding = 3;
-	bindings[3].sampler = m_sampler;
-
-	bindings[4].binding = 4;
-	bindings[4].buffer = m_lightingUniformBuffer;
-	bindings[4].offset = 0;
-	bindings[4].size = sizeof(LightingUniforms);
+	bindings[1].buffer = m_lightingUniformBuffer;
+	bindings[1].offset = 0;
+	bindings[1].size = sizeof(LightingUniforms);
 
 	BindGroupDescriptor bindGroupDesc;
 	bindGroupDesc.layout = m_bindGroupLayout;
@@ -1157,6 +937,7 @@ void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale,
 {
 	m_cubes.push_back({position, rotation, scale, color});
 }
+
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
 {
 	m_lines.push_back({position1, color1});

@@ -74,17 +74,11 @@ private:
 	bool initDepthBuffer();
 	void terminateDepthBuffer();
 
-	bool initRenderPipeline();
-	void terminateRenderPipeline();
-
 	bool initInstancingRenderPipeline();
 	void terminateInstancingRenderPipeline();
 
 	bool initLinePipeline();
 	void terminateLinePipeline();
-
-	bool initTextures();
-	void terminateTextures();
 
 	bool initGeometry();
 	void terminateGeometry();
@@ -194,26 +188,14 @@ private:
 	wgpu::TextureView m_depthTextureView = nullptr;
 
 	// Render Pipeline
-	wgpu::ShaderModule m_shaderModule = nullptr;
-	wgpu::RenderPipeline m_pipeline = nullptr;
 	wgpu::ShaderModule m_instancingShaderModule = nullptr;
 	wgpu::RenderPipeline m_instancingPipeline = nullptr;
 	wgpu::ShaderModule m_lineShaderModule = nullptr;
 	wgpu::RenderPipeline m_linePipeline = nullptr;
 
-	// Texture
-	wgpu::Sampler m_sampler = nullptr;
-	wgpu::Texture m_baseColorTexture = nullptr;
-	wgpu::TextureView m_baseColorTextureView = nullptr;
-	wgpu::Texture m_normalTexture = nullptr;
-	wgpu::TextureView m_normalTextureView = nullptr;
-
-	// Geometry
-	wgpu::Buffer m_vertexBuffer = nullptr;
 	wgpu::Buffer m_cubeVertexBuffer = nullptr;
 	wgpu::Buffer m_cubeIndexBuffer = nullptr;
 	wgpu::Buffer m_lineVertexBuffer = nullptr;
-	int m_vertexCount = 0;
 	wgpu::Buffer m_instanceBuffer = nullptr;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
 	std::vector<ResourceManager::LineVertexAttributes> m_lines;
