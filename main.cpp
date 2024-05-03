@@ -35,6 +35,7 @@ int main(int, char **)
 	if (!renderer.onInit())
 		return 1;
 
+	simulator.init();
 	while (renderer.isRunning())
 	{
 		simulator.simulateStep();

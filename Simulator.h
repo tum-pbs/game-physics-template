@@ -14,6 +14,7 @@ public:
     void simulateStep();
     void onDraw();
     void onGUI();
+    void init();
 
 private:
     void drawCoordinatesAxes();
