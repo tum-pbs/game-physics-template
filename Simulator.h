@@ -17,6 +17,8 @@ public:
     void init();
 
 private:
+    using vec3 = glm::vec3;
+    void drawWireCube(vec3 position, vec3 scale, vec3 color);
     void drawCoordinatesAxes();
     Renderer &renderer;
 };
