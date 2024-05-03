@@ -20,6 +20,7 @@ add_executable(Template
 	main.cpp
 	Renderer.h
 	Renderer.cpp
+	Primitives.h
 	ResourceManager.h
 	ResourceManager.cpp
 	implementations.cpp
