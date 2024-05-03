@@ -47,6 +47,8 @@
 #include <string>
 #include <array>
 
+#include "Primitives.h"
+
 using namespace wgpu;
 using VertexAttributes = ResourceManager::VertexAttributes;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
@@ -186,10 +188,10 @@ void Renderer::onFrame()
 	if (cubeInstances > 0)
 	{
 		renderPass.setPipeline(m_instancingPipeline);
-		renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexCount * sizeof(PrimitiveVertexAttributes));
+		renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexBuffer.getSize());
 		renderPass.setVertexBuffer(1, m_instanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
-		renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexCount * sizeof(uint16_t));
-		renderPass.drawIndexed(m_cubeIndexCount, cubeInstances, 0, 0, 0);
+		renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexBuffer.getSize());
+		renderPass.drawIndexed(static_cast<uint32_t>(cube::indices.size()), cubeInstances, 0, 0, 0);
 	}
 
 	if (lines > 0)
@@ -336,17 +338,14 @@ bool Renderer::initWindowAndDevice()
 		return false;
 	}
 
-	std::cout << "Requesting adapter..." << std::endl;
 	m_surface = glfwGetWGPUSurface(m_instance, m_window);
 	RequestAdapterOptions adapterOpts{};
 	adapterOpts.compatibleSurface = m_surface;
 	Adapter adapter = m_instance.requestAdapter(adapterOpts);
-	std::cout << "Got adapter: " << adapter << std::endl;
 
 	SupportedLimits supportedLimits;
 	adapter.getLimits(&supportedLimits);
 
-	std::cout << "Requesting device..." << std::endl;
 	RequiredLimits requiredLimits = Default;
 	requiredLimits.limits.maxVertexAttributes = 6;
 	requiredLimits.limits.maxVertexBuffers = 3;
@@ -372,7 +371,6 @@ bool Renderer::initWindowAndDevice()
 	deviceDesc.requiredLimits = &requiredLimits;
 	deviceDesc.defaultQueue.label = "The default queue";
 	m_device = adapter.requestDevice(deviceDesc);
-	std::cout << "Got device: " << m_device << std::endl;
 
 	// Add an error callback for more debug info
 	m_errorCallbackHandle = m_device.setUncapturedErrorCallback([](ErrorType type, char const *message)
@@ -430,7 +428,6 @@ bool Renderer::initSwapChain()
 	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
 
-	std::cout << "Creating swapchain..." << std::endl;
 	SwapChainDescriptor swapChainDesc;
 	swapChainDesc.width = static_cast<uint32_t>(width);
 	swapChainDesc.height = static_cast<uint32_t>(height);
@@ -438,7 +435,6 @@ bool Renderer::initSwapChain()
 	swapChainDesc.format = m_swapChainFormat;
 	swapChainDesc.presentMode = PresentMode::Immediate;
 	m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
-	std::cout << "Swapchain: " << m_swapChain << std::endl;
 	return m_swapChain != nullptr;
 }
 
@@ -464,7 +460,6 @@ bool Renderer::initDepthBuffer()
 	depthTextureDesc.viewFormatCount = 1;
 	depthTextureDesc.viewFormats = (WGPUTextureFormat *)&m_depthTextureFormat;
 	m_depthTexture = m_device.createTexture(depthTextureDesc);
-	std::cout << "Depth texture: " << m_depthTexture << std::endl;
 
 	// Create the view of the depth texture manipulated by the rasterizer
 	TextureViewDescriptor depthTextureViewDesc;
@@ -476,7 +471,6 @@ bool Renderer::initDepthBuffer()
 	depthTextureViewDesc.dimension = TextureViewDimension::_2D;
 	depthTextureViewDesc.format = m_depthTextureFormat;
 	m_depthTextureView = m_depthTexture.createView(depthTextureViewDesc);
-	std::cout << "Depth texture view: " << m_depthTextureView << std::endl;
 
 	return m_depthTextureView != nullptr;
 }
@@ -490,11 +484,7 @@ void Renderer::terminateDepthBuffer()
 
 bool Renderer::initLinePipeline()
 {
-	std::cout << "Creating line shader module..." << std::endl;
 	m_lineShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", m_device);
-	std::cout << "Line shader module: " << m_lineShaderModule << std::endl;
-
-	std::cout << "Creating line render pipeline..." << std::endl;
 	RenderPipelineDescriptor pipelineDesc;
 
 	// This is for instanced rendering
@@ -574,18 +564,13 @@ bool Renderer::initLinePipeline()
 	pipelineDesc.layout = layout;
 
 	m_linePipeline = m_device.createRenderPipeline(pipelineDesc);
-	std::cout << "Render pipeline: " << m_linePipeline << std::endl;
 
 	return m_linePipeline != nullptr;
 }
 
 bool Renderer::initInstancingRenderPipeline()
 {
-	std::cout << "Creating instancing shader module..." << std::endl;
 	m_instancingShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", m_device);
-	std::cout << "Instancing shader module: " << m_instancingShaderModule << std::endl;
-
-	std::cout << "Creating instancing render pipeline..." << std::endl;
 	RenderPipelineDescriptor pipelineDesc;
 
 	// This is for instanced rendering
@@ -694,18 +679,14 @@ bool Renderer::initInstancingRenderPipeline()
 	pipelineDesc.layout = layout;
 
 	m_instancingPipeline = m_device.createRenderPipeline(pipelineDesc);
-	std::cout << "Render pipeline: " << m_instancingPipeline << std::endl;
 
 	return m_instancingPipeline != nullptr;
 }
 
 bool Renderer::initRenderPipeline()
 {
-	std::cout << "Creating shader module..." << std::endl;
 	m_shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/shader.wgsl", m_device);
-	std::cout << "Shader module: " << m_shaderModule << std::endl;
 
-	std::cout << "Creating render pipeline..." << std::endl;
 	RenderPipelineDescriptor pipelineDesc;
 
 	// Vertex fetch
@@ -804,7 +785,6 @@ bool Renderer::initRenderPipeline()
 	pipelineDesc.layout = layout;
 
 	m_pipeline = m_device.createRenderPipeline(pipelineDesc);
-	std::cout << "Render pipeline: " << m_pipeline << std::endl;
 
 	return m_pipeline != nullptr;
 }
@@ -823,6 +803,7 @@ void Renderer::terminateInstancingRenderPipeline()
 void Renderer::clearScene()
 {
 	m_cubes.clear();
+	m_lines.clear();
 }
 
 bool Renderer::initTextures()
@@ -895,66 +876,19 @@ bool Renderer::initGeometry()
 
 	m_vertexCount = static_cast<int>(vertexData.size());
 
-	std::vector<PrimitiveVertexAttributes> cubeVertexData = {
-		// left handed coordinates: z is away, x is right and y is up, position and normals
-		// front face
-		{{-0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
-		{{0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
-		{{0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
-		{{-0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
-		// left face
-		{{-0.5, -0.5, -0.5}, {-1.0, 0.0, 0.0}},
-		{{-0.5, 0.5, -0.5}, {-1.0, 0.0, 0.0}},
-		{{-0.5, 0.5, 0.5}, {-1.0, 0.0, 0.0}},
-		{{-0.5, -0.5, 0.5}, {-1.0, 0.0, 0.0}},
-		// right face
-		{{0.5, -0.5, -0.5}, {1.0, 0.0, 0.0}},
-		{{0.5, 0.5, -0.5}, {1.0, 0.0, 0.0}},
-		{{0.5, 0.5, 0.5}, {1.0, 0.0, 0.0}},
-		{{0.5, -0.5, 0.5}, {1.0, 0.0, 0.0}},
-		// back face
-		{{-0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
-		{{0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
-		{{0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
-		{{-0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
-		// top face
-		{{-0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
-		{{0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
-		{{0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
-		{{-0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
-		// bottom face
-		{{-0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
-		{{0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
-		{{0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
-		{{-0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
-	};
-
-	m_cubeVertexCount = static_cast<int>(cubeVertexData.size());
-
-	std::vector<uint16_t> cubeIndexData = {
-		0, 2, 1, 0, 3, 2,		// front face
-		4, 6, 5, 4, 7, 6,		// left face
-		8, 9, 10, 8, 10, 11,	// right face
-		12, 13, 14, 12, 14, 15, // back face
-		16, 18, 17, 16, 19, 18, // top face
-		20, 21, 22, 20, 22, 23, // bottom face
-	};
-
-	m_cubeIndexCount = static_cast<int>(cubeIndexData.size());
-
 	BufferDescriptor cubeVertexBufferDesc;
-	cubeVertexBufferDesc.size = cubeVertexData.size() * sizeof(PrimitiveVertexAttributes);
+	cubeVertexBufferDesc.size = cube::vertices.size() * sizeof(PrimitiveVertexAttributes);
 	cubeVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
 	cubeVertexBufferDesc.mappedAtCreation = false;
 	m_cubeVertexBuffer = m_device.createBuffer(cubeVertexBufferDesc);
-	m_queue.writeBuffer(m_cubeVertexBuffer, 0, cubeVertexData.data(), cubeVertexBufferDesc.size);
+	m_queue.writeBuffer(m_cubeVertexBuffer, 0, cube::vertices.data(), cubeVertexBufferDesc.size);
 
 	BufferDescriptor cubeIndexBufferDesc;
-	cubeIndexBufferDesc.size = cubeIndexData.size() * sizeof(uint16_t);
+	cubeIndexBufferDesc.size = cube::indices.size() * sizeof(uint16_t);
 	cubeIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
 	cubeIndexBufferDesc.mappedAtCreation = false;
 	m_cubeIndexBuffer = m_device.createBuffer(cubeIndexBufferDesc);
-	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cubeIndexData.data(), cubeIndexBufferDesc.size);
+	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cube::indices.data(), cubeIndexBufferDesc.size);
 
 	return m_vertexBuffer != nullptr && m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr;
 }
@@ -985,8 +919,6 @@ void Renderer::terminateGeometry()
 		m_lineVertexBuffer.destroy();
 		m_lineVertexBuffer.release();
 	}
-	m_cubeVertexCount = 0;
-	m_cubeIndexCount = 0;
 }
 
 bool Renderer::initUniforms()

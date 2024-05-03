@@ -31,6 +31,7 @@
 #include "ResourceManager.h"
 #include <functional>
 #include <array>
+#include <utility>
 
 // Forward declare
 struct GLFWwindow;
@@ -213,8 +214,6 @@ private:
 	wgpu::Buffer m_cubeIndexBuffer = nullptr;
 	wgpu::Buffer m_lineVertexBuffer = nullptr;
 	int m_vertexCount = 0;
-	int m_cubeVertexCount = 0;
-	int m_cubeIndexCount = 0;
 	wgpu::Buffer m_instanceBuffer = nullptr;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
 	std::vector<ResourceManager::LineVertexAttributes> m_lines;
