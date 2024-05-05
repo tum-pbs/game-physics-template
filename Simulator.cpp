@@ -108,14 +108,21 @@ void Simulator::onGUI()
     ImGui::ColorEdit3("Color", glm::value_ptr(m_color));
     ImGui::DragFloat3("Rotation", glm::value_ptr(m_rotation), 0.1f);
     ImGui::DragFloat3("Scale", glm::value_ptr(m_scale), 0.01f);
+
+    ImGui::BeginTable("Cubes", 2);
+    ImGui::PushButtonRepeat(true);
+    ImGui::TableNextColumn();
     if (ImGui::Button("Add Cube"))
     {
         addToCubeCube();
     }
+    ImGui::TableNextColumn();
     if (ImGui::Button("Remove Cube"))
     {
-        cubes.pop_back();
+        if (!cubes.empty())
+            cubes.pop_back();
     }
+    ImGui::EndTable();
     ImGui::End();
 }
 
