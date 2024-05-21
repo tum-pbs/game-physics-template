@@ -50,9 +50,9 @@ void Simulator::init()
 
 void Simulator::drawCoordinatesAxes()
 {
-    renderer.drawCube({1, 0, 0}, glm::quat(vec3()), {2, 0.1, 0.1}, {1, 0, 0}); // pos x is red
-    renderer.drawCube({0, 1, 0}, glm::quat(vec3()), {0.1, 2, 0.1}, {0, 1, 0}); // pos y is green
-    renderer.drawCube({0, 0, 1}, glm::quat(vec3()), {0.1, 0.1, 2}, {0, 0, 1}); // pos z is blue
+    renderer.drawCube({1, 0, 0}, glm::quat(vec3()), {2, 0.1, 0.1}, {1, 0, 0}, Renderer::dontCull); // pos x is red
+    renderer.drawCube({0, 1, 0}, glm::quat(vec3()), {0.1, 2, 0.1}, {0, 1, 0}, Renderer::dontCull); // pos y is green
+    renderer.drawCube({0, 0, 1}, glm::quat(vec3()), {0.1, 0.1, 2}, {0, 0, 1}, Renderer::dontCull); // pos z is blue
 }
 
 void Simulator::drawWireCube(vec3 position, vec3 scale, vec3 color)

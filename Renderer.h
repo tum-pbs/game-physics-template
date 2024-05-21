@@ -40,9 +40,9 @@ class Renderer
 {
 public:
 	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
-	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color);
+	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
-	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color);
+	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
 	// A function called only once at the beginning. Returns false is init failed.
@@ -70,6 +70,7 @@ public:
 	enum DrawFlags
 	{
 		unlit = 1 << 0,
+		dontCull = 1 << 1,
 	};
 	enum UniformFlags
 	{

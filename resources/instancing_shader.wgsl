@@ -1,7 +1,7 @@
 
 const UNIFORM_CULLING_PLANE = 1u;
 const INSTANCE_UNLIT = 1u;
-
+const INSTANCE_NO_CULLING_PLANE = 2u;
 struct VertexInput {
 	@location(0) position: vec3f,
 	@location(1) normal: vec3f,
@@ -77,7 +77,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
-    if (uMyUniforms.flags & UNIFORM_CULLING_PLANE) != 0u {
+    if (uMyUniforms.flags & UNIFORM_CULLING_PLANE) != 0u && (in.flags & INSTANCE_NO_CULLING_PLANE) == 0u {
         let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
         if distance < 0.0 {
         discard;

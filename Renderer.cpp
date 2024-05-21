@@ -1006,9 +1006,9 @@ uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 sc
 	return current_id++;
 }
 
-uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color)
+uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags)
 {
-	return drawCube(position, rotation, scale, glm::vec4(color, 1.0f));
+	return drawCube(position, rotation, scale, glm::vec4(color, 1.0f), flags);
 }
 
 uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
@@ -1017,9 +1017,9 @@ uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 sc
 	return current_id++;
 }
 
-uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color)
+uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags)
 {
-	return drawQuad(position, rotation, scale, glm::vec4(color, 1.0f));
+	return drawQuad(position, rotation, scale, glm::vec4(color, 1.0f), flags);
 }
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
