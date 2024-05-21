@@ -122,14 +122,14 @@ void Simulator::drawWirePlane(vec3 normal, float distance)
     vec3 right = glm::cross(normal, forward);
     forward = glm::normalize(forward);
     right = glm::normalize(right);
-    renderer.drawLine(center - forward * size + right * size, center + forward * size + right * size, {1, 1, 1});
-    renderer.drawLine(center + forward * size + right * size, center + forward * size - right * size, {1, 1, 1});
-    renderer.drawLine(center + forward * size - right * size, center - forward * size - right * size, {1, 1, 1});
-    renderer.drawLine(center - forward * size - right * size, center - forward * size + right * size, {1, 1, 1});
+    renderer.drawLine(center - forward * size + right * size, center + forward * size + right * size, {0, 0, 0});
+    renderer.drawLine(center + forward * size + right * size, center + forward * size - right * size, {0, 0, 0});
+    renderer.drawLine(center + forward * size - right * size, center - forward * size - right * size, {0, 0, 0});
+    renderer.drawLine(center - forward * size - right * size, center - forward * size + right * size, {0, 0, 0});
     float angleX = glm::degrees(atan2f(normal.y, normal.z));
     float angleY = -glm::degrees(atan2f(normal.x, normal.z));
     vec3 eulerAngles = {angleX, angleY, 0};
-    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size), {1, 1, 1});
+    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size * 2), {0.5f, 0.5f, 0.5f, 0.3f});
 }
 
 void Simulator::onGUI()
@@ -168,16 +168,4 @@ void Simulator::onDraw()
     {
         renderer.drawCube(cube.transform.position, cube.transform.rotation, cube.transform.scale, cube.color);
     }
-    // drawCoordinatesAxes();
-    // renderer.drawLine({-1, 0, 1}, {1, 0, 1}, {1, 0, 0}, {0, 0, 1});
-    // for (float x = -10; x < 10; x++)
-    // {
-    //     for (float y = -10; y < 10; y++)
-    //     {
-    //         for (float z = -10; z < 10; z++)
-    //         {
-    //             renderer.drawCube({x, y, z}, rotation, scale, color);
-    //         }
-    //     }
-    // }
 };

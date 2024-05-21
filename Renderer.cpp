@@ -630,7 +630,7 @@ bool Renderer::initInstancingRenderPipeline()
 
 	// Color attribute
 	instanceAttribs[3].shaderLocation = 5;
-	instanceAttribs[3].format = VertexFormat::Float32x3;
+	instanceAttribs[3].format = VertexFormat::Float32x4;
 	instanceAttribs[3].offset = offsetof(InstancedVertexAttributes, color);
 
 	VertexBufferLayout instanceBufferLayout;
@@ -982,14 +982,24 @@ void Renderer::terminateGui()
 	ImGui_ImplWGPU_Shutdown();
 }
 
-void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color)
 {
 	m_cubes.push_back({position, rotation, scale, color});
 }
 
-void Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+{
+	drawCube(position, rotation, scale, glm::vec4(color, 1.0f));
+}
+
+void Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color)
 {
 	m_quads.push_back({position, rotation, scale, color});
+}
+
+void Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+{
+	drawQuad(position, rotation, scale, glm::vec4(color, 1.0f));
 }
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)

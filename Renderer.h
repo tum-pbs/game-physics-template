@@ -39,7 +39,9 @@ struct GLFWwindow;
 class Renderer
 {
 public:
+	void drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color);
 	void drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
+	void drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color);
 	void drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);

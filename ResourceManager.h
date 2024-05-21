@@ -37,6 +37,7 @@ class ResourceManager
 public:
 	// (Just aliases to make notations lighter)
 	using path = std::filesystem::path;
+	using vec4 = glm::vec4;
 	using vec3 = glm::vec3;
 	using vec2 = glm::vec2;
 	using mat3x3 = glm::mat3x3;
@@ -58,7 +59,7 @@ public:
 		vec3 position;
 		vec3 rotation;
 		vec3 scale;
-		vec3 color;
+		vec4 color;
 	};
 
 	/**
