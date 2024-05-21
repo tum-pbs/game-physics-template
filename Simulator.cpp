@@ -129,7 +129,7 @@ void Simulator::drawPlane(vec3 normal, float distance)
     float angleX = glm::degrees(atan2f(normal.y, normal.z));
     float angleY = -glm::degrees(atan2f(normal.x, normal.z));
     vec3 eulerAngles = {angleX, angleY, 0};
-    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size * 2), {0.2f, 0.2f, 0.2f, 0.3f}, Renderer::unlit);
+    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size * 2), {0.0f, 0.0f, 0.0f, 0.5f}, Renderer::unlit);
 }
 
 void Simulator::onGUI()
