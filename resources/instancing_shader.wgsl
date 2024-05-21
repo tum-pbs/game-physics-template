@@ -5,12 +5,12 @@ struct VertexInput {
 	@location(2) world_pos: vec3f,
 	@location(3) rotation: vec3f,
 	@location(4) scale: vec3f,
-	@location(5) color: vec3f,
+	@location(5) color: vec4f,
 };
 
 struct VertexOutput {
 	@builtin(position) position: vec4f,
-	@location(0) color: vec3f,
+	@location(0) color: vec4f,
 	@location(1) normal: vec3f,
     @location(2) worldpos: vec3f,
 };
@@ -66,11 +66,9 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
-    if uMyUniforms.cullingDistance >= 0.0 {
-        let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
-        if distance < 0.0 {
+    let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
+    if distance < 0.0 {
         discard;
-        }
     }
     // Basic phong shading
 
@@ -78,9 +76,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     let normal = normalize(in.normal);
     let diffuse = max(dot(normal, light_dir), 0.0);
     let ambient = 0.1;
-    let color = in.color * (diffuse + ambient);
+    let color = in.color.xyz * (diffuse + ambient);
 
 	// Gamma-correction
     let corrected_color = pow(color, vec3f(2.2));
-    return vec4f(corrected_color, 1.0);
+    return vec4f(corrected_color, in.color.w);
 }
