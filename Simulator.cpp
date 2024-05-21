@@ -129,7 +129,7 @@ void Simulator::drawPlane(vec3 normal, float distance)
     float angleX = glm::degrees(atan2f(normal.y, normal.z));
     float angleY = -glm::degrees(atan2f(normal.x, normal.z));
     vec3 eulerAngles = {angleX, angleY, 0};
-    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size * 2), {0.5f, 0.5f, 0.5f, 0.3f});
+    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size * 2), {0.2f, 0.2f, 0.2f, 0.3f}, Renderer::unlit);
 }
 
 void Simulator::onGUI()
@@ -154,7 +154,7 @@ void Simulator::onGUI()
             cubes.pop_back();
     }
     ImGui::EndTable();
-    ImGui::CheckboxFlags("Culling Plane Enabled", &renderer.m_uniforms.flags, 1);
+    ImGui::CheckboxFlags("Culling Plane Enabled", &renderer.m_uniforms.flags, Renderer::cullingPlane);
     if (renderer.m_uniforms.flags)
     {
         ImGui::DragDirection("CullDirection", renderer.m_uniforms.cullingNormal);

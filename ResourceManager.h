@@ -60,6 +60,8 @@ public:
 		vec3 rotation;
 		vec3 scale;
 		vec4 color;
+		uint32_t id;
+		uint32_t flags;
 	};
 
 	/**

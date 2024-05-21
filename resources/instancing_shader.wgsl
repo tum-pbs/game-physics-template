@@ -1,4 +1,7 @@
 
+const UNIFORM_CULLING_PLANE = 1u;
+const INSTANCE_UNLIT = 1u;
+
 struct VertexInput {
 	@location(0) position: vec3f,
 	@location(1) normal: vec3f,
@@ -6,6 +9,8 @@ struct VertexInput {
 	@location(3) rotation: vec3f,
 	@location(4) scale: vec3f,
 	@location(5) color: vec4f,
+    @location(6) id: u32,
+    @location(7) flags: u32
 };
 
 struct VertexOutput {
@@ -13,6 +18,8 @@ struct VertexOutput {
 	@location(0) color: vec4f,
 	@location(1) normal: vec3f,
     @location(2) worldpos: vec3f,
+    @location(3) id: u32,
+    @location(4) flags: u32
 };
 
 //
@@ -60,6 +67,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * vec4f(rot * (in.position * in.scale) + in.world_pos, 1.0);
     out.normal = rot * in.normal;
     out.color = in.color;
+    out.id = in.id;
+    out.flags = in.flags;
     out.worldpos = rot * (in.position * in.scale) + in.world_pos;
     return out;
 }
@@ -67,20 +76,23 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
-    if (uMyUniforms.flags & 1u) != 0u {
+    if (uMyUniforms.flags & UNIFORM_CULLING_PLANE) != 0u {
         let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
         if distance < 0.0 {
         discard;
         }
     }
     // Basic phong shading
+    var color = in.color.xyz;
 
-    let light_dir = normalize(vec3f(2.0, 0.5, 1.0));
-    let normal = normalize(in.normal);
-    let diffuse = max(dot(normal, light_dir), 0.0);
-    let ambient = 0.1;
-    let color = in.color.xyz * (diffuse + ambient);
+    if (in.flags & INSTANCE_UNLIT) == 0u {
 
+        let light_dir = normalize(vec3f(2.0, 0.5, 1.0));
+        let normal = normalize(in.normal);
+        let diffuse = max(dot(normal, light_dir), 0.0);
+        let ambient = 0.1;
+        color = color * (diffuse + ambient);
+    }
 	// Gamma-correction
     let corrected_color = pow(color, vec3f(2.2));
     return vec4f(corrected_color, in.color.w);

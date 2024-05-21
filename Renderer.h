@@ -39,10 +39,10 @@ struct GLFWwindow;
 class Renderer
 {
 public:
-	void drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color);
-	void drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
-	void drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color);
-	void drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
+	uint32_t drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
+	uint32_t drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
+	uint32_t drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
+	uint32_t drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
 	// A function called only once at the beginning. Returns false is init failed.
@@ -66,6 +66,15 @@ public:
 	void onScroll(double xoffset, double yoffset);
 	void clearScene();
 	std::function<void()> defineGUI = nullptr;
+
+	enum DrawFlags
+	{
+		unlit = 1 << 0,
+	};
+	enum UniformFlags
+	{
+		cullingPlane = 1 << 0,
+	};
 	struct MyUniforms
 	{
 		// We add transform matrices
@@ -130,11 +139,7 @@ private:
 	using vec3 = glm::vec3;
 	using vec2 = glm::vec2;
 
-	/**
-	 * The same structure as in the shader, replicated in C++
-	 */
-
-	// Have the compiler check byte alignment
+	uint32_t current_id = 0;
 
 	struct LightingUniforms
 	{

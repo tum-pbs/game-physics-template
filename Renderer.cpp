@@ -366,7 +366,7 @@ bool Renderer::initWindowAndDevice()
 	adapter.getLimits(&supportedLimits);
 
 	RequiredLimits requiredLimits = Default;
-	requiredLimits.limits.maxVertexAttributes = 6;
+	requiredLimits.limits.maxVertexAttributes = 8;
 	requiredLimits.limits.maxVertexBuffers = 3;
 	requiredLimits.limits.maxBufferSize = 150000 * sizeof(VertexAttributes);
 	requiredLimits.limits.maxVertexBufferArrayStride = sizeof(VertexAttributes);
@@ -611,8 +611,8 @@ bool Renderer::initInstancingRenderPipeline()
 	primitiveVertexBufferLayout.arrayStride = sizeof(PrimitiveVertexAttributes);
 	primitiveVertexBufferLayout.stepMode = VertexStepMode::Vertex;
 
-	// position, rotation, scale, color
-	std::vector<VertexAttribute> instanceAttribs(4);
+	// position, rotation, scale, color, id, flags
+	std::vector<VertexAttribute> instanceAttribs(6);
 
 	// Position attribute
 	instanceAttribs[0].shaderLocation = 2;
@@ -633,6 +633,16 @@ bool Renderer::initInstancingRenderPipeline()
 	instanceAttribs[3].shaderLocation = 5;
 	instanceAttribs[3].format = VertexFormat::Float32x4;
 	instanceAttribs[3].offset = offsetof(InstancedVertexAttributes, color);
+
+	// ID attribute
+	instanceAttribs[4].shaderLocation = 6;
+	instanceAttribs[4].format = VertexFormat::Uint32;
+	instanceAttribs[4].offset = offsetof(InstancedVertexAttributes, id);
+
+	// Flags attribute
+	instanceAttribs[5].shaderLocation = 7;
+	instanceAttribs[5].format = VertexFormat::Uint32;
+	instanceAttribs[5].offset = offsetof(InstancedVertexAttributes, flags);
 
 	VertexBufferLayout instanceBufferLayout;
 	instanceBufferLayout.attributeCount = (uint32_t)instanceAttribs.size();
@@ -712,6 +722,7 @@ void Renderer::clearScene()
 	m_cubes.clear();
 	m_quads.clear();
 	m_lines.clear();
+	current_id = 0;
 }
 
 bool Renderer::initGeometry()
@@ -984,24 +995,31 @@ void Renderer::terminateGui()
 	ImGui_ImplWGPU_Shutdown();
 }
 
-void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color)
+uint32_t Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
-	m_cubes.push_back({position, rotation, scale, color});
+	m_cubes.push_back({position,
+					   rotation,
+					   scale,
+					   color,
+					   current_id,
+					   flags});
+	return current_id++;
 }
 
-void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+uint32_t Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
 {
-	drawCube(position, rotation, scale, glm::vec4(color, 1.0f));
+	return drawCube(position, rotation, scale, glm::vec4(color, 1.0f));
 }
 
-void Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color)
+uint32_t Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
-	m_quads.push_back({position, rotation, scale, color});
+	m_quads.push_back({position, rotation, scale, color, current_id, flags});
+	return current_id++;
 }
 
-void Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+uint32_t Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
 {
-	drawQuad(position, rotation, scale, glm::vec4(color, 1.0f));
+	return drawQuad(position, rotation, scale, glm::vec4(color, 1.0f));
 }
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
