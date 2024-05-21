@@ -26,6 +26,7 @@ struct MyUniforms {
 	time: f32,
     cullingNormal: vec3f,
     cullingDistance: f32,
+    flags: u32,
 };
 
 @group(0) @binding(0) var<uniform> uMyUniforms: MyUniforms;
@@ -66,9 +67,11 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
-    let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
-    if distance < 0.0 {
+    if (uMyUniforms.flags & 1u) != 0u {
+        let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
+        if distance < 0.0 {
         discard;
+        }
     }
     // Basic phong shading
 

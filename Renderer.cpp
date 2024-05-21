@@ -98,6 +98,7 @@ void Renderer::onFrame()
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingNormal), &m_uniforms.cullingNormal, sizeof(MyUniforms::cullingNormal));
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingOffset), &m_uniforms.cullingOffset, sizeof(MyUniforms::cullingOffset));
+	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, flags), &m_uniforms.flags, sizeof(MyUniforms::flags));
 
 	int cubeInstances = static_cast<int>(m_cubes.size());
 	if (m_cubeInstanceBuffer != nullptr)
@@ -798,6 +799,7 @@ bool Renderer::initUniforms()
 	m_uniforms.time = 1.0f;
 	m_uniforms.cullingNormal = {0.0f, 0.0f, 1.0f};
 	m_uniforms.cullingOffset = 0.0f;
+	m_uniforms.flags = 0;
 	m_queue.writeBuffer(m_uniformBuffer, 0, &m_uniforms, sizeof(MyUniforms));
 
 	updateProjectionMatrix();

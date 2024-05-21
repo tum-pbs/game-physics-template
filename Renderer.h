@@ -76,7 +76,11 @@ public:
 		float time;
 		glm::vec3 cullingNormal;
 		float cullingOffset;
+		uint32_t flags;
+		float _pad[3];
 	};
+	static_assert(sizeof(MyUniforms) % 16 == 0);
+
 	MyUniforms m_uniforms;
 
 private:
@@ -131,7 +135,6 @@ private:
 	 */
 
 	// Have the compiler check byte alignment
-	static_assert(sizeof(MyUniforms) % 16 == 0);
 
 	struct LightingUniforms
 	{

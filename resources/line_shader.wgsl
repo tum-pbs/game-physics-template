@@ -18,6 +18,9 @@ struct MyUniforms {
 	modelMatrix: mat4x4f,
 	cameraWorldPosition: vec3f,
 	time: f32,
+	cullingNormal: vec3f,
+	cullingDistance: vec3f,
+	flags: u32,
 };
 
 @group(0) @binding(0) var<uniform> uMyUniforms: MyUniforms;

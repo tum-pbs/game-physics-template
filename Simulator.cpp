@@ -113,7 +113,7 @@ void Simulator::simulateStep()
     // rotation.z = fmod(rotation.z, 360.0f);
 }
 
-void Simulator::drawWirePlane(vec3 normal, float distance)
+void Simulator::drawPlane(vec3 normal, float distance)
 {
     vec3 center = normal * distance;
     renderer.drawLine(center, center + normal, {1, 1, 1});
@@ -154,8 +154,12 @@ void Simulator::onGUI()
             cubes.pop_back();
     }
     ImGui::EndTable();
-    ImGui::DragDirection("CullDirection", renderer.m_uniforms.cullingNormal);
-    ImGui::DragFloat("CullOffset", &renderer.m_uniforms.cullingOffset, 0.01f);
+    ImGui::CheckboxFlags("Culling Plane Enabled", &renderer.m_uniforms.flags, 1);
+    if (renderer.m_uniforms.flags)
+    {
+        ImGui::DragDirection("CullDirection", renderer.m_uniforms.cullingNormal);
+        ImGui::DragFloat("CullOffset", &renderer.m_uniforms.cullingOffset, 0.01f);
+    }
     ImGui::End();
 }
 
@@ -163,7 +167,8 @@ void Simulator::onDraw()
 {
     drawCoordinatesAxes();
     drawWireCube({0, 0, 0}, {5, 5, 5}, {1, 1, 1});
-    drawWirePlane(renderer.m_uniforms.cullingNormal, renderer.m_uniforms.cullingOffset);
+    if (renderer.m_uniforms.flags & 1)
+        drawPlane(renderer.m_uniforms.cullingNormal, renderer.m_uniforms.cullingOffset);
     for (Object &cube : cubes)
     {
         renderer.drawCube(cube.transform.position, cube.transform.rotation, cube.transform.scale, cube.color);
