@@ -2,6 +2,7 @@
 #include <imgui.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <glm/gtx/polar_coordinates.hpp>
 
 struct Transform
 {
@@ -18,6 +19,17 @@ glm::vec3 m_rotation(0, 0, 0);
 glm::vec3 m_scale(0.8, 0.8, 0.8);
 glm::vec3 m_color(1, 0, 0);
 std::vector<Object> cubes;
+
+namespace ImGui
+{
+    bool DragDirection(const char *label, glm::vec3 &direction)
+    {
+        glm::vec2 angles = glm::degrees(glm::polar(glm::vec3(direction)));
+        bool changed = ImGui::DragFloat2(label, glm::value_ptr(angles));
+        direction = glm::euclidean(glm::radians(angles));
+        return changed;
+    }
+}
 void addToCubeCube()
 {
     size_t i = cubes.size();
@@ -101,6 +113,21 @@ void Simulator::simulateStep()
     // rotation.z = fmod(rotation.z, 360.0f);
 }
 
+void Simulator::drawWirePlane(vec3 normal, float distance)
+{
+    vec3 center = normal * distance;
+    renderer.drawLine(center, center + normal, {1, 1, 1});
+    float size = 5;
+    vec3 forward = glm::cross(normal, vec3(1, 0, 0));
+    vec3 right = glm::cross(normal, forward);
+    forward = glm::normalize(forward);
+    right = glm::normalize(right);
+    renderer.drawLine(center - forward * size + right * size, center + forward * size + right * size, {1, 1, 1});
+    renderer.drawLine(center + forward * size + right * size, center + forward * size - right * size, {1, 1, 1});
+    renderer.drawLine(center + forward * size - right * size, center - forward * size - right * size, {1, 1, 1});
+    renderer.drawLine(center - forward * size - right * size, center - forward * size + right * size, {1, 1, 1});
+}
+
 void Simulator::onGUI()
 {
     ImGui::Begin("Primitives");
@@ -123,6 +150,8 @@ void Simulator::onGUI()
             cubes.pop_back();
     }
     ImGui::EndTable();
+    ImGui::DragDirection("CullDirection", renderer.m_uniforms.cullingNormal);
+    ImGui::DragFloat("CullOffset", &renderer.m_uniforms.cullingOffset, 0.01f);
     ImGui::End();
 }
 
@@ -130,6 +159,10 @@ void Simulator::onDraw()
 {
     drawCoordinatesAxes();
     drawWireCube({0, 0, 0}, {5, 5, 5}, {1, 1, 1});
+    if (renderer.m_uniforms.cullingOffset >= 0.0f)
+    {
+        drawWirePlane(renderer.m_uniforms.cullingNormal, renderer.m_uniforms.cullingOffset);
+    }
     for (Object &cube : cubes)
     {
         renderer.drawCube(cube.transform.position, cube.transform.rotation, cube.transform.scale, cube.color);

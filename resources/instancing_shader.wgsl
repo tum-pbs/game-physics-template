@@ -12,6 +12,7 @@ struct VertexOutput {
 	@builtin(position) position: vec4f,
 	@location(0) color: vec3f,
 	@location(1) normal: vec3f,
+    @location(2) worldpos: vec3f,
 };
 
 //
@@ -23,6 +24,8 @@ struct MyUniforms {
 	modelMatrix: mat4x4f,
 	cameraWorldPosition: vec3f,
 	time: f32,
+    cullingNormal: vec3f,
+    cullingDistance: f32,
 };
 
 @group(0) @binding(0) var<uniform> uMyUniforms: MyUniforms;
@@ -56,13 +59,19 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * vec4f(rot * (in.position * in.scale) + in.world_pos, 1.0);
     out.normal = rot * in.normal;
     out.color = in.color;
+    out.worldpos = rot * (in.position * in.scale) + in.world_pos;
     return out;
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
-
+    if uMyUniforms.cullingDistance >= 0.0 {
+        let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
+        if distance < 0.0 {
+        discard;
+        }
+    }
     // Basic phong shading
 
     let light_dir = normalize(vec3f(2.0, 0.5, 1.0));

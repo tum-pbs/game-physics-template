@@ -96,6 +96,8 @@ void Renderer::onFrame()
 	// Update uniform buffer
 	m_uniforms.time = static_cast<float>(glfwGetTime());
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
+	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingNormal), &m_uniforms.cullingNormal, sizeof(MyUniforms::cullingNormal));
+	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingOffset), &m_uniforms.cullingOffset, sizeof(MyUniforms::cullingOffset));
 
 	int cubeInstances = static_cast<int>(m_cubes.size());
 	if (m_instanceBuffer != nullptr)
@@ -158,6 +160,7 @@ void Renderer::onFrame()
 	depthStencilAttachment.depthStoreOp = StoreOp::Store;
 	depthStencilAttachment.depthReadOnly = false;
 	depthStencilAttachment.stencilClearValue = 0;
+
 #ifdef WEBGPU_BACKEND_WGPU
 	depthStencilAttachment.stencilLoadOp = LoadOp::Clear;
 	depthStencilAttachment.stencilStoreOp = StoreOp::Store;
@@ -173,14 +176,9 @@ void Renderer::onFrame()
 	renderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
-	// renderPass.setPipeline(m_pipeline);
-
-	// renderPass.setVertexBuffer(0, m_vertexBuffer, 0, m_vertexCount * sizeof(VertexAttributes));
-
 	// Set binding group
 	renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
 
-	// renderPass.draw(m_vertexCount, 1, 0, 0);
 	if (cubeInstances > 0)
 	{
 		renderPass.setPipeline(m_instancingPipeline);
@@ -197,6 +195,7 @@ void Renderer::onFrame()
 
 		renderPass.draw(lines, 1, 0, 0);
 	}
+
 	// We add the GUI drawing commands to the render pass
 	updateGui(renderPass);
 
@@ -748,7 +747,8 @@ bool Renderer::initUniforms()
 	m_uniforms.viewMatrix = glm::lookAt(vec3(-2.0f, -3.0f, 2.0f), vec3(0.0f), vec3(0, 0, 1));
 	m_uniforms.projectionMatrix = glm::perspective(45 * PI / 180, 640.0f / 480.0f, 0.01f, 100.0f);
 	m_uniforms.time = 1.0f;
-	m_uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
+	m_uniforms.cullingNormal = {0.0f, 0.0f, 1.0f};
+	m_uniforms.cullingOffset = 0.0f;
 	m_queue.writeBuffer(m_uniformBuffer, 0, &m_uniforms, sizeof(MyUniforms));
 
 	updateProjectionMatrix();

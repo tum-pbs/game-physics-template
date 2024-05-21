@@ -63,6 +63,18 @@ public:
 	void onScroll(double xoffset, double yoffset);
 	void clearScene();
 	std::function<void()> defineGUI = nullptr;
+	struct MyUniforms
+	{
+		// We add transform matrices
+		glm::mat4x4 projectionMatrix;
+		glm::mat4x4 viewMatrix;
+		glm::mat4x4 modelMatrix;
+		glm::vec3 cameraWorldPosition;
+		float time;
+		glm::vec3 cullingNormal;
+		float cullingOffset;
+	};
+	MyUniforms m_uniforms;
 
 private:
 	bool initWindowAndDevice();
@@ -114,16 +126,7 @@ private:
 	/**
 	 * The same structure as in the shader, replicated in C++
 	 */
-	struct MyUniforms
-	{
-		// We add transform matrices
-		mat4x4 projectionMatrix;
-		mat4x4 viewMatrix;
-		mat4x4 modelMatrix;
-		vec4 color;
-		vec3 cameraWorldPosition;
-		float time;
-	};
+
 	// Have the compiler check byte alignment
 	static_assert(sizeof(MyUniforms) % 16 == 0);
 
@@ -202,7 +205,6 @@ private:
 
 	// Uniforms
 	wgpu::Buffer m_uniformBuffer = nullptr;
-	MyUniforms m_uniforms;
 	wgpu::Buffer m_lightingUniformBuffer = nullptr;
 	LightingUniforms m_lightingUniforms;
 	bool m_lightingUniformsChanged = true;
