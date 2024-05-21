@@ -196,6 +196,14 @@ void Renderer::onFrame()
 	// Set binding group
 	renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
 
+	if (lines > 0)
+	{
+		renderPass.setPipeline(m_linePipeline);
+		renderPass.setVertexBuffer(0, m_lineVertexBuffer, 0, lines * sizeof(LineVertexAttributes));
+
+		renderPass.draw(lines, 1, 0, 0);
+	}
+
 	if (cubeInstances > 0)
 	{
 		renderPass.setPipeline(m_instancingPipeline);
@@ -212,14 +220,6 @@ void Renderer::onFrame()
 		renderPass.setVertexBuffer(1, m_quadInstanceBuffer, 0, quadInstances * sizeof(InstancedVertexAttributes));
 		renderPass.setIndexBuffer(m_quadIndexBuffer, IndexFormat::Uint16, 0, m_quadIndexBuffer.getSize());
 		renderPass.drawIndexed(static_cast<uint32_t>(quad::indices.size()), quadInstances, 0, 0, 0);
-	}
-
-	if (lines > 0)
-	{
-		renderPass.setPipeline(m_linePipeline);
-		renderPass.setVertexBuffer(0, m_lineVertexBuffer, 0, lines * sizeof(LineVertexAttributes));
-
-		renderPass.draw(lines, 1, 0, 0);
 	}
 
 	// We add the GUI drawing commands to the render pass
