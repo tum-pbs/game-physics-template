@@ -126,6 +126,10 @@ void Simulator::drawWirePlane(vec3 normal, float distance)
     renderer.drawLine(center + forward * size + right * size, center + forward * size - right * size, {1, 1, 1});
     renderer.drawLine(center + forward * size - right * size, center - forward * size - right * size, {1, 1, 1});
     renderer.drawLine(center - forward * size - right * size, center - forward * size + right * size, {1, 1, 1});
+    float angleX = glm::degrees(atan2f(normal.y, normal.z));
+    float angleY = -glm::degrees(atan2f(normal.x, normal.z));
+    vec3 eulerAngles = {angleX, angleY, 0};
+    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size), {1, 1, 1});
 }
 
 void Simulator::onGUI()
@@ -159,10 +163,7 @@ void Simulator::onDraw()
 {
     drawCoordinatesAxes();
     drawWireCube({0, 0, 0}, {5, 5, 5}, {1, 1, 1});
-    if (renderer.m_uniforms.cullingOffset >= 0.0f)
-    {
-        drawWirePlane(renderer.m_uniforms.cullingNormal, renderer.m_uniforms.cullingOffset);
-    }
+    drawWirePlane(renderer.m_uniforms.cullingNormal, renderer.m_uniforms.cullingOffset);
     for (Object &cube : cubes)
     {
         renderer.drawCube(cube.transform.position, cube.transform.rotation, cube.transform.scale, cube.color);

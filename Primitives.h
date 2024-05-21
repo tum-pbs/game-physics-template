@@ -43,3 +43,20 @@ namespace cube
         20, 21, 22, 20, 22, 23, // bottom face
     };
 }
+namespace quad
+{
+    const VertexList vertices = {
+        {{-0.5, -0.5, 0}, {0, 0, 1}},
+        {{0.5, -0.5, 0}, {0, 0, 1}},
+        {{0.5, 0.5, 0}, {0, 0, 1}},
+        {{-0.5, 0.5, 0}, {0, 0, 1}},
+    };
+    const IndexList indices = {
+        0,
+        1,
+        2,
+        0,
+        2,
+        3,
+    };
+}

@@ -40,6 +40,7 @@ class Renderer
 {
 public:
 	void drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
+	void drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
 	// A function called only once at the beginning. Returns false is init failed.
@@ -198,9 +199,13 @@ private:
 
 	wgpu::Buffer m_cubeVertexBuffer = nullptr;
 	wgpu::Buffer m_cubeIndexBuffer = nullptr;
+	wgpu::Buffer m_quadVertexBuffer = nullptr;
+	wgpu::Buffer m_quadIndexBuffer = nullptr;
 	wgpu::Buffer m_lineVertexBuffer = nullptr;
-	wgpu::Buffer m_instanceBuffer = nullptr;
+	wgpu::Buffer m_cubeInstanceBuffer = nullptr;
+	wgpu::Buffer m_quadInstanceBuffer = nullptr;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
+	std::vector<ResourceManager::InstancedVertexAttributes> m_quads;
 	std::vector<ResourceManager::LineVertexAttributes> m_lines;
 
 	// Uniforms

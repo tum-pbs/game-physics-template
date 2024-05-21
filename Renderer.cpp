@@ -100,19 +100,35 @@ void Renderer::onFrame()
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingOffset), &m_uniforms.cullingOffset, sizeof(MyUniforms::cullingOffset));
 
 	int cubeInstances = static_cast<int>(m_cubes.size());
-	if (m_instanceBuffer != nullptr)
+	if (m_cubeInstanceBuffer != nullptr)
 	{
-		m_instanceBuffer.destroy();
-		m_instanceBuffer = nullptr;
+		m_cubeInstanceBuffer.destroy();
+		m_cubeInstanceBuffer = nullptr;
 	}
-	BufferDescriptor instanceBufferDesc;
+	BufferDescriptor cubeInstanceBufferDesc;
 	if (cubeInstances > 0)
 	{
-		instanceBufferDesc.size = sizeof(InstancedVertexAttributes) * cubeInstances;
-		instanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-		instanceBufferDesc.mappedAtCreation = false;
-		m_instanceBuffer = m_device.createBuffer(instanceBufferDesc);
-		m_queue.writeBuffer(m_instanceBuffer, 0, m_cubes.data(), instanceBufferDesc.size);
+		cubeInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * cubeInstances;
+		cubeInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+		cubeInstanceBufferDesc.mappedAtCreation = false;
+		m_cubeInstanceBuffer = m_device.createBuffer(cubeInstanceBufferDesc);
+		m_queue.writeBuffer(m_cubeInstanceBuffer, 0, m_cubes.data(), cubeInstanceBufferDesc.size);
+	}
+
+	int quadInstances = static_cast<int>(m_quads.size());
+	if (m_quadInstanceBuffer != nullptr)
+	{
+		m_quadInstanceBuffer.destroy();
+		m_quadInstanceBuffer = nullptr;
+	}
+	BufferDescriptor quadInstanceBufferDesc;
+	if (quadInstances > 0)
+	{
+		quadInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * quadInstances;
+		quadInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+		quadInstanceBufferDesc.mappedAtCreation = false;
+		m_quadInstanceBuffer = m_device.createBuffer(quadInstanceBufferDesc);
+		m_queue.writeBuffer(m_quadInstanceBuffer, 0, m_quads.data(), quadInstanceBufferDesc.size);
 	}
 
 	int lines = static_cast<int>(m_lines.size());
@@ -183,9 +199,18 @@ void Renderer::onFrame()
 	{
 		renderPass.setPipeline(m_instancingPipeline);
 		renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexBuffer.getSize());
-		renderPass.setVertexBuffer(1, m_instanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
+		renderPass.setVertexBuffer(1, m_cubeInstanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
 		renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexBuffer.getSize());
 		renderPass.drawIndexed(static_cast<uint32_t>(cube::indices.size()), cubeInstances, 0, 0, 0);
+	}
+
+	if (quadInstances > 0)
+	{
+		renderPass.setPipeline(m_instancingPipeline);
+		renderPass.setVertexBuffer(0, m_quadVertexBuffer, 0, m_quadVertexBuffer.getSize());
+		renderPass.setVertexBuffer(1, m_quadInstanceBuffer, 0, quadInstances * sizeof(InstancedVertexAttributes));
+		renderPass.setIndexBuffer(m_quadIndexBuffer, IndexFormat::Uint16, 0, m_quadIndexBuffer.getSize());
+		renderPass.drawIndexed(static_cast<uint32_t>(quad::indices.size()), quadInstances, 0, 0, 0);
 	}
 
 	if (lines > 0)
@@ -684,6 +709,7 @@ void Renderer::terminateInstancingRenderPipeline()
 void Renderer::clearScene()
 {
 	m_cubes.clear();
+	m_quads.clear();
 	m_lines.clear();
 }
 
@@ -705,7 +731,21 @@ bool Renderer::initGeometry()
 	m_cubeIndexBuffer = m_device.createBuffer(cubeIndexBufferDesc);
 	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cube::indices.data(), cubeIndexBufferDesc.size);
 
-	return m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr;
+	BufferDescriptor quadVertexBufferDesc;
+	quadVertexBufferDesc.size = quad::vertices.size() * sizeof(PrimitiveVertexAttributes);
+	quadVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
+	quadVertexBufferDesc.mappedAtCreation = false;
+	m_quadVertexBuffer = m_device.createBuffer(quadVertexBufferDesc);
+	m_queue.writeBuffer(m_quadVertexBuffer, 0, quad::vertices.data(), quadVertexBufferDesc.size);
+
+	BufferDescriptor quadIndexBufferDesc;
+	quadIndexBufferDesc.size = quad::indices.size() * sizeof(uint16_t);
+	quadIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
+	quadIndexBufferDesc.mappedAtCreation = false;
+	m_quadIndexBuffer = m_device.createBuffer(quadIndexBufferDesc);
+	m_queue.writeBuffer(m_quadIndexBuffer, 0, quad::indices.data(), quadIndexBufferDesc.size);
+
+	return m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr && m_quadVertexBuffer != nullptr && m_quadIndexBuffer != nullptr;
 }
 
 void Renderer::terminateLinePipeline()
@@ -721,10 +761,19 @@ void Renderer::terminateGeometry()
 	m_cubeVertexBuffer.release();
 	m_cubeIndexBuffer.destroy();
 	m_cubeIndexBuffer.release();
-	if (m_instanceBuffer != nullptr)
+	m_quadVertexBuffer.destroy();
+	m_quadVertexBuffer.release();
+	m_quadIndexBuffer.destroy();
+	m_quadIndexBuffer.release();
+	if (m_cubeInstanceBuffer != nullptr)
 	{
-		m_instanceBuffer.destroy();
-		m_instanceBuffer.release();
+		m_cubeInstanceBuffer.destroy();
+		m_cubeInstanceBuffer.release();
+	}
+	if (m_quadInstanceBuffer != nullptr)
+	{
+		m_quadInstanceBuffer.destroy();
+		m_quadInstanceBuffer.release();
 	}
 	if (m_lineVertexBuffer != nullptr)
 	{
@@ -936,6 +985,11 @@ void Renderer::terminateGui()
 void Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
 {
 	m_cubes.push_back({position, rotation, scale, color});
+}
+
+void Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+{
+	m_quads.push_back({position, rotation, scale, color});
 }
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
