@@ -28,6 +28,7 @@
 
 #include <webgpu/webgpu.hpp>
 #include <glm/glm.hpp>
+#include <glm/ext.hpp>
 
 #include <vector>
 #include <filesystem>
@@ -40,6 +41,7 @@ public:
 	using vec4 = glm::vec4;
 	using vec3 = glm::vec3;
 	using vec2 = glm::vec2;
+	using quat = glm::quat;
 	using mat3x3 = glm::mat3x3;
 
 	struct PrimitiveVertexAttributes
@@ -57,7 +59,7 @@ public:
 	struct InstancedVertexAttributes
 	{
 		vec3 position;
-		vec3 rotation;
+		quat rotation;
 		vec3 scale;
 		vec4 color;
 		uint32_t id;

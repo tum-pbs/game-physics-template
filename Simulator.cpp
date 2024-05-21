@@ -50,9 +50,9 @@ void Simulator::init()
 
 void Simulator::drawCoordinatesAxes()
 {
-    renderer.drawCube({1, 0, 0}, {0, 0, 0}, {2, 0.1, 0.1}, {1, 0, 0}); // pos x is red
-    renderer.drawCube({0, 1, 0}, {0, 0, 0}, {0.1, 2, 0.1}, {0, 1, 0}); // pos y is green
-    renderer.drawCube({0, 0, 1}, {0, 0, 0}, {0.1, 0.1, 2}, {0, 0, 1}); // pos z is blue
+    renderer.drawCube({1, 0, 0}, glm::quat(vec3()), {2, 0.1, 0.1}, {1, 0, 0}); // pos x is red
+    renderer.drawCube({0, 1, 0}, glm::quat(vec3()), {0.1, 2, 0.1}, {0, 1, 0}); // pos y is green
+    renderer.drawCube({0, 0, 1}, glm::quat(vec3()), {0.1, 0.1, 2}, {0, 0, 1}); // pos z is blue
 }
 
 void Simulator::drawWireCube(vec3 position, vec3 scale, vec3 color)
@@ -126,10 +126,8 @@ void Simulator::drawPlane(vec3 normal, float distance)
     renderer.drawLine(center + forward * size + right * size, center + forward * size - right * size, {0, 0, 0});
     renderer.drawLine(center + forward * size - right * size, center - forward * size - right * size, {0, 0, 0});
     renderer.drawLine(center - forward * size - right * size, center - forward * size + right * size, {0, 0, 0});
-    float angleX = glm::degrees(atan2f(normal.y, normal.z));
-    float angleY = -glm::degrees(atan2f(normal.x, normal.z));
-    vec3 eulerAngles = {angleX, angleY, 0};
-    renderer.drawQuad(center - 0.001f * normal, eulerAngles, vec3(size * 2), {0.0f, 0.0f, 0.0f, 0.5f}, Renderer::unlit);
+    glm::quat rotation = glm::quat_cast(glm::mat3(forward, right, normal));
+    renderer.drawQuad(center - 0.001f * normal, rotation, vec3(size * 2), {0.0f, 0.0f, 0.0f, 0.5f}, Renderer::unlit);
 }
 
 void Simulator::onGUI()
@@ -171,6 +169,6 @@ void Simulator::onDraw()
         drawPlane(renderer.m_uniforms.cullingNormal, renderer.m_uniforms.cullingOffset);
     for (Object &cube : cubes)
     {
-        renderer.drawCube(cube.transform.position, cube.transform.rotation, cube.transform.scale, cube.color);
+        renderer.drawCube(cube.transform.position, glm::quat(glm::radians(cube.transform.rotation)), cube.transform.scale, cube.color);
     }
 };

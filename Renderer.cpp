@@ -995,7 +995,7 @@ void Renderer::terminateGui()
 	ImGui_ImplWGPU_Shutdown();
 }
 
-uint32_t Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
+uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
 	m_cubes.push_back({position,
 					   rotation,
@@ -1006,18 +1006,18 @@ uint32_t Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 sc
 	return current_id++;
 }
 
-uint32_t Renderer::drawCube(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color)
 {
 	return drawCube(position, rotation, scale, glm::vec4(color, 1.0f));
 }
 
-uint32_t Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
+uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
 	m_quads.push_back({position, rotation, scale, color, current_id, flags});
 	return current_id++;
 }
 
-uint32_t Renderer::drawQuad(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
+uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color)
 {
 	return drawQuad(position, rotation, scale, glm::vec4(color, 1.0f));
 }

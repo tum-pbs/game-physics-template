@@ -6,7 +6,7 @@ struct VertexInput {
 	@location(0) position: vec3f,
 	@location(1) normal: vec3f,
 	@location(2) world_pos: vec3f,
-	@location(3) rotation: vec3f,
+	@location(3) rotation: vec4f, // a quaternion
 	@location(4) scale: vec3f,
 	@location(5) color: vec4f,
     @location(6) id: u32,
@@ -38,42 +38,43 @@ struct MyUniforms {
 
 @group(0) @binding(0) var<uniform> uMyUniforms: MyUniforms;
 
-fn rotationX(angle: f32) -> mat3x3f {
-    return mat3x3f(1.0, 0.0, 0.0,
-        0.0, cos(angle), -sin(angle),
-        0.0, sin(angle), cos(angle));
+
+fn quatDot(q1: vec4f, q2: vec4f) -> vec4f {
+    let scalar = q1.w * q2.w - dot(q1.xyz, q2.xyz);
+    let v = cross(q1.xyz, q2.xyz) + q1.w * q2.xyz + q2.w * q1.xyz;
+    return vec4f(v, scalar);
 }
 
-fn rotationY(angle: f32) -> mat3x3f {
-    return mat3x3f(cos(angle), 0.0, sin(angle),
-        0.0, 1.0, 0.0,
-        -sin(angle), 0.0, cos(angle));
+fn quatInv(q: vec4f) -> vec4f {
+    return vec4f(-q.xyz, q.w);
 }
 
-fn rotationZ(angle: f32) -> mat3x3f {
-    return mat3x3f(cos(angle), -sin(angle), 0.0,
-        sin(angle), cos(angle), 0.0,
-        0.0, 0.0, 1.0);
+fn quatMul(q: vec4f, v: vec3f) -> vec3f {
+    let r = quatDot(q, quatDot(vec4f(v, 0.0), quatInv(q)));
+    return r.xyz;
 }
 
-@vertex
+fn transform(position: vec3f, rotation: vec4f, scale: vec3f, v: vec3f) -> vec3f {
+    return position + quatMul(rotation, v * scale);
+}
+
+
+    @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    let rotX = rotationX(radians(in.rotation.x));
-    let rotY = rotationY(radians(in.rotation.y));
-    let rotZ = rotationZ(radians(in.rotation.z));
-    let rot = rotZ * rotY * rotX;
 
-    out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * vec4f(rot * (in.position * in.scale) + in.world_pos, 1.0);
-    out.normal = rot * in.normal;
+    let worldpos = transform(in.world_pos, in.rotation, in.scale, in.position);
+
+    out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * vec4f(worldpos, 1.0);
+    out.normal = quatMul(in.rotation, in.normal);
     out.color = in.color;
     out.id = in.id;
     out.flags = in.flags;
-    out.worldpos = rot * (in.position * in.scale) + in.world_pos;
+    out.worldpos = worldpos;
     return out;
 }
 
-@fragment
+    @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
     if (uMyUniforms.flags & UNIFORM_CULLING_PLANE) != 0u {
