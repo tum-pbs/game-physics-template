@@ -171,4 +171,5 @@ void Simulator::onDraw()
     {
         renderer.drawCube(cube.transform.position, glm::quat(glm::radians(cube.transform.rotation)), cube.transform.scale, cube.color);
     }
+    renderer.drawSphere({0, 0, 0}, 1, {1, 1, 1});
 };

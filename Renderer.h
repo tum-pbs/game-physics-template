@@ -41,6 +41,8 @@ class Renderer
 public:
 	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
 	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
+	uint32_t drawSphere(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
+	uint32_t drawSphere(glm::vec3 position, float scale, glm::vec3 color, uint32_t flags = 0);
 	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
 	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
@@ -212,10 +214,14 @@ private:
 	wgpu::Buffer m_cubeIndexBuffer = nullptr;
 	wgpu::Buffer m_quadVertexBuffer = nullptr;
 	wgpu::Buffer m_quadIndexBuffer = nullptr;
+	wgpu::Buffer m_sphereVertexBuffer = nullptr;
+	wgpu::Buffer m_sphereIndexBuffer = nullptr;
 	wgpu::Buffer m_lineVertexBuffer = nullptr;
 	wgpu::Buffer m_cubeInstanceBuffer = nullptr;
+	wgpu::Buffer m_sphereInstanceBuffer = nullptr;
 	wgpu::Buffer m_quadInstanceBuffer = nullptr;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
+	std::vector<ResourceManager::InstancedVertexAttributes> m_spheres;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_quads;
 	std::vector<ResourceManager::LineVertexAttributes> m_lines;
 

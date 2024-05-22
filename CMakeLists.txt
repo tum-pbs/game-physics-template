@@ -21,6 +21,7 @@ add_executable(Template
 	Renderer.h
 	Renderer.cpp
 	Primitives.h
+	Primitives.cpp
 	ResourceManager.h
 	ResourceManager.cpp
 	implementations.cpp

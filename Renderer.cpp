@@ -100,6 +100,8 @@ void Renderer::onFrame()
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingOffset), &m_uniforms.cullingOffset, sizeof(MyUniforms::cullingOffset));
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, flags), &m_uniforms.flags, sizeof(MyUniforms::flags));
 
+	// prepare cube buffers
+
 	int cubeInstances = static_cast<int>(m_cubes.size());
 	if (m_cubeInstanceBuffer != nullptr)
 	{
@@ -116,6 +118,26 @@ void Renderer::onFrame()
 		m_queue.writeBuffer(m_cubeInstanceBuffer, 0, m_cubes.data(), cubeInstanceBufferDesc.size);
 	}
 
+	// prepare sphere buffers
+
+	int sphereInstances = static_cast<int>(m_spheres.size());
+	if (m_sphereInstanceBuffer != nullptr)
+	{
+		m_sphereInstanceBuffer.destroy();
+		m_sphereInstanceBuffer = nullptr;
+	}
+	BufferDescriptor sphereInstanceBufferDesc;
+	if (sphereInstances > 0)
+	{
+		sphereInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * sphereInstances;
+		sphereInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+		sphereInstanceBufferDesc.mappedAtCreation = false;
+		m_sphereInstanceBuffer = m_device.createBuffer(sphereInstanceBufferDesc);
+		m_queue.writeBuffer(m_sphereInstanceBuffer, 0, m_spheres.data(), sphereInstanceBufferDesc.size);
+	}
+
+	// prepare quad buffers
+
 	int quadInstances = static_cast<int>(m_quads.size());
 	if (m_quadInstanceBuffer != nullptr)
 	{
@@ -131,6 +153,8 @@ void Renderer::onFrame()
 		m_quadInstanceBuffer = m_device.createBuffer(quadInstanceBufferDesc);
 		m_queue.writeBuffer(m_quadInstanceBuffer, 0, m_quads.data(), quadInstanceBufferDesc.size);
 	}
+
+	// prepare line buffers
 
 	int lines = static_cast<int>(m_lines.size());
 	if (m_lineVertexBuffer != nullptr)
@@ -210,7 +234,16 @@ void Renderer::onFrame()
 		renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexBuffer.getSize());
 		renderPass.setVertexBuffer(1, m_cubeInstanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
 		renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexBuffer.getSize());
-		renderPass.drawIndexed(static_cast<uint32_t>(cube::indices.size()), cubeInstances, 0, 0, 0);
+		renderPass.drawIndexed(static_cast<uint32_t>(cube::triangles.size() * 3), cubeInstances, 0, 0, 0);
+	}
+
+	if (sphereInstances > 0)
+	{
+		renderPass.setPipeline(m_instancingPipeline);
+		renderPass.setVertexBuffer(0, m_sphereVertexBuffer, 0, m_sphereVertexBuffer.getSize());
+		renderPass.setVertexBuffer(1, m_sphereInstanceBuffer, 0, sphereInstances * sizeof(InstancedVertexAttributes));
+		renderPass.setIndexBuffer(m_sphereIndexBuffer, IndexFormat::Uint16, 0, m_sphereIndexBuffer.getSize());
+		renderPass.drawIndexed(static_cast<uint32_t>(m_sphereIndexBuffer.getSize() / 2), sphereInstances, 0, 0, 0);
 	}
 
 	if (quadInstances > 0)
@@ -219,7 +252,7 @@ void Renderer::onFrame()
 		renderPass.setVertexBuffer(0, m_quadVertexBuffer, 0, m_quadVertexBuffer.getSize());
 		renderPass.setVertexBuffer(1, m_quadInstanceBuffer, 0, quadInstances * sizeof(InstancedVertexAttributes));
 		renderPass.setIndexBuffer(m_quadIndexBuffer, IndexFormat::Uint16, 0, m_quadIndexBuffer.getSize());
-		renderPass.drawIndexed(static_cast<uint32_t>(quad::indices.size()), quadInstances, 0, 0, 0);
+		renderPass.drawIndexed(static_cast<uint32_t>(quad::triangles.size() * 3), quadInstances, 0, 0, 0);
 	}
 
 	// We add the GUI drawing commands to the render pass
@@ -720,6 +753,7 @@ void Renderer::terminateInstancingRenderPipeline()
 void Renderer::clearScene()
 {
 	m_cubes.clear();
+	m_spheres.clear();
 	m_quads.clear();
 	m_lines.clear();
 	current_id = 0;
@@ -729,6 +763,8 @@ bool Renderer::initGeometry()
 {
 	// bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR "/fourareen.obj", vertexData);
 
+	// cube
+
 	BufferDescriptor cubeVertexBufferDesc;
 	cubeVertexBufferDesc.size = cube::vertices.size() * sizeof(PrimitiveVertexAttributes);
 	cubeVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
@@ -737,11 +773,33 @@ bool Renderer::initGeometry()
 	m_queue.writeBuffer(m_cubeVertexBuffer, 0, cube::vertices.data(), cubeVertexBufferDesc.size);
 
 	BufferDescriptor cubeIndexBufferDesc;
-	cubeIndexBufferDesc.size = cube::indices.size() * sizeof(uint16_t);
+	cubeIndexBufferDesc.size = cube::triangles.size() * sizeof(Triangle);
 	cubeIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
 	cubeIndexBufferDesc.mappedAtCreation = false;
 	m_cubeIndexBuffer = m_device.createBuffer(cubeIndexBufferDesc);
-	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cube::indices.data(), cubeIndexBufferDesc.size);
+	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cube::triangles.data(), cubeIndexBufferDesc.size);
+
+	// sphere
+
+	IndexedMesh sphereMesh = make_icosphere(2);
+	VertexNormalList sphereVertices = sphereMesh.first;
+	TriangleList sphereTriangles = sphereMesh.second;
+
+	BufferDescriptor sphereVertexBufferSDesc;
+	sphereVertexBufferSDesc.size = sphereVertices.size() * sizeof(PrimitiveVertexAttributes);
+	sphereVertexBufferSDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
+	sphereVertexBufferSDesc.mappedAtCreation = false;
+	m_sphereVertexBuffer = m_device.createBuffer(sphereVertexBufferSDesc);
+	m_queue.writeBuffer(m_sphereVertexBuffer, 0, sphereVertices.data(), sphereVertexBufferSDesc.size);
+
+	BufferDescriptor sphereIndexBufferDesc;
+	sphereIndexBufferDesc.size = sphereTriangles.size() * sizeof(Triangle);
+	sphereIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
+	sphereIndexBufferDesc.mappedAtCreation = false;
+	m_sphereIndexBuffer = m_device.createBuffer(sphereIndexBufferDesc);
+	m_queue.writeBuffer(m_sphereIndexBuffer, 0, sphereTriangles.data(), sphereIndexBufferDesc.size);
+
+	// quad
 
 	BufferDescriptor quadVertexBufferDesc;
 	quadVertexBufferDesc.size = quad::vertices.size() * sizeof(PrimitiveVertexAttributes);
@@ -751,11 +809,11 @@ bool Renderer::initGeometry()
 	m_queue.writeBuffer(m_quadVertexBuffer, 0, quad::vertices.data(), quadVertexBufferDesc.size);
 
 	BufferDescriptor quadIndexBufferDesc;
-	quadIndexBufferDesc.size = quad::indices.size() * sizeof(uint16_t);
+	quadIndexBufferDesc.size = quad::triangles.size() * sizeof(Triangle);
 	quadIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
 	quadIndexBufferDesc.mappedAtCreation = false;
 	m_quadIndexBuffer = m_device.createBuffer(quadIndexBufferDesc);
-	m_queue.writeBuffer(m_quadIndexBuffer, 0, quad::indices.data(), quadIndexBufferDesc.size);
+	m_queue.writeBuffer(m_quadIndexBuffer, 0, quad::triangles.data(), quadIndexBufferDesc.size);
 
 	return m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr && m_quadVertexBuffer != nullptr && m_quadIndexBuffer != nullptr;
 }
@@ -773,6 +831,10 @@ void Renderer::terminateGeometry()
 	m_cubeVertexBuffer.release();
 	m_cubeIndexBuffer.destroy();
 	m_cubeIndexBuffer.release();
+	m_sphereVertexBuffer.destroy();
+	m_sphereVertexBuffer.release();
+	m_sphereIndexBuffer.destroy();
+	m_sphereIndexBuffer.release();
 	m_quadVertexBuffer.destroy();
 	m_quadVertexBuffer.release();
 	m_quadIndexBuffer.destroy();
@@ -781,6 +843,11 @@ void Renderer::terminateGeometry()
 	{
 		m_cubeInstanceBuffer.destroy();
 		m_cubeInstanceBuffer.release();
+	}
+	if (m_sphereInstanceBuffer != nullptr)
+	{
+		m_sphereInstanceBuffer.destroy();
+		m_sphereInstanceBuffer.release();
 	}
 	if (m_quadInstanceBuffer != nullptr)
 	{
@@ -1009,6 +1076,17 @@ uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 sc
 uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags)
 {
 	return drawCube(position, rotation, scale, glm::vec4(color, 1.0f), flags);
+}
+
+uint32_t Renderer::drawSphere(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
+{
+	m_spheres.push_back({position, rotation, scale, color, current_id, flags});
+	return current_id++;
+}
+
+uint32_t Renderer::drawSphere(glm::vec3 position, float scale, glm::vec3 color, uint32_t flags)
+{
+	return drawSphere(position, glm::quat(vec3(0)), vec3(scale), glm::vec4(color, 1.0f), flags);
 }
 
 uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
