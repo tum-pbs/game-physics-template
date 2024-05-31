@@ -32,6 +32,9 @@
 #include <functional>
 #include <array>
 #include <utility>
+#include "pipelines/InstancingPipeline.h"
+#include "pipelines/LinePipeline.h"
+#include "pipelines/PostProcessingPipeline.h"
 
 // Forward declare
 struct GLFWwindow;
@@ -105,13 +108,8 @@ private:
 	bool initDepthBuffer();
 	void terminateDepthBuffer();
 
-	bool initInstancingRenderPipeline();
 	void terminateInstancingRenderPipeline();
-
-	bool initLinePipeline();
 	void terminateLinePipeline();
-
-	bool initPostProcessPipeline();
 	void terminatePostProcessPipeline();
 
 	bool initGeometry();
@@ -203,18 +201,14 @@ private:
 	// Swap Chain
 	wgpu::SwapChain m_swapChain = nullptr;
 
+	InstancingPipeline m_instancingPipeline;
+	LinePipeline m_linePipeline;
+	PostProcessingPipeline m_postProcessingPipeline;
+
 	// Depth Buffer
 	wgpu::TextureFormat m_depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
 	wgpu::Texture m_depthTexture = nullptr;
 	wgpu::TextureView m_depthTextureView = nullptr;
-
-	// Render Pipeline
-	wgpu::ShaderModule m_instancingShaderModule = nullptr;
-	wgpu::RenderPipeline m_instancingPipeline = nullptr;
-	wgpu::ShaderModule m_lineShaderModule = nullptr;
-	wgpu::RenderPipeline m_linePipeline = nullptr;
-	wgpu::ShaderModule m_postProcessShaderModule = nullptr;
-	wgpu::RenderPipeline m_postProcessPipeline = nullptr;
 
 	wgpu::Buffer m_cubeVertexBuffer = nullptr;
 	wgpu::Buffer m_cubeIndexBuffer = nullptr;

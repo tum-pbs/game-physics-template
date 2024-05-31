@@ -73,11 +73,11 @@ bool Renderer::onInit()
 		return false;
 	if (!initDepthBuffer())
 		return false;
-	if (!initInstancingRenderPipeline())
+	if (!m_instancingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout))
 		return false;
-	if (!initLinePipeline())
+	if (!m_linePipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout))
 		return false;
-	if (!initPostProcessPipeline())
+	if (!m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_postBindGroupLayout))
 		return false;
 	if (!initGeometry())
 		return false;
@@ -238,7 +238,7 @@ void Renderer::onFrame()
 
 	if (lines > 0)
 	{
-		renderPass.setPipeline(m_linePipeline);
+		renderPass.setPipeline(m_linePipeline.pipeline);
 		renderPass.setVertexBuffer(0, m_lineVertexBuffer, 0, lines * sizeof(LineVertexAttributes));
 
 		renderPass.draw(lines, 1, 0, 0);
@@ -246,7 +246,7 @@ void Renderer::onFrame()
 
 	if (cubeInstances > 0)
 	{
-		renderPass.setPipeline(m_instancingPipeline);
+		renderPass.setPipeline(m_instancingPipeline.pipeline);
 		renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexBuffer.getSize());
 		renderPass.setVertexBuffer(1, m_cubeInstanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
 		renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexBuffer.getSize());
@@ -255,7 +255,7 @@ void Renderer::onFrame()
 
 	if (sphereInstances > 0)
 	{
-		renderPass.setPipeline(m_instancingPipeline);
+		renderPass.setPipeline(m_instancingPipeline.pipeline);
 		renderPass.setVertexBuffer(0, m_sphereVertexBuffer, 0, m_sphereVertexBuffer.getSize());
 		renderPass.setVertexBuffer(1, m_sphereInstanceBuffer, 0, sphereInstances * sizeof(InstancedVertexAttributes));
 		renderPass.setIndexBuffer(m_sphereIndexBuffer, IndexFormat::Uint16, 0, m_sphereIndexBuffer.getSize());
@@ -264,7 +264,7 @@ void Renderer::onFrame()
 
 	if (quadInstances > 0)
 	{
-		renderPass.setPipeline(m_instancingPipeline);
+		renderPass.setPipeline(m_instancingPipeline.pipeline);
 		renderPass.setVertexBuffer(0, m_quadVertexBuffer, 0, m_quadVertexBuffer.getSize());
 		renderPass.setVertexBuffer(1, m_quadInstanceBuffer, 0, quadInstances * sizeof(InstancedVertexAttributes));
 		renderPass.setIndexBuffer(m_quadIndexBuffer, IndexFormat::Uint16, 0, m_quadIndexBuffer.getSize());
@@ -287,7 +287,7 @@ void Renderer::onFrame()
 	postProcessRenderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPassPost = encoder.beginRenderPass(postProcessRenderPassDesc);
 
-	renderPassPost.setPipeline(m_postProcessPipeline);
+	renderPassPost.setPipeline(m_postProcessingPipeline.pipeline);
 	renderPassPost.setBindGroup(0, m_postBindGroup, 0, nullptr);
 	renderPassPost.draw(6, 1, 0, 0);
 
@@ -320,7 +320,7 @@ void Renderer::onFinish()
 	terminateLightingUniforms();
 	terminateUniforms();
 	terminateGeometry();
-	terminateInstancingRenderPipeline();
+	m_instancingPipeline.terminate();
 	terminateLinePipeline();
 	terminatePostProcessPipeline();
 	terminateBindGroupLayout();
@@ -621,281 +621,9 @@ void Renderer::terminateDepthBuffer()
 	m_depthTexture.release();
 }
 
-bool Renderer::initLinePipeline()
-{
-	m_lineShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", m_device);
-	RenderPipelineDescriptor pipelineDesc;
-
-	// This is for instanced rendering
-	std::vector<VertexAttribute> primitiveVertexAttribs(2);
-
-	// Position attribute
-	primitiveVertexAttribs[0].shaderLocation = 0;
-	primitiveVertexAttribs[0].format = VertexFormat::Float32x3;
-	primitiveVertexAttribs[0].offset = offsetof(LineVertexAttributes, position);
-
-	// Color attribute
-	primitiveVertexAttribs[1].shaderLocation = 1;
-	primitiveVertexAttribs[1].format = VertexFormat::Float32x3;
-	primitiveVertexAttribs[1].offset = offsetof(LineVertexAttributes, color);
-
-	VertexBufferLayout lineVertexBufferLayout;
-	lineVertexBufferLayout.attributeCount = (uint32_t)primitiveVertexAttribs.size();
-	lineVertexBufferLayout.attributes = primitiveVertexAttribs.data();
-	lineVertexBufferLayout.arrayStride = sizeof(LineVertexAttributes);
-	lineVertexBufferLayout.stepMode = VertexStepMode::Vertex;
-
-	std::vector<VertexBufferLayout> vertexBufferLayouts = {lineVertexBufferLayout};
-
-	pipelineDesc.vertex.bufferCount = static_cast<uint32_t>(vertexBufferLayouts.size());
-	pipelineDesc.vertex.buffers = vertexBufferLayouts.data();
-
-	pipelineDesc.vertex.module = m_lineShaderModule;
-	pipelineDesc.vertex.entryPoint = "vs_main";
-	pipelineDesc.vertex.constantCount = 0;
-	pipelineDesc.vertex.constants = nullptr;
-
-	pipelineDesc.primitive.topology = PrimitiveTopology::LineList;
-	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
-	pipelineDesc.primitive.frontFace = FrontFace::CCW;
-	pipelineDesc.primitive.cullMode = CullMode::Back;
-
-	FragmentState fragmentState;
-	pipelineDesc.fragment = &fragmentState;
-	fragmentState.module = m_lineShaderModule;
-	fragmentState.entryPoint = "fs_main";
-	fragmentState.constantCount = 0;
-	fragmentState.constants = nullptr;
-
-	BlendState blendState;
-	blendState.color.srcFactor = BlendFactor::SrcAlpha;
-	blendState.color.dstFactor = BlendFactor::OneMinusSrcAlpha;
-	blendState.color.operation = BlendOperation::Add;
-	blendState.alpha.srcFactor = BlendFactor::Zero;
-	blendState.alpha.dstFactor = BlendFactor::One;
-	blendState.alpha.operation = BlendOperation::Add;
-
-	ColorTargetState colorTarget;
-	colorTarget.format = m_swapChainFormat;
-	colorTarget.blend = &blendState;
-	colorTarget.writeMask = ColorWriteMask::All;
-
-	fragmentState.targetCount = 1;
-	fragmentState.targets = &colorTarget;
-
-	DepthStencilState depthStencilState = Default;
-	depthStencilState.depthCompare = CompareFunction::Less;
-	depthStencilState.depthWriteEnabled = true;
-	depthStencilState.format = m_depthTextureFormat;
-	depthStencilState.stencilReadMask = 0;
-	depthStencilState.stencilWriteMask = 0;
-
-	pipelineDesc.depthStencil = &depthStencilState;
-
-	pipelineDesc.multisample.count = 1;
-	pipelineDesc.multisample.mask = ~0u;
-	pipelineDesc.multisample.alphaToCoverageEnabled = false;
-
-	// Create the pipeline layout
-	PipelineLayoutDescriptor layoutDesc{};
-	layoutDesc.bindGroupLayoutCount = 1;
-	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_bindGroupLayout;
-	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
-	pipelineDesc.layout = layout;
-
-	m_linePipeline = m_device.createRenderPipeline(pipelineDesc);
-
-	return m_linePipeline != nullptr;
-}
-
-bool Renderer::initInstancingRenderPipeline()
-{
-	m_instancingShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", m_device);
-	RenderPipelineDescriptor pipelineDesc;
-
-	// This is for instanced rendering
-	std::vector<VertexAttribute> lineVertexAttribs(2);
-
-	// Position attribute
-	lineVertexAttribs[0].shaderLocation = 0;
-	lineVertexAttribs[0].format = VertexFormat::Float32x3;
-	lineVertexAttribs[0].offset = offsetof(PrimitiveVertexAttributes, position);
-
-	// Normal attribute
-	lineVertexAttribs[1].shaderLocation = 1;
-	lineVertexAttribs[1].format = VertexFormat::Float32x3;
-	lineVertexAttribs[1].offset = offsetof(PrimitiveVertexAttributes, normal);
-
-	VertexBufferLayout primitiveVertexBufferLayout;
-	primitiveVertexBufferLayout.attributeCount = (uint32_t)lineVertexAttribs.size();
-	primitiveVertexBufferLayout.attributes = lineVertexAttribs.data();
-	primitiveVertexBufferLayout.arrayStride = sizeof(PrimitiveVertexAttributes);
-	primitiveVertexBufferLayout.stepMode = VertexStepMode::Vertex;
-
-	// position, rotation, scale, color, id, flags
-	std::vector<VertexAttribute> instanceAttribs(6);
-
-	// Position attribute
-	instanceAttribs[0].shaderLocation = 2;
-	instanceAttribs[0].format = VertexFormat::Float32x3;
-	instanceAttribs[0].offset = offsetof(InstancedVertexAttributes, position);
-
-	// Rotation attribute
-	instanceAttribs[1].shaderLocation = 3;
-	instanceAttribs[1].format = VertexFormat::Float32x4;
-	instanceAttribs[1].offset = offsetof(InstancedVertexAttributes, rotation);
-
-	// Scale attribute
-	instanceAttribs[2].shaderLocation = 4;
-	instanceAttribs[2].format = VertexFormat::Float32x3;
-	instanceAttribs[2].offset = offsetof(InstancedVertexAttributes, scale);
-
-	// Color attribute
-	instanceAttribs[3].shaderLocation = 5;
-	instanceAttribs[3].format = VertexFormat::Float32x4;
-	instanceAttribs[3].offset = offsetof(InstancedVertexAttributes, color);
-
-	// ID attribute
-	instanceAttribs[4].shaderLocation = 6;
-	instanceAttribs[4].format = VertexFormat::Uint32;
-	instanceAttribs[4].offset = offsetof(InstancedVertexAttributes, id);
-
-	// Flags attribute
-	instanceAttribs[5].shaderLocation = 7;
-	instanceAttribs[5].format = VertexFormat::Uint32;
-	instanceAttribs[5].offset = offsetof(InstancedVertexAttributes, flags);
-
-	VertexBufferLayout instanceBufferLayout;
-	instanceBufferLayout.attributeCount = (uint32_t)instanceAttribs.size();
-	instanceBufferLayout.attributes = instanceAttribs.data();
-	instanceBufferLayout.arrayStride = sizeof(InstancedVertexAttributes);
-	instanceBufferLayout.stepMode = VertexStepMode::Instance;
-
-	std::vector<VertexBufferLayout> vertexBufferLayouts = {primitiveVertexBufferLayout, instanceBufferLayout};
-
-	pipelineDesc.vertex.bufferCount = static_cast<uint32_t>(vertexBufferLayouts.size());
-	pipelineDesc.vertex.buffers = vertexBufferLayouts.data();
-
-	pipelineDesc.vertex.module = m_instancingShaderModule;
-	pipelineDesc.vertex.entryPoint = "vs_main";
-	pipelineDesc.vertex.constantCount = 0;
-	pipelineDesc.vertex.constants = nullptr;
-
-	pipelineDesc.primitive.topology = PrimitiveTopology::TriangleList;
-	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
-	pipelineDesc.primitive.cullMode = CullMode::Back;
-
-	FragmentState fragmentState;
-	pipelineDesc.fragment = &fragmentState;
-	fragmentState.module = m_instancingShaderModule;
-	fragmentState.entryPoint = "fs_main";
-	fragmentState.constantCount = 0;
-	fragmentState.constants = nullptr;
-
-	BlendState blendState;
-	blendState.color.srcFactor = BlendFactor::SrcAlpha;
-	blendState.color.dstFactor = BlendFactor::OneMinusSrcAlpha;
-	blendState.color.operation = BlendOperation::Add;
-	blendState.alpha.srcFactor = BlendFactor::Zero;
-	blendState.alpha.dstFactor = BlendFactor::One;
-	blendState.alpha.operation = BlendOperation::Add;
-
-	ColorTargetState colorTarget;
-	colorTarget.format = m_swapChainFormat;
-	colorTarget.blend = &blendState;
-	colorTarget.writeMask = ColorWriteMask::All;
-
-	fragmentState.targetCount = 1;
-	fragmentState.targets = &colorTarget;
-
-	DepthStencilState depthStencilState = Default;
-	depthStencilState.depthCompare = CompareFunction::Less;
-	depthStencilState.depthWriteEnabled = true;
-	depthStencilState.format = m_depthTextureFormat;
-	depthStencilState.stencilReadMask = 0;
-	depthStencilState.stencilWriteMask = 0;
-
-	pipelineDesc.depthStencil = &depthStencilState;
-
-	pipelineDesc.multisample.count = 1;
-	pipelineDesc.multisample.mask = ~0u;
-	pipelineDesc.multisample.alphaToCoverageEnabled = false;
-
-	// Create the pipeline layout
-	PipelineLayoutDescriptor layoutDesc{};
-	layoutDesc.bindGroupLayoutCount = 1;
-	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_bindGroupLayout;
-	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
-	pipelineDesc.layout = layout;
-
-	m_instancingPipeline = m_device.createRenderPipeline(pipelineDesc);
-
-	return m_instancingPipeline != nullptr;
-}
-
-bool Renderer::initPostProcessPipeline()
-{
-	m_postProcessShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/post_processing.wgsl", m_device);
-	RenderPipelineDescriptor pipelineDesc;
-	pipelineDesc.label = "Post process pipeline";
-	// This is for instanced rendering
-	pipelineDesc.vertex.bufferCount = 0;
-	pipelineDesc.vertex.buffers = nullptr;
-
-	pipelineDesc.vertex.module = m_postProcessShaderModule;
-	pipelineDesc.vertex.entryPoint = "vs_main";
-	pipelineDesc.vertex.constantCount = 0;
-	pipelineDesc.vertex.constants = nullptr;
-
-	pipelineDesc.primitive.topology = PrimitiveTopology::TriangleList;
-	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
-	pipelineDesc.primitive.cullMode = CullMode::Back;
-
-	FragmentState fragmentState;
-	pipelineDesc.fragment = &fragmentState;
-	fragmentState.module = m_postProcessShaderModule;
-	fragmentState.entryPoint = "fs_main";
-	fragmentState.constantCount = 0;
-	fragmentState.constants = nullptr;
-
-	BlendState blendState;
-	blendState.color.srcFactor = BlendFactor::SrcAlpha;
-	blendState.color.dstFactor = BlendFactor::OneMinusSrcAlpha;
-	blendState.color.operation = BlendOperation::Add;
-	blendState.alpha.srcFactor = BlendFactor::Zero;
-	blendState.alpha.dstFactor = BlendFactor::One;
-	blendState.alpha.operation = BlendOperation::Add;
-
-	ColorTargetState colorTarget;
-	colorTarget.format = m_swapChainFormat;
-	colorTarget.blend = &blendState;
-	colorTarget.writeMask = ColorWriteMask::All;
-
-	fragmentState.targetCount = 1;
-	fragmentState.targets = &colorTarget;
-
-	pipelineDesc.depthStencil = nullptr;
-
-	pipelineDesc.multisample.count = 1;
-	pipelineDesc.multisample.mask = ~0u;
-	pipelineDesc.multisample.alphaToCoverageEnabled = false;
-
-	// Create the pipeline layout
-	PipelineLayoutDescriptor layoutDesc{};
-	layoutDesc.bindGroupLayoutCount = 1;
-	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_postBindGroupLayout;
-	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
-	pipelineDesc.layout = layout;
-
-	m_postProcessPipeline = m_device.createRenderPipeline(pipelineDesc);
-
-	return m_postProcessPipeline != nullptr;
-}
-
 void Renderer::terminateInstancingRenderPipeline()
 {
-	m_instancingPipeline.release();
-	m_instancingShaderModule.release();
+	m_instancingPipeline.terminate();
 }
 void Renderer::clearScene()
 {
@@ -967,14 +695,12 @@ bool Renderer::initGeometry()
 
 void Renderer::terminateLinePipeline()
 {
-	m_linePipeline.release();
-	m_lineShaderModule.release();
+	m_linePipeline.terminate();
 }
 
 void Renderer::terminatePostProcessPipeline()
 {
-	m_postProcessPipeline.release();
-	m_postProcessShaderModule.release();
+	m_postProcessingPipeline.terminate();
 }
 
 void Renderer::terminateGeometry()

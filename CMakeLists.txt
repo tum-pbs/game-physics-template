@@ -23,6 +23,12 @@ add_executable(Template
 	Primitives.h
 	Primitives.cpp
 	ResourceManager.h
+	pipelines/InstancingPipeline.cpp
+	pipelines/InstancingPipeline.h
+	pipelines/LinePipeline.cpp
+	pipelines/LinePipeline.h
+	pipelines/PostProcessingPipeline.cpp
+	pipelines/PostProcessingPipeline.h
 	ResourceManager.cpp
 	implementations.cpp
 	Simulator.cpp
