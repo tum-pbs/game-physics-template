@@ -40,7 +40,5 @@ int main(int, char **)
 		renderer.onFrame();
 		renderer.clearScene();
 	}
-
-	renderer.onFinish();
 	return 0;
 }

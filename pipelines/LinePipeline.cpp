@@ -8,8 +8,10 @@
 using namespace wgpu;
 using LineVertexAttributes = ResourceManager::LineVertexAttributes;
 
-void LinePipeline::init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::BindGroupLayout &bindGroupLayout)
+void LinePipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
 {
+    device = device_;
+    queue = queue_;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
 
@@ -106,7 +108,7 @@ void LinePipeline::terminate()
         lineVertexBuffer.release();
 }
 
-void LinePipeline::updateLines(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::LineVertexAttributes> &lines)
+void LinePipeline::updateLines(std::vector<ResourceManager::LineVertexAttributes> &lines)
 {
     lineCount = static_cast<int>(lines.size());
     if (lineVertexBuffer != nullptr)

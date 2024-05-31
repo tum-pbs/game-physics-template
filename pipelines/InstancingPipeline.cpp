@@ -9,8 +9,10 @@ using namespace wgpu;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
 using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
 
-void InstancingPipeline::init(Device &device, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
+void InstancingPipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
 {
+    device = device_;
+    queue = queue_;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
 
@@ -133,6 +135,8 @@ void InstancingPipeline::init(Device &device, TextureFormat &swapChainFormat, Te
 
     if (pipeline == nullptr)
         throw std::runtime_error("Failed to create instancing pipeline");
+
+    initGeometry();
 }
 
 void InstancingPipeline::terminate()
@@ -159,7 +163,7 @@ void InstancingPipeline::terminate()
     terminateGeometry();
 }
 
-void InstancingPipeline::updateCubes(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &cubes)
+void InstancingPipeline::updateCubes(std::vector<ResourceManager::InstancedVertexAttributes> &cubes)
 {
     cubeInstances = static_cast<int>(cubes.size());
     if (cubeInstanceBuffer != nullptr)
@@ -191,7 +195,7 @@ void InstancingPipeline::drawCubes(wgpu::RenderPassEncoder renderPass)
     }
 }
 
-void InstancingPipeline::updateSpheres(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &spheres)
+void InstancingPipeline::updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres)
 {
     sphereInstances = static_cast<int>(spheres.size());
     if (sphereInstanceBuffer != nullptr)
@@ -222,7 +226,7 @@ void InstancingPipeline::drawSpheres(wgpu::RenderPassEncoder renderPass)
     }
 }
 
-void InstancingPipeline::updateQuads(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &quads)
+void InstancingPipeline::updateQuads(std::vector<ResourceManager::InstancedVertexAttributes> &quads)
 {
     quadInstances = static_cast<int>(quads.size());
     if (quadInstanceBuffer != nullptr)
@@ -253,7 +257,7 @@ void InstancingPipeline::drawQuads(wgpu::RenderPassEncoder renderPass)
     }
 }
 
-void InstancingPipeline::initGeometry(wgpu::Device &device, wgpu::Queue &queue)
+void InstancingPipeline::initGeometry()
 {
     // Load cube geometry
 

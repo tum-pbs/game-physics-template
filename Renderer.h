@@ -43,6 +43,7 @@ class Renderer
 {
 public:
 	Renderer();
+	~Renderer();
 	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
 	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	uint32_t drawSphere(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
@@ -54,9 +55,6 @@ public:
 
 	// A function called at each frame, guaranteed never to be called before `onInit`.
 	void onFrame();
-
-	// A function called only once at the very end.
-	void onFinish();
 
 	// A function that tells if the application is still running.
 	bool isRunning();

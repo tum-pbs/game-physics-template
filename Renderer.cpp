@@ -70,10 +70,9 @@ Renderer::Renderer()
 	initSwapChain();
 	initDepthBuffer();
 	initRenderTexture();
-	m_instancingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
-	m_linePipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
+	m_instancingPipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
+	m_linePipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
 	m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_postBindGroupLayout);
-	m_instancingPipeline.initGeometry(m_device, m_queue);
 	initUniforms();
 	initLightingUniforms();
 	initBindGroup();
@@ -95,13 +94,13 @@ void Renderer::onFrame()
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, flags), &m_uniforms.flags, sizeof(MyUniforms::flags));
 
 	// prepare instanced draw calls
-	m_instancingPipeline.updateCubes(m_device, m_queue, m_cubes);
-	m_instancingPipeline.updateSpheres(m_device, m_queue, m_spheres);
-	m_instancingPipeline.updateQuads(m_device, m_queue, m_quads);
+	m_instancingPipeline.updateCubes(m_cubes);
+	m_instancingPipeline.updateSpheres(m_spheres);
+	m_instancingPipeline.updateQuads(m_quads);
 
 	// prepare line buffers
 
-	m_linePipeline.updateLines(m_device, m_queue, m_lines);
+	m_linePipeline.updateLines(m_lines);
 
 	TextureView nextTexture = m_swapChain.getCurrentTextureView();
 	if (!nextTexture)
@@ -211,7 +210,7 @@ void Renderer::onFrame()
 #endif
 }
 
-void Renderer::onFinish()
+Renderer::~Renderer()
 {
 	terminateGui();
 	terminateBindGroup();

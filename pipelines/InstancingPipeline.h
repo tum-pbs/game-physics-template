@@ -19,19 +19,22 @@ public:
     wgpu::Buffer quadVertexBuffer = nullptr;
     wgpu::Buffer quadIndexBuffer = nullptr;
 
-    void init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::BindGroupLayout &bindGroupLayout);
+    void init(wgpu::Device &device_, wgpu::Queue &queue_, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::BindGroupLayout &bindGroupLayout);
     void terminate();
-    void updateCubes(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &cubes);
+    void updateCubes(std::vector<ResourceManager::InstancedVertexAttributes> &cubes);
     void drawCubes(wgpu::RenderPassEncoder renderPass);
-    void updateSpheres(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &spheres);
+    void updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres);
     void drawSpheres(wgpu::RenderPassEncoder renderPass);
-    void updateQuads(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &quads);
+    void updateQuads(std::vector<ResourceManager::InstancedVertexAttributes> &quads);
     void drawQuads(wgpu::RenderPassEncoder renderPass);
-    void initGeometry(wgpu::Device &device, wgpu::Queue &queue);
+    void initGeometry();
     void terminateGeometry();
 
 private:
     int cubeInstances = 0;
     int sphereInstances = 0;
     int quadInstances = 0;
+
+    wgpu::Device device = nullptr;
+    wgpu::Queue queue = nullptr;
 };
