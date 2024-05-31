@@ -111,9 +111,6 @@ private:
 	bool initDepthBuffer();
 	void terminateDepthBuffer();
 
-	bool initGeometry();
-	void terminateGeometry();
-
 	bool initUniforms();
 	void terminateUniforms();
 
@@ -209,16 +206,6 @@ private:
 	wgpu::Texture m_depthTexture = nullptr;
 	wgpu::TextureView m_depthTextureView = nullptr;
 
-	wgpu::Buffer m_cubeVertexBuffer = nullptr;
-	wgpu::Buffer m_cubeIndexBuffer = nullptr;
-	wgpu::Buffer m_quadVertexBuffer = nullptr;
-	wgpu::Buffer m_quadIndexBuffer = nullptr;
-	wgpu::Buffer m_sphereVertexBuffer = nullptr;
-	wgpu::Buffer m_sphereIndexBuffer = nullptr;
-	wgpu::Buffer m_lineVertexBuffer = nullptr;
-	wgpu::Buffer m_cubeInstanceBuffer = nullptr;
-	wgpu::Buffer m_sphereInstanceBuffer = nullptr;
-	wgpu::Buffer m_quadInstanceBuffer = nullptr;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_spheres;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_quads;

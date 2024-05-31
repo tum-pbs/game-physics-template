@@ -50,10 +50,10 @@
 #include "Primitives.h"
 
 using namespace wgpu;
-using VertexAttributes = ResourceManager::VertexAttributes;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
 using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
 using LineVertexAttributes = ResourceManager::LineVertexAttributes;
+using VertexAttributes = ResourceManager::VertexAttributes;
 
 constexpr float PI = 3.14159265358979323846f;
 
@@ -81,7 +81,7 @@ bool Renderer::onInit()
 		return false;
 	if (!m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_postBindGroupLayout))
 		return false;
-	if (!initGeometry())
+	if (!m_instancingPipeline.initGeometry(m_device, m_queue))
 		return false;
 	if (!initUniforms())
 		return false;
@@ -108,77 +108,14 @@ void Renderer::onFrame()
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingOffset), &m_uniforms.cullingOffset, sizeof(MyUniforms::cullingOffset));
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, flags), &m_uniforms.flags, sizeof(MyUniforms::flags));
 
-	// prepare cube buffers
-
-	int cubeInstances = static_cast<int>(m_cubes.size());
-	if (m_cubeInstanceBuffer != nullptr)
-	{
-		m_cubeInstanceBuffer.destroy();
-		m_cubeInstanceBuffer = nullptr;
-	}
-	BufferDescriptor cubeInstanceBufferDesc;
-	if (cubeInstances > 0)
-	{
-		cubeInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * cubeInstances;
-		cubeInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-		cubeInstanceBufferDesc.mappedAtCreation = false;
-		m_cubeInstanceBuffer = m_device.createBuffer(cubeInstanceBufferDesc);
-		m_queue.writeBuffer(m_cubeInstanceBuffer, 0, m_cubes.data(), cubeInstanceBufferDesc.size);
-	}
-
-	// prepare sphere buffers
-
-	int sphereInstances = static_cast<int>(m_spheres.size());
-	if (m_sphereInstanceBuffer != nullptr)
-	{
-		m_sphereInstanceBuffer.destroy();
-		m_sphereInstanceBuffer = nullptr;
-	}
-	BufferDescriptor sphereInstanceBufferDesc;
-	if (sphereInstances > 0)
-	{
-		sphereInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * sphereInstances;
-		sphereInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-		sphereInstanceBufferDesc.mappedAtCreation = false;
-		m_sphereInstanceBuffer = m_device.createBuffer(sphereInstanceBufferDesc);
-		m_queue.writeBuffer(m_sphereInstanceBuffer, 0, m_spheres.data(), sphereInstanceBufferDesc.size);
-	}
-
-	// prepare quad buffers
-
-	int quadInstances = static_cast<int>(m_quads.size());
-	if (m_quadInstanceBuffer != nullptr)
-	{
-		m_quadInstanceBuffer.destroy();
-		m_quadInstanceBuffer = nullptr;
-	}
-	BufferDescriptor quadInstanceBufferDesc;
-	if (quadInstances > 0)
-	{
-		quadInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * quadInstances;
-		quadInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-		quadInstanceBufferDesc.mappedAtCreation = false;
-		m_quadInstanceBuffer = m_device.createBuffer(quadInstanceBufferDesc);
-		m_queue.writeBuffer(m_quadInstanceBuffer, 0, m_quads.data(), quadInstanceBufferDesc.size);
-	}
+	// prepare instanced draw calls
+	m_instancingPipeline.updateCubes(m_device, m_queue, m_cubes);
+	m_instancingPipeline.updateSpheres(m_device, m_queue, m_spheres);
+	m_instancingPipeline.updateQuads(m_device, m_queue, m_quads);
 
 	// prepare line buffers
 
-	int lines = static_cast<int>(m_lines.size());
-	if (m_lineVertexBuffer != nullptr)
-	{
-		m_lineVertexBuffer.destroy();
-		m_lineVertexBuffer = nullptr;
-	}
-	BufferDescriptor lineBufferDesc;
-	if (lines > 0)
-	{
-		lineBufferDesc.size = sizeof(LineVertexAttributes) * lines;
-		lineBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-		lineBufferDesc.mappedAtCreation = false;
-		m_lineVertexBuffer = m_device.createBuffer(lineBufferDesc);
-		m_queue.writeBuffer(m_lineVertexBuffer, 0, m_lines.data(), lineBufferDesc.size);
-	}
+	m_linePipeline.updateLines(m_device, m_queue, m_lines);
 
 	TextureView nextTexture = m_swapChain.getCurrentTextureView();
 	if (!nextTexture)
@@ -238,40 +175,13 @@ void Renderer::onFrame()
 	// Set binding group
 	renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
 
-	if (lines > 0)
-	{
-		renderPass.setPipeline(m_linePipeline.pipeline);
-		renderPass.setVertexBuffer(0, m_lineVertexBuffer, 0, lines * sizeof(LineVertexAttributes));
+	m_linePipeline.drawLines(renderPass);
 
-		renderPass.draw(lines, 1, 0, 0);
-	}
+	m_instancingPipeline.drawCubes(renderPass);
 
-	if (cubeInstances > 0)
-	{
-		renderPass.setPipeline(m_instancingPipeline.pipeline);
-		renderPass.setVertexBuffer(0, m_cubeVertexBuffer, 0, m_cubeVertexBuffer.getSize());
-		renderPass.setVertexBuffer(1, m_cubeInstanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
-		renderPass.setIndexBuffer(m_cubeIndexBuffer, IndexFormat::Uint16, 0, m_cubeIndexBuffer.getSize());
-		renderPass.drawIndexed(static_cast<uint32_t>(cube::triangles.size() * 3), cubeInstances, 0, 0, 0);
-	}
+	m_instancingPipeline.drawSpheres(renderPass);
 
-	if (sphereInstances > 0)
-	{
-		renderPass.setPipeline(m_instancingPipeline.pipeline);
-		renderPass.setVertexBuffer(0, m_sphereVertexBuffer, 0, m_sphereVertexBuffer.getSize());
-		renderPass.setVertexBuffer(1, m_sphereInstanceBuffer, 0, sphereInstances * sizeof(InstancedVertexAttributes));
-		renderPass.setIndexBuffer(m_sphereIndexBuffer, IndexFormat::Uint16, 0, m_sphereIndexBuffer.getSize());
-		renderPass.drawIndexed(static_cast<uint32_t>(m_sphereIndexBuffer.getSize() / 2), sphereInstances, 0, 0, 0);
-	}
-
-	if (quadInstances > 0)
-	{
-		renderPass.setPipeline(m_instancingPipeline.pipeline);
-		renderPass.setVertexBuffer(0, m_quadVertexBuffer, 0, m_quadVertexBuffer.getSize());
-		renderPass.setVertexBuffer(1, m_quadInstanceBuffer, 0, quadInstances * sizeof(InstancedVertexAttributes));
-		renderPass.setIndexBuffer(m_quadIndexBuffer, IndexFormat::Uint16, 0, m_quadIndexBuffer.getSize());
-		renderPass.drawIndexed(static_cast<uint32_t>(quad::triangles.size() * 3), quadInstances, 0, 0, 0);
-	}
+	m_instancingPipeline.drawQuads(renderPass);
 	updateGui(renderPass);
 	renderPass.end();
 	renderPass.release();
@@ -321,7 +231,6 @@ void Renderer::onFinish()
 	terminateBindGroup();
 	terminateLightingUniforms();
 	terminateUniforms();
-	terminateGeometry();
 	m_instancingPipeline.terminate();
 	m_linePipeline.terminate();
 	m_postProcessingPipeline.terminate();
@@ -640,102 +549,6 @@ void Renderer::clearScene()
 	m_quads.clear();
 	m_lines.clear();
 	current_id = 0;
-}
-
-bool Renderer::initGeometry()
-{
-	// bool success = ResourceManager::loadGeometryFromObj(RESOURCE_DIR "/fourareen.obj", vertexData);
-
-	// cube
-
-	BufferDescriptor cubeVertexBufferDesc;
-	cubeVertexBufferDesc.size = cube::vertices.size() * sizeof(PrimitiveVertexAttributes);
-	cubeVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-	cubeVertexBufferDesc.mappedAtCreation = false;
-	m_cubeVertexBuffer = m_device.createBuffer(cubeVertexBufferDesc);
-	m_queue.writeBuffer(m_cubeVertexBuffer, 0, cube::vertices.data(), cubeVertexBufferDesc.size);
-
-	BufferDescriptor cubeIndexBufferDesc;
-	cubeIndexBufferDesc.size = cube::triangles.size() * sizeof(Triangle);
-	cubeIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
-	cubeIndexBufferDesc.mappedAtCreation = false;
-	m_cubeIndexBuffer = m_device.createBuffer(cubeIndexBufferDesc);
-	m_queue.writeBuffer(m_cubeIndexBuffer, 0, cube::triangles.data(), cubeIndexBufferDesc.size);
-
-	// sphere
-
-	IndexedMesh sphereMesh = make_icosphere(2);
-	VertexNormalList sphereVertices = sphereMesh.first;
-	TriangleList sphereTriangles = sphereMesh.second;
-
-	BufferDescriptor sphereVertexBufferSDesc;
-	sphereVertexBufferSDesc.size = sphereVertices.size() * sizeof(PrimitiveVertexAttributes);
-	sphereVertexBufferSDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-	sphereVertexBufferSDesc.mappedAtCreation = false;
-	m_sphereVertexBuffer = m_device.createBuffer(sphereVertexBufferSDesc);
-	m_queue.writeBuffer(m_sphereVertexBuffer, 0, sphereVertices.data(), sphereVertexBufferSDesc.size);
-
-	BufferDescriptor sphereIndexBufferDesc;
-	sphereIndexBufferDesc.size = sphereTriangles.size() * sizeof(Triangle);
-	sphereIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
-	sphereIndexBufferDesc.mappedAtCreation = false;
-	m_sphereIndexBuffer = m_device.createBuffer(sphereIndexBufferDesc);
-	m_queue.writeBuffer(m_sphereIndexBuffer, 0, sphereTriangles.data(), sphereIndexBufferDesc.size);
-
-	// quad
-
-	BufferDescriptor quadVertexBufferDesc;
-	quadVertexBufferDesc.size = quad::vertices.size() * sizeof(PrimitiveVertexAttributes);
-	quadVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-	quadVertexBufferDesc.mappedAtCreation = false;
-	m_quadVertexBuffer = m_device.createBuffer(quadVertexBufferDesc);
-	m_queue.writeBuffer(m_quadVertexBuffer, 0, quad::vertices.data(), quadVertexBufferDesc.size);
-
-	BufferDescriptor quadIndexBufferDesc;
-	quadIndexBufferDesc.size = quad::triangles.size() * sizeof(Triangle);
-	quadIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
-	quadIndexBufferDesc.mappedAtCreation = false;
-	m_quadIndexBuffer = m_device.createBuffer(quadIndexBufferDesc);
-	m_queue.writeBuffer(m_quadIndexBuffer, 0, quad::triangles.data(), quadIndexBufferDesc.size);
-
-	return m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr && m_quadVertexBuffer != nullptr && m_quadIndexBuffer != nullptr;
-}
-
-void Renderer::terminateGeometry()
-{
-
-	m_cubeVertexBuffer.destroy();
-	m_cubeVertexBuffer.release();
-	m_cubeIndexBuffer.destroy();
-	m_cubeIndexBuffer.release();
-	m_sphereVertexBuffer.destroy();
-	m_sphereVertexBuffer.release();
-	m_sphereIndexBuffer.destroy();
-	m_sphereIndexBuffer.release();
-	m_quadVertexBuffer.destroy();
-	m_quadVertexBuffer.release();
-	m_quadIndexBuffer.destroy();
-	m_quadIndexBuffer.release();
-	if (m_cubeInstanceBuffer != nullptr)
-	{
-		m_cubeInstanceBuffer.destroy();
-		m_cubeInstanceBuffer.release();
-	}
-	if (m_sphereInstanceBuffer != nullptr)
-	{
-		m_sphereInstanceBuffer.destroy();
-		m_sphereInstanceBuffer.release();
-	}
-	if (m_quadInstanceBuffer != nullptr)
-	{
-		m_quadInstanceBuffer.destroy();
-		m_quadInstanceBuffer.release();
-	}
-	if (m_lineVertexBuffer != nullptr)
-	{
-		m_lineVertexBuffer.destroy();
-		m_lineVertexBuffer.release();
-	}
 }
 
 bool Renderer::initUniforms()

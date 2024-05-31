@@ -101,4 +101,36 @@ void LinePipeline::terminate()
         shaderModule.release();
     if (pipeline != nullptr)
         pipeline.release();
+    if (lineVertexBuffer != nullptr)
+        lineVertexBuffer.release();
+}
+
+void LinePipeline::updateLines(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::LineVertexAttributes> &lines)
+{
+    lineCount = static_cast<int>(lines.size());
+    if (lineVertexBuffer != nullptr)
+    {
+        lineVertexBuffer.destroy();
+        lineVertexBuffer = nullptr;
+    }
+    BufferDescriptor lineBufferDesc;
+    if (lineCount > 0)
+    {
+        lineBufferDesc.size = sizeof(LineVertexAttributes) * lineCount;
+        lineBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+        lineBufferDesc.mappedAtCreation = false;
+        lineVertexBuffer = device.createBuffer(lineBufferDesc);
+        queue.writeBuffer(lineVertexBuffer, 0, lines.data(), lineBufferDesc.size);
+    }
+}
+
+void LinePipeline::drawLines(wgpu::RenderPassEncoder renderPass)
+{
+    if (lineCount > 0)
+    {
+        renderPass.setPipeline(pipeline);
+        renderPass.setVertexBuffer(0, lineVertexBuffer, 0, lineCount * sizeof(LineVertexAttributes));
+
+        renderPass.draw(lineCount, 1, 0, 0);
+    }
 }
