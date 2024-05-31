@@ -111,6 +111,9 @@ private:
 	bool initLinePipeline();
 	void terminateLinePipeline();
 
+	bool initPostProcessPipeline();
+	void terminatePostProcessPipeline();
+
 	bool initGeometry();
 	void terminateGeometry();
 
@@ -143,6 +146,7 @@ private:
 	using vec2 = glm::vec2;
 
 	uint32_t current_id = 0;
+	int width, height;
 
 	struct LightingUniforms
 	{
@@ -209,6 +213,8 @@ private:
 	wgpu::RenderPipeline m_instancingPipeline = nullptr;
 	wgpu::ShaderModule m_lineShaderModule = nullptr;
 	wgpu::RenderPipeline m_linePipeline = nullptr;
+	wgpu::ShaderModule m_postProcessShaderModule = nullptr;
+	wgpu::RenderPipeline m_postProcessPipeline = nullptr;
 
 	wgpu::Buffer m_cubeVertexBuffer = nullptr;
 	wgpu::Buffer m_cubeIndexBuffer = nullptr;
@@ -233,9 +239,15 @@ private:
 
 	// Bind Group Layout
 	wgpu::BindGroupLayout m_bindGroupLayout = nullptr;
+	wgpu::BindGroupLayout m_postBindGroupLayout = nullptr;
+
+	wgpu::Texture m_postTexture = nullptr;
+	wgpu::TextureView m_postTextureView = nullptr;
+	wgpu::Sampler m_postSampler = nullptr;
 
 	// Bind Group
 	wgpu::BindGroup m_bindGroup = nullptr;
+	wgpu::BindGroup m_postBindGroup = nullptr;
 
 	CameraState m_cameraState;
 	DragState m_drag;

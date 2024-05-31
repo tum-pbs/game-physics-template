@@ -57,6 +57,9 @@ using LineVertexAttributes = ResourceManager::LineVertexAttributes;
 
 constexpr float PI = 3.14159265358979323846f;
 
+#ifndef RESOURCE_DIR
+#define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
+#endif
 ///////////////////////////////////////////////////////////////////////////////
 // Public methods
 
@@ -64,15 +67,17 @@ bool Renderer::onInit()
 {
 	if (!initWindowAndDevice())
 		return false;
+	if (!initBindGroupLayout())
+		return false;
 	if (!initSwapChain())
 		return false;
 	if (!initDepthBuffer())
 		return false;
-	if (!initBindGroupLayout())
-		return false;
 	if (!initInstancingRenderPipeline())
 		return false;
 	if (!initLinePipeline())
+		return false;
+	if (!initPostProcessPipeline())
 		return false;
 	if (!initGeometry())
 		return false;
@@ -93,6 +98,7 @@ void Renderer::onFrame()
 	glfwPollEvents();
 	updateDragInertia();
 	updateLightingUniforms();
+
 	// Update uniform buffer
 	m_uniforms.time = static_cast<float>(glfwGetTime());
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
@@ -185,8 +191,18 @@ void Renderer::onFrame()
 
 	RenderPassDescriptor renderPassDesc{};
 
+	// TODO maybe rewrite the texture view descriptor
+	TextureViewDescriptor postProcessTextureViewDesc;
+	postProcessTextureViewDesc.aspect = TextureAspect::All;
+	postProcessTextureViewDesc.baseArrayLayer = 0;
+	postProcessTextureViewDesc.arrayLayerCount = 1;
+	postProcessTextureViewDesc.baseMipLevel = 0;
+	postProcessTextureViewDesc.mipLevelCount = 1;
+	postProcessTextureViewDesc.dimension = TextureViewDimension::_2D;
+	postProcessTextureViewDesc.format = m_swapChainFormat;
+
 	RenderPassColorAttachment renderPassColorAttachment{};
-	renderPassColorAttachment.view = nextTexture;
+	renderPassColorAttachment.view = m_postTextureView;
 	renderPassColorAttachment.resolveTarget = nullptr;
 	renderPassColorAttachment.loadOp = LoadOp::Clear;
 	renderPassColorAttachment.storeOp = StoreOp::Store;
@@ -254,12 +270,31 @@ void Renderer::onFrame()
 		renderPass.setIndexBuffer(m_quadIndexBuffer, IndexFormat::Uint16, 0, m_quadIndexBuffer.getSize());
 		renderPass.drawIndexed(static_cast<uint32_t>(quad::triangles.size() * 3), quadInstances, 0, 0, 0);
 	}
-
-	// We add the GUI drawing commands to the render pass
 	updateGui(renderPass);
-
 	renderPass.end();
 	renderPass.release();
+
+	RenderPassColorAttachment renderPassColorAttachment2{};
+	renderPassColorAttachment2.view = nextTexture;
+	renderPassColorAttachment2.resolveTarget = nullptr;
+	renderPassColorAttachment2.loadOp = LoadOp::Clear;
+	renderPassColorAttachment2.storeOp = StoreOp::Store;
+	renderPassColorAttachment2.clearValue = Color{0.05, 0.05, 0.05, 1.0};
+	RenderPassDescriptor postProcessRenderPassDesc{};
+	postProcessRenderPassDesc.colorAttachmentCount = 1;
+	postProcessRenderPassDesc.colorAttachments = &renderPassColorAttachment2;
+	postProcessRenderPassDesc.timestampWriteCount = 0;
+	postProcessRenderPassDesc.timestampWrites = nullptr;
+	RenderPassEncoder renderPassPost = encoder.beginRenderPass(postProcessRenderPassDesc);
+
+	renderPassPost.setPipeline(m_postProcessPipeline);
+	renderPassPost.setBindGroup(0, m_postBindGroup, 0, nullptr);
+	renderPassPost.draw(6, 1, 0, 0);
+
+	// We add the GUI drawing commands to the render pass
+	// updateGui(renderPassPost);
+	renderPassPost.end();
+	renderPassPost.release();
 
 	nextTexture.release();
 
@@ -287,6 +322,7 @@ void Renderer::onFinish()
 	terminateGeometry();
 	terminateInstancingRenderPipeline();
 	terminateLinePipeline();
+	terminatePostProcessPipeline();
 	terminateBindGroupLayout();
 	terminateDepthBuffer();
 	terminateSwapChain();
@@ -477,7 +513,6 @@ void Renderer::terminateWindowAndDevice()
 bool Renderer::initSwapChain()
 {
 	// Get the current size of the window's framebuffer:
-	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
 
 	SwapChainDescriptor swapChainDesc;
@@ -487,18 +522,70 @@ bool Renderer::initSwapChain()
 	swapChainDesc.format = m_swapChainFormat;
 	swapChainDesc.presentMode = PresentMode::Immediate;
 	m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
+
+	TextureDescriptor postProcessTextureDesc;
+	postProcessTextureDesc.dimension = TextureDimension::_2D;
+	postProcessTextureDesc.format = m_swapChainFormat;
+	postProcessTextureDesc.size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
+	postProcessTextureDesc.usage = TextureUsage::CopySrc | TextureUsage::TextureBinding | TextureUsage::RenderAttachment;
+	postProcessTextureDesc.sampleCount = 1;
+	postProcessTextureDesc.mipLevelCount = 1;
+	postProcessTextureDesc.viewFormatCount = 1;
+	postProcessTextureDesc.viewFormats = (WGPUTextureFormat *)&m_swapChainFormat;
+	m_postTexture = m_device.createTexture(postProcessTextureDesc);
+
+	TextureViewDescriptor postProcessTextureViewDesc;
+	postProcessTextureViewDesc.aspect = TextureAspect::All;
+	postProcessTextureViewDesc.baseArrayLayer = 0;
+	postProcessTextureViewDesc.arrayLayerCount = 1;
+	postProcessTextureViewDesc.baseMipLevel = 0;
+	postProcessTextureViewDesc.mipLevelCount = 1;
+	postProcessTextureViewDesc.dimension = TextureViewDimension::_2D;
+	postProcessTextureViewDesc.format = m_postTexture.getFormat();
+	m_postTextureView = m_postTexture.createView(postProcessTextureViewDesc);
+
+	std::vector<BindGroupEntry> bindingsPost(2);
+
+	bindingsPost[0].binding = 0;
+	bindingsPost[0].textureView = m_postTextureView;
+
+	SamplerDescriptor samplerDesc;
+	samplerDesc.addressModeU = AddressMode::ClampToEdge;
+	samplerDesc.addressModeV = AddressMode::ClampToEdge;
+	samplerDesc.addressModeW = AddressMode::ClampToEdge;
+	samplerDesc.magFilter = FilterMode::Linear;
+	samplerDesc.minFilter = FilterMode::Linear;
+	samplerDesc.mipmapFilter = MipmapFilterMode::Linear;
+	samplerDesc.lodMinClamp = 0.0f;
+	samplerDesc.lodMaxClamp = 1.0f;
+	samplerDesc.compare = CompareFunction::Undefined;
+	samplerDesc.maxAnisotropy = 1;
+	m_postSampler = m_device.createSampler(samplerDesc);
+
+	bindingsPost[1].binding = 1;
+	bindingsPost[1].sampler = m_postSampler;
+
+	BindGroupDescriptor bindGroupDescPost;
+	bindGroupDescPost.layout = m_postBindGroupLayout;
+	bindGroupDescPost.entryCount = (uint32_t)bindingsPost.size();
+	bindGroupDescPost.entries = bindingsPost.data();
+	m_postBindGroup = m_device.createBindGroup(bindGroupDescPost);
+
 	return m_swapChain != nullptr;
 }
 
 void Renderer::terminateSwapChain()
 {
+	m_postTexture.destroy();
+	m_postTexture.release();
+	m_postBindGroup.release();
+	// m_postTextureView.release();
 	m_swapChain.release();
 }
 
 bool Renderer::initDepthBuffer()
 {
 	// Get the current size of the window's framebuffer:
-	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
 
 	// Create the depth texture
@@ -570,6 +657,7 @@ bool Renderer::initLinePipeline()
 
 	pipelineDesc.primitive.topology = PrimitiveTopology::LineList;
 	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
+	pipelineDesc.primitive.frontFace = FrontFace::CCW;
 	pipelineDesc.primitive.cullMode = CullMode::Back;
 
 	FragmentState fragmentState;
@@ -745,6 +833,65 @@ bool Renderer::initInstancingRenderPipeline()
 	return m_instancingPipeline != nullptr;
 }
 
+bool Renderer::initPostProcessPipeline()
+{
+	m_postProcessShaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/post_processing.wgsl", m_device);
+	RenderPipelineDescriptor pipelineDesc;
+	pipelineDesc.label = "Post process pipeline";
+	// This is for instanced rendering
+	pipelineDesc.vertex.bufferCount = 0;
+	pipelineDesc.vertex.buffers = nullptr;
+
+	pipelineDesc.vertex.module = m_postProcessShaderModule;
+	pipelineDesc.vertex.entryPoint = "vs_main";
+	pipelineDesc.vertex.constantCount = 0;
+	pipelineDesc.vertex.constants = nullptr;
+
+	pipelineDesc.primitive.topology = PrimitiveTopology::TriangleList;
+	pipelineDesc.primitive.stripIndexFormat = IndexFormat::Undefined;
+	pipelineDesc.primitive.cullMode = CullMode::Back;
+
+	FragmentState fragmentState;
+	pipelineDesc.fragment = &fragmentState;
+	fragmentState.module = m_postProcessShaderModule;
+	fragmentState.entryPoint = "fs_main";
+	fragmentState.constantCount = 0;
+	fragmentState.constants = nullptr;
+
+	BlendState blendState;
+	blendState.color.srcFactor = BlendFactor::SrcAlpha;
+	blendState.color.dstFactor = BlendFactor::OneMinusSrcAlpha;
+	blendState.color.operation = BlendOperation::Add;
+	blendState.alpha.srcFactor = BlendFactor::Zero;
+	blendState.alpha.dstFactor = BlendFactor::One;
+	blendState.alpha.operation = BlendOperation::Add;
+
+	ColorTargetState colorTarget;
+	colorTarget.format = m_swapChainFormat;
+	colorTarget.blend = &blendState;
+	colorTarget.writeMask = ColorWriteMask::All;
+
+	fragmentState.targetCount = 1;
+	fragmentState.targets = &colorTarget;
+
+	pipelineDesc.depthStencil = nullptr;
+
+	pipelineDesc.multisample.count = 1;
+	pipelineDesc.multisample.mask = ~0u;
+	pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+	// Create the pipeline layout
+	PipelineLayoutDescriptor layoutDesc{};
+	layoutDesc.bindGroupLayoutCount = 1;
+	layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&m_postBindGroupLayout;
+	PipelineLayout layout = m_device.createPipelineLayout(layoutDesc);
+	pipelineDesc.layout = layout;
+
+	m_postProcessPipeline = m_device.createRenderPipeline(pipelineDesc);
+
+	return m_postProcessPipeline != nullptr;
+}
+
 void Renderer::terminateInstancingRenderPipeline()
 {
 	m_instancingPipeline.release();
@@ -822,6 +969,12 @@ void Renderer::terminateLinePipeline()
 {
 	m_linePipeline.release();
 	m_lineShaderModule.release();
+}
+
+void Renderer::terminatePostProcessPipeline()
+{
+	m_postProcessPipeline.release();
+	m_postProcessShaderModule.release();
 }
 
 void Renderer::terminateGeometry()
@@ -951,12 +1104,31 @@ bool Renderer::initBindGroupLayout()
 	bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
 	m_bindGroupLayout = m_device.createBindGroupLayout(bindGroupLayoutDesc);
 
+	std::vector<BindGroupLayoutEntry> bindingLayoutEntriesPost(2, Default);
+
+	BindGroupLayoutEntry &bindingLayoutPost = bindingLayoutEntriesPost[0];
+	bindingLayoutPost.binding = 0;
+	bindingLayoutPost.visibility = ShaderStage::Fragment;
+	bindingLayoutPost.texture.sampleType = TextureSampleType::Float;
+	bindingLayoutPost.texture.viewDimension = TextureViewDimension::_2D;
+
+	BindGroupLayoutEntry &bindingLayoutPost2 = bindingLayoutEntriesPost[1];
+	bindingLayoutPost2.binding = 1;
+	bindingLayoutPost2.visibility = ShaderStage::Fragment;
+	bindingLayoutPost2.sampler.type = SamplerBindingType::Filtering;
+
+	BindGroupLayoutDescriptor bindGroupLayoutDescPost{};
+	bindGroupLayoutDescPost.entryCount = (uint32_t)bindingLayoutEntriesPost.size();
+	bindGroupLayoutDescPost.entries = bindingLayoutEntriesPost.data();
+	m_postBindGroupLayout = m_device.createBindGroupLayout(bindGroupLayoutDescPost);
+
 	return m_bindGroupLayout != nullptr;
 }
 
 void Renderer::terminateBindGroupLayout()
 {
 	m_bindGroupLayout.release();
+	m_postBindGroupLayout.release();
 }
 
 bool Renderer::initBindGroup()
@@ -986,12 +1158,12 @@ bool Renderer::initBindGroup()
 void Renderer::terminateBindGroup()
 {
 	m_bindGroup.release();
+	m_postBindGroup.release();
 }
 
 void Renderer::updateProjectionMatrix()
 {
 	// Update projection matrix
-	int width, height;
 	glfwGetFramebufferSize(m_window, &width, &height);
 	float ratio = width / (float)height;
 	m_uniforms.projectionMatrix = glm::perspective(45 * PI / 180, ratio, 0.01f, 100.0f);

@@ -59,7 +59,7 @@ fn transform(position: vec3f, rotation: vec4f, scale: vec3f, v: vec3f) -> vec3f 
 }
 
 
-    @vertex
+@vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
 
@@ -74,7 +74,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-    @fragment
+@fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
     if (uMyUniforms.flags & UNIFORM_CULLING_PLANE) != 0u && (in.flags & INSTANCE_NO_CULLING_PLANE) == 0u {

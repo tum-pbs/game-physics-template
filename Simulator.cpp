@@ -139,7 +139,7 @@ void Simulator::onGUI()
     ImGui::DragFloat3("Scale", glm::value_ptr(m_scale), 0.01f);
 
     ImGui::BeginTable("Cubes", 2);
-    ImGui::PushButtonRepeat(true);
+    // ImGui::PushButtonRepeat(true);
     ImGui::TableNextColumn();
     if (ImGui::Button("Add Cube"))
     {
@@ -152,6 +152,7 @@ void Simulator::onGUI()
             cubes.pop_back();
     }
     ImGui::EndTable();
+
     ImGui::CheckboxFlags("Culling Plane Enabled", &renderer.m_uniforms.flags, Renderer::cullingPlane);
     if (renderer.m_uniforms.flags)
     {
