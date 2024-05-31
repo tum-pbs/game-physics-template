@@ -162,7 +162,7 @@ void Renderer::onFrame()
 	m_instancingPipeline.drawSpheres(renderPass);
 
 	m_instancingPipeline.drawQuads(renderPass);
-	updateGui(renderPass);
+
 	renderPass.end();
 	renderPass.release();
 
@@ -183,8 +183,7 @@ void Renderer::onFrame()
 	renderPassPost.setBindGroup(0, m_postBindGroup, 0, nullptr);
 	renderPassPost.draw(6, 1, 0, 0);
 
-	// We add the GUI drawing commands to the render pass
-	// updateGui(renderPassPost);
+	updateGui(renderPassPost);
 	renderPassPost.end();
 	renderPassPost.release();
 
@@ -752,7 +751,7 @@ void Renderer::initGui()
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOther(m_window, true);
-	ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat, m_depthTextureFormat);
+	ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat);
 }
 
 void Renderer::terminateGui()
@@ -822,6 +821,7 @@ void Renderer::updateGui(RenderPassEncoder renderPass)
 	// Draw the UI
 	ImGui::EndFrame();
 	// Convert the UI defined above into low-level drawing commands
+
 	ImGui::Render();
 	// Execute the low-level drawing commands on the WebGPU backend
 	ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
