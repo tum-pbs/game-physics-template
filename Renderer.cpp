@@ -60,6 +60,7 @@ using VertexAttributes = ResourceManager::VertexAttributes;
 
 Renderer::Renderer()
 {
+	// TODO: do some more robust initialization
 	initWindowAndDevice();
 	initBindGroupLayout();
 	initSwapChain();
@@ -94,15 +95,11 @@ void Renderer::onFrame()
 	m_instancingPipeline.updateQuads(m_quads);
 
 	// prepare line buffers
-
 	m_linePipeline.updateLines(m_lines);
 
 	TextureView nextTexture = m_swapChain.getCurrentTextureView();
 	if (!nextTexture)
-	{
-		std::cerr << "Cannot acquire next swap chain texture" << std::endl;
-		return;
-	}
+		throw std::runtime_error("Could not get next texture!");
 
 	CommandEncoderDescriptor commandEncoderDesc;
 	commandEncoderDesc.label = "Command Encoder";
