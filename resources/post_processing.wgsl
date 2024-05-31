@@ -36,9 +36,9 @@ fn vs_main(@builtin(vertex_index) VertexIndex: u32) -> VertexOutput {
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4<f32> {
     let color = textureSample(postProTexture, postProSampler, uv);
-    var effect = vec3f(1.0);
-    // var uv2 = uv * (1.0 - uv.yx);
-    // var vignette = uv2.x * uv2.y * 15.0;
-    // effect = pow(vignette, 0.5);
+    var effect = 1.0;
+    var uv2 = uv * (1.0 - uv.yx);
+    var vignette = uv2.x * uv2.y * 15.0;
+    effect = pow(vignette, 0.5);
     return vec4f(color.rgb * effect, 1.0);
 }
