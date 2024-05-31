@@ -50,9 +50,6 @@
 #include "Primitives.h"
 
 using namespace wgpu;
-using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
-using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
-using LineVertexAttributes = ResourceManager::LineVertexAttributes;
 using VertexAttributes = ResourceManager::VertexAttributes;
 
 constexpr float PI = 3.14159265358979323846f;
