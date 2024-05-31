@@ -321,8 +321,8 @@ void Renderer::onFinish()
 	terminateUniforms();
 	terminateGeometry();
 	m_instancingPipeline.terminate();
-	terminateLinePipeline();
-	terminatePostProcessPipeline();
+	m_linePipeline.terminate();
+	m_postProcessingPipeline.terminate();
 	terminateBindGroupLayout();
 	terminateDepthBuffer();
 	terminateSwapChain();
@@ -621,10 +621,6 @@ void Renderer::terminateDepthBuffer()
 	m_depthTexture.release();
 }
 
-void Renderer::terminateInstancingRenderPipeline()
-{
-	m_instancingPipeline.terminate();
-}
 void Renderer::clearScene()
 {
 	m_cubes.clear();
@@ -691,16 +687,6 @@ bool Renderer::initGeometry()
 	m_queue.writeBuffer(m_quadIndexBuffer, 0, quad::triangles.data(), quadIndexBufferDesc.size);
 
 	return m_cubeVertexBuffer != nullptr && m_cubeIndexBuffer != nullptr && m_quadVertexBuffer != nullptr && m_quadIndexBuffer != nullptr;
-}
-
-void Renderer::terminateLinePipeline()
-{
-	m_linePipeline.terminate();
-}
-
-void Renderer::terminatePostProcessPipeline()
-{
-	m_postProcessingPipeline.terminate();
 }
 
 void Renderer::terminateGeometry()

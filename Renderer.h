@@ -108,10 +108,6 @@ private:
 	bool initDepthBuffer();
 	void terminateDepthBuffer();
 
-	void terminateInstancingRenderPipeline();
-	void terminateLinePipeline();
-	void terminatePostProcessPipeline();
-
 	bool initGeometry();
 	void terminateGeometry();
 
