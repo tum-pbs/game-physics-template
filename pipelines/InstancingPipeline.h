@@ -16,9 +16,12 @@ public:
     void terminateGeometry();
 
 private:
-    int cubeInstances = 0;
-    int sphereInstances = 0;
-    int quadInstances = 0;
+    size_t cubeInstances = 0;
+    size_t sphereInstances = 0;
+    size_t quadInstances = 0;
+    size_t prevCubeInstances = 0;
+    size_t prevSphereInstances = 0;
+    size_t prevQuadInstances = 0;
 
     wgpu::Device device = nullptr;
     wgpu::Queue queue = nullptr;
@@ -37,4 +40,7 @@ private:
     wgpu::Buffer quadInstanceBuffer = nullptr;
     wgpu::Buffer quadVertexBuffer = nullptr;
     wgpu::Buffer quadIndexBuffer = nullptr;
+
+    void reallocateBuffer(wgpu::Buffer &buffer, size_t count);
+    void draw(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances);
 };

@@ -165,96 +165,56 @@ void InstancingPipeline::terminate()
 
 void InstancingPipeline::updateCubes(std::vector<ResourceManager::InstancedVertexAttributes> &cubes)
 {
-    cubeInstances = static_cast<int>(cubes.size());
-    if (cubeInstanceBuffer != nullptr)
-    {
-        cubeInstanceBuffer.destroy();
-        cubeInstanceBuffer = nullptr;
-    }
-    BufferDescriptor cubeInstanceBufferDesc;
+    cubeInstances = cubes.size();
+
+    if (cubeInstances != prevCubeInstances)
+        reallocateBuffer(cubeInstanceBuffer, cubeInstances);
+
     if (cubeInstances > 0)
-    {
-        cubeInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * cubeInstances;
-        cubeInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-        cubeInstanceBufferDesc.mappedAtCreation = false;
-        cubeInstanceBuffer = device.createBuffer(cubeInstanceBufferDesc);
-        queue.writeBuffer(cubeInstanceBuffer, 0, cubes.data(), cubeInstanceBufferDesc.size);
-    }
+        queue.writeBuffer(cubeInstanceBuffer, 0, cubes.data(), sizeof(InstancedVertexAttributes) * cubeInstances);
+
+    prevCubeInstances = cubeInstances;
 }
 
 void InstancingPipeline::drawCubes(wgpu::RenderPassEncoder renderPass)
 {
-    // TODO: set bindgroup
-    if (cubeInstances > 0)
-    {
-        renderPass.setPipeline(pipeline);
-        renderPass.setVertexBuffer(0, cubeVertexBuffer, 0, cubeVertexBuffer.getSize());
-        renderPass.setVertexBuffer(1, cubeInstanceBuffer, 0, cubeInstances * sizeof(InstancedVertexAttributes));
-        renderPass.setIndexBuffer(cubeIndexBuffer, IndexFormat::Uint16, 0, cubeIndexBuffer.getSize());
-        renderPass.drawIndexed(static_cast<uint32_t>(cube::triangles.size() * 3), cubeInstances, 0, 0, 0);
-    }
+    draw(renderPass, cubeInstanceBuffer, cubeVertexBuffer, cubeIndexBuffer, cubeInstances);
 }
 
 void InstancingPipeline::updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres)
 {
-    sphereInstances = static_cast<int>(spheres.size());
-    if (sphereInstanceBuffer != nullptr)
-    {
-        sphereInstanceBuffer.destroy();
-        sphereInstanceBuffer = nullptr;
-    }
-    BufferDescriptor sphereInstanceBufferDesc;
+    sphereInstances = spheres.size();
+
+    if (sphereInstances != prevSphereInstances)
+        reallocateBuffer(sphereInstanceBuffer, sphereInstances);
+
     if (sphereInstances > 0)
-    {
-        sphereInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * sphereInstances;
-        sphereInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-        sphereInstanceBufferDesc.mappedAtCreation = false;
-        sphereInstanceBuffer = device.createBuffer(sphereInstanceBufferDesc);
-        queue.writeBuffer(sphereInstanceBuffer, 0, spheres.data(), sphereInstanceBufferDesc.size);
-    }
+        queue.writeBuffer(sphereInstanceBuffer, 0, spheres.data(), sizeof(InstancedVertexAttributes) * sphereInstances);
+
+    prevSphereInstances = sphereInstances;
 }
 
 void InstancingPipeline::drawSpheres(wgpu::RenderPassEncoder renderPass)
 {
-    if (sphereInstances > 0)
-    {
-        renderPass.setPipeline(pipeline);
-        renderPass.setVertexBuffer(0, sphereVertexBuffer, 0, sphereVertexBuffer.getSize());
-        renderPass.setVertexBuffer(1, sphereInstanceBuffer, 0, sphereInstances * sizeof(InstancedVertexAttributes));
-        renderPass.setIndexBuffer(sphereIndexBuffer, IndexFormat::Uint16, 0, sphereIndexBuffer.getSize());
-        renderPass.drawIndexed(static_cast<uint32_t>(sphereIndexBuffer.getSize() / 2), sphereInstances, 0, 0, 0);
-    }
+    draw(renderPass, sphereInstanceBuffer, sphereVertexBuffer, sphereIndexBuffer, sphereInstances);
 }
 
 void InstancingPipeline::updateQuads(std::vector<ResourceManager::InstancedVertexAttributes> &quads)
 {
-    quadInstances = static_cast<int>(quads.size());
-    if (quadInstanceBuffer != nullptr)
-    {
-        quadInstanceBuffer.destroy();
-        quadInstanceBuffer = nullptr;
-    }
-    BufferDescriptor quadInstanceBufferDesc;
+    quadInstances = quads.size();
+
+    if (quadInstances != prevQuadInstances)
+        reallocateBuffer(quadInstanceBuffer, quadInstances);
+
     if (quadInstances > 0)
-    {
-        quadInstanceBufferDesc.size = sizeof(InstancedVertexAttributes) * quadInstances;
-        quadInstanceBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-        quadInstanceBufferDesc.mappedAtCreation = false;
-        quadInstanceBuffer = device.createBuffer(quadInstanceBufferDesc);
-        queue.writeBuffer(quadInstanceBuffer, 0, quads.data(), quadInstanceBufferDesc.size);
-    }
+        queue.writeBuffer(quadInstanceBuffer, 0, quads.data(), sizeof(InstancedVertexAttributes) * quadInstances);
+
+    prevQuadInstances = quadInstances;
 }
 
 void InstancingPipeline::drawQuads(wgpu::RenderPassEncoder renderPass)
 {
-    if (quadInstances > 0)
-    {
-        renderPass.setPipeline(pipeline);
-        renderPass.setVertexBuffer(0, quadVertexBuffer, 0, quadVertexBuffer.getSize());
-        renderPass.setVertexBuffer(1, quadInstanceBuffer, 0, quadInstances * sizeof(InstancedVertexAttributes));
-        renderPass.setIndexBuffer(quadIndexBuffer, IndexFormat::Uint16, 0, quadIndexBuffer.getSize());
-        renderPass.drawIndexed(static_cast<uint32_t>(quad::triangles.size() * 3), quadInstances, 0, 0, 0);
-    }
+    draw(renderPass, quadInstanceBuffer, quadVertexBuffer, quadIndexBuffer, quadInstances);
 }
 
 void InstancingPipeline::initGeometry()
@@ -356,5 +316,31 @@ void InstancingPipeline::terminateGeometry()
     {
         quadIndexBuffer.destroy();
         quadIndexBuffer.release();
+    }
+}
+
+void InstancingPipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count)
+{
+    if (buffer != nullptr)
+    {
+        buffer.destroy();
+        buffer = nullptr;
+    }
+    BufferDescriptor bufferDesc;
+    bufferDesc.size = sizeof(InstancedVertexAttributes) * count;
+    bufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+    bufferDesc.mappedAtCreation = false;
+    buffer = device.createBuffer(bufferDesc);
+}
+
+void InstancingPipeline::draw(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances)
+{
+    if (instances > 0)
+    {
+        renderPass.setPipeline(pipeline);
+        renderPass.setVertexBuffer(0, vertexBuffer, 0, vertexBuffer.getSize());
+        renderPass.setVertexBuffer(1, instanceBuffer, 0, instances * sizeof(InstancedVertexAttributes));
+        renderPass.setIndexBuffer(indexBuffer, IndexFormat::Uint16, 0, indexBuffer.getSize());
+        renderPass.drawIndexed(static_cast<uint32_t>(indexBuffer.getSize() / sizeof(uint16_t)), static_cast<uint32_t>(instances), 0, 0, 0);
     }
 }
