@@ -52,8 +52,6 @@
 using namespace wgpu;
 using VertexAttributes = ResourceManager::VertexAttributes;
 
-constexpr float PI = 3.14159265358979323846f;
-
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
 #endif
@@ -251,7 +249,7 @@ void Renderer::onMouseMove(double xpos, double ypos)
 		vec2 delta = (currentMouse - m_drag.startMouse) * m_drag.sensitivity;
 		m_cameraState.angles = m_drag.startCameraState.angles + delta;
 		// Clamp to avoid going too far when orbitting up/down
-		m_cameraState.angles.y = glm::clamp(m_cameraState.angles.y, -PI / 2 + 1e-5f, PI / 2 - 1e-5f);
+		m_cameraState.angles.y = glm::clamp(m_cameraState.angles.y, -glm::half_pi<float>() + 1e-5f, glm::half_pi<float>() - 1e-5f);
 		updateViewMatrix();
 
 		// Inertia
@@ -305,7 +303,6 @@ void Renderer::initWindowAndDevice()
 
 	if (!glfwInit())
 		throw std::runtime_error("Could not initialize GLFW!");
-
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
@@ -545,11 +542,10 @@ void Renderer::initUniforms()
 	bufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
 	bufferDesc.mappedAtCreation = false;
 	m_uniformBuffer = m_device.createBuffer(bufferDesc);
-
 	// Upload the initial value of the uniforms
 	m_uniforms.modelMatrix = mat4x4(1.0);
 	m_uniforms.viewMatrix = glm::lookAt(vec3(-2.0f, -3.0f, 2.0f), vec3(0.0f), vec3(0, 0, 1));
-	m_uniforms.projectionMatrix = glm::perspective(45 * PI / 180, 640.0f / 480.0f, 0.01f, 100.0f);
+	m_uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), 640.0f / 480.0f, 0.01f, 100.0f);
 	m_uniforms.time = 1.0f;
 	m_uniforms.cullingNormal = {0.0f, 0.0f, 1.0f};
 	m_uniforms.cullingOffset = 0.0f;
@@ -698,7 +694,7 @@ void Renderer::updateProjectionMatrix()
 	// Update projection matrix
 	glfwGetFramebufferSize(m_window, &width, &height);
 	float ratio = width / (float)height;
-	m_uniforms.projectionMatrix = glm::perspective(45 * PI / 180, ratio, 0.01f, 100.0f);
+	m_uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), ratio, 0.01f, 100.0f);
 	m_queue.writeBuffer(
 		m_uniformBuffer,
 		offsetof(MyUniforms, projectionMatrix),
@@ -739,7 +735,7 @@ void Renderer::updateDragInertia()
 			return;
 		}
 		m_cameraState.angles += m_drag.velocity;
-		m_cameraState.angles.y = glm::clamp(m_cameraState.angles.y, -PI / 2 + 1e-5f, PI / 2 - 1e-5f);
+		m_cameraState.angles.y = glm::clamp(m_cameraState.angles.y, -glm::half_pi<float>() + 1e-5f, glm::half_pi<float>() - 1e-5f);
 		// Dampen the velocity so that it decreases exponentially and stops
 		// after a few frames.
 		m_drag.velocity *= m_drag.intertia;
