@@ -63,35 +63,21 @@ constexpr float PI = 3.14159265358979323846f;
 ///////////////////////////////////////////////////////////////////////////////
 // Public methods
 
-bool Renderer::onInit()
+Renderer::Renderer()
 {
-	if (!initWindowAndDevice())
-		return false;
-	if (!initBindGroupLayout())
-		return false;
-	if (!initSwapChain())
-		return false;
-	if (!initDepthBuffer())
-		return false;
-	if (!initRenderTexture())
-		return false;
-	if (!m_instancingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout))
-		return false;
-	if (!m_linePipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout))
-		return false;
-	if (!m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_postBindGroupLayout))
-		return false;
-	if (!m_instancingPipeline.initGeometry(m_device, m_queue))
-		return false;
-	if (!initUniforms())
-		return false;
-	if (!initLightingUniforms())
-		return false;
-	if (!initBindGroup())
-		return false;
-	if (!initGui())
-		return false;
-	return true;
+	initWindowAndDevice();
+	initBindGroupLayout();
+	initSwapChain();
+	initDepthBuffer();
+	initRenderTexture();
+	m_instancingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
+	m_linePipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
+	m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_postBindGroupLayout);
+	m_instancingPipeline.initGeometry(m_device, m_queue);
+	initUniforms();
+	initLightingUniforms();
+	initBindGroup();
+	initGui();
 }
 
 void Renderer::onFrame()
@@ -315,30 +301,21 @@ void Renderer::onScroll(double /* xoffset */, double yoffset)
 ///////////////////////////////////////////////////////////////////////////////
 // Private methods
 
-bool Renderer::initWindowAndDevice()
+void Renderer::initWindowAndDevice()
 {
 	m_instance = createInstance(InstanceDescriptor{});
 	if (!m_instance)
-	{
-		std::cerr << "Could not initialize WebGPU!" << std::endl;
-		return false;
-	}
+		throw std::runtime_error("Could not initialize WebGPU!");
 
 	if (!glfwInit())
-	{
-		std::cerr << "Could not initialize GLFW!" << std::endl;
-		return false;
-	}
+		throw std::runtime_error("Could not initialize GLFW!");
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 	m_window = glfwCreateWindow(640, 480, "Game Physics Template", NULL, NULL);
 	if (!m_window)
-	{
-		std::cerr << "Could not open window!" << std::endl;
-		return false;
-	}
+		throw std::runtime_error("Could not open window!");
 
 	m_surface = glfwGetWGPUSurface(m_instance, m_window);
 	RequestAdapterOptions adapterOpts{};
@@ -409,7 +386,10 @@ bool Renderer::initWindowAndDevice()
 		if (that != nullptr) that->onScroll(xoffset, yoffset); });
 
 	adapter.release();
-	return m_device != nullptr;
+	if (!m_device)
+	{
+		throw std::runtime_error("Could not create device!");
+	}
 }
 
 void Renderer::terminateWindowAndDevice()
@@ -423,7 +403,7 @@ void Renderer::terminateWindowAndDevice()
 	glfwTerminate();
 }
 
-bool Renderer::initSwapChain()
+void Renderer::initSwapChain()
 {
 	// Get the current size of the window's framebuffer:
 	glfwGetFramebufferSize(m_window, &width, &height);
@@ -436,7 +416,8 @@ bool Renderer::initSwapChain()
 	swapChainDesc.presentMode = PresentMode::Immediate;
 	m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
 
-	return m_swapChain != nullptr;
+	if (!m_swapChain)
+		throw std::runtime_error("Could not create swap chain!");
 }
 
 void Renderer::terminateSwapChain()
@@ -444,7 +425,7 @@ void Renderer::terminateSwapChain()
 	m_swapChain.release();
 }
 
-bool Renderer::initRenderTexture()
+void Renderer::initRenderTexture()
 {
 
 	TextureDescriptor postProcessTextureDesc;
@@ -495,7 +476,14 @@ bool Renderer::initRenderTexture()
 	bindGroupDescPost.entries = bindingsPost.data();
 	m_postBindGroup = m_device.createBindGroup(bindGroupDescPost);
 
-	return m_postTexture != nullptr && m_postTextureView != nullptr && m_postSampler != nullptr && m_postBindGroup != nullptr;
+	if (m_postTexture == nullptr)
+		throw std::runtime_error("Could not create post process texture!");
+	if (m_postTextureView == nullptr)
+		throw std::runtime_error("Could not create post process texture view!");
+	if (m_postSampler == nullptr)
+		throw std::runtime_error("Could not create post process sampler!");
+	if (m_postBindGroup == nullptr)
+		throw std::runtime_error("Could not create post process bind group!");
 }
 
 void Renderer::terminateRenderTexture()
@@ -504,7 +492,7 @@ void Renderer::terminateRenderTexture()
 	m_postTexture.release();
 	m_postBindGroup.release();
 }
-bool Renderer::initDepthBuffer()
+void Renderer::initDepthBuffer()
 {
 	// Get the current size of the window's framebuffer:
 	glfwGetFramebufferSize(m_window, &width, &height);
@@ -532,7 +520,11 @@ bool Renderer::initDepthBuffer()
 	depthTextureViewDesc.format = m_depthTextureFormat;
 	m_depthTextureView = m_depthTexture.createView(depthTextureViewDesc);
 
-	return m_depthTextureView != nullptr;
+	if (m_depthTexture == nullptr)
+		throw std::runtime_error("Could not create depth texture!");
+
+	if (m_depthTextureView == nullptr)
+		throw std::runtime_error("Could not create depth texture view!");
 }
 
 void Renderer::terminateDepthBuffer()
@@ -551,7 +543,7 @@ void Renderer::clearScene()
 	current_id = 0;
 }
 
-bool Renderer::initUniforms()
+void Renderer::initUniforms()
 {
 	// Create uniform buffer
 	BufferDescriptor bufferDesc;
@@ -573,7 +565,8 @@ bool Renderer::initUniforms()
 	updateProjectionMatrix();
 	updateViewMatrix();
 
-	return m_uniformBuffer != nullptr;
+	if (m_uniformBuffer == nullptr)
+		throw std::runtime_error("Could not create uniform buffer!");
 }
 
 void Renderer::terminateUniforms()
@@ -582,7 +575,7 @@ void Renderer::terminateUniforms()
 	m_uniformBuffer.release();
 }
 
-bool Renderer::initLightingUniforms()
+void Renderer::initLightingUniforms()
 {
 	// Create uniform buffer
 	BufferDescriptor bufferDesc;
@@ -599,7 +592,8 @@ bool Renderer::initLightingUniforms()
 
 	updateLightingUniforms();
 
-	return m_lightingUniformBuffer != nullptr;
+	if (m_lightingUniformBuffer == nullptr)
+		throw std::runtime_error("Could not create lighting uniform buffer!");
 }
 
 void Renderer::terminateLightingUniforms()
@@ -617,7 +611,7 @@ void Renderer::updateLightingUniforms()
 	}
 }
 
-bool Renderer::initBindGroupLayout()
+void Renderer::initBindGroupLayout()
 {
 	std::vector<BindGroupLayoutEntry> bindingLayoutEntries(2, Default);
 
@@ -661,7 +655,11 @@ bool Renderer::initBindGroupLayout()
 	bindGroupLayoutDescPost.entries = bindingLayoutEntriesPost.data();
 	m_postBindGroupLayout = m_device.createBindGroupLayout(bindGroupLayoutDescPost);
 
-	return m_bindGroupLayout != nullptr;
+	if (m_bindGroupLayout == nullptr)
+		throw std::runtime_error("Could not create bind group layout!");
+
+	if (m_postBindGroupLayout == nullptr)
+		throw std::runtime_error("Could not create post bind group layout!");
 }
 
 void Renderer::terminateBindGroupLayout()
@@ -670,7 +668,7 @@ void Renderer::terminateBindGroupLayout()
 	m_postBindGroupLayout.release();
 }
 
-bool Renderer::initBindGroup()
+void Renderer::initBindGroup()
 {
 	// Create a binding
 	std::vector<BindGroupEntry> bindings(2);
@@ -691,7 +689,8 @@ bool Renderer::initBindGroup()
 	bindGroupDesc.entries = bindings.data();
 	m_bindGroup = m_device.createBindGroup(bindGroupDesc);
 
-	return m_bindGroup != nullptr;
+	if (m_bindGroup == nullptr)
+		throw std::runtime_error("Could not create bind group!");
 }
 
 void Renderer::terminateBindGroup()
@@ -754,7 +753,7 @@ void Renderer::updateDragInertia()
 	}
 }
 
-bool Renderer::initGui()
+void Renderer::initGui()
 {
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -764,7 +763,6 @@ bool Renderer::initGui()
 	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOther(m_window, true);
 	ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat, m_depthTextureFormat);
-	return true;
 }
 
 void Renderer::terminateGui()

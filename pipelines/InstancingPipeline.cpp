@@ -9,7 +9,7 @@ using namespace wgpu;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
 using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
 
-bool InstancingPipeline::init(Device &device, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
+void InstancingPipeline::init(Device &device, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
 {
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
@@ -131,7 +131,8 @@ bool InstancingPipeline::init(Device &device, TextureFormat &swapChainFormat, Te
 
     pipeline = device.createRenderPipeline(pipelineDesc);
 
-    return pipeline != nullptr;
+    if (pipeline == nullptr)
+        throw std::runtime_error("Failed to create instancing pipeline");
 }
 
 void InstancingPipeline::terminate()
@@ -252,7 +253,7 @@ void InstancingPipeline::drawQuads(wgpu::RenderPassEncoder renderPass)
     }
 }
 
-bool InstancingPipeline::initGeometry(wgpu::Device &device, wgpu::Queue &queue)
+void InstancingPipeline::initGeometry(wgpu::Device &device, wgpu::Queue &queue)
 {
     // Load cube geometry
 
@@ -306,7 +307,18 @@ bool InstancingPipeline::initGeometry(wgpu::Device &device, wgpu::Queue &queue)
     quadIndexBuffer = device.createBuffer(quadIndexBufferDesc);
     queue.writeBuffer(quadIndexBuffer, 0, quad::triangles.data(), quadIndexBufferDesc.size);
 
-    return cubeVertexBuffer != nullptr && cubeIndexBuffer != nullptr && sphereVertexBuffer != nullptr && sphereIndexBuffer != nullptr && quadVertexBuffer != nullptr && quadIndexBuffer != nullptr;
+    if (cubeVertexBuffer == nullptr)
+        throw std::runtime_error("Failed to create cube vertex buffer");
+    if (cubeIndexBuffer == nullptr)
+        throw std::runtime_error("Failed to create cube index buffer");
+    if (sphereVertexBuffer == nullptr)
+        throw std::runtime_error("Failed to create sphere vertex buffer");
+    if (sphereIndexBuffer == nullptr)
+        throw std::runtime_error("Failed to create sphere index buffer");
+    if (quadVertexBuffer == nullptr)
+        throw std::runtime_error("Failed to create quad vertex buffer");
+    if (quadIndexBuffer == nullptr)
+        throw std::runtime_error("Failed to create quad index buffer");
 }
 
 void InstancingPipeline::terminateGeometry()

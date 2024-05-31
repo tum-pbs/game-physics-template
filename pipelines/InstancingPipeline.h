@@ -19,7 +19,7 @@ public:
     wgpu::Buffer quadVertexBuffer = nullptr;
     wgpu::Buffer quadIndexBuffer = nullptr;
 
-    bool init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::BindGroupLayout &bindGroupLayout);
+    void init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::BindGroupLayout &bindGroupLayout);
     void terminate();
     void updateCubes(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &cubes);
     void drawCubes(wgpu::RenderPassEncoder renderPass);
@@ -27,7 +27,7 @@ public:
     void drawSpheres(wgpu::RenderPassEncoder renderPass);
     void updateQuads(wgpu::Device &device, wgpu::Queue &queue, std::vector<ResourceManager::InstancedVertexAttributes> &quads);
     void drawQuads(wgpu::RenderPassEncoder renderPass);
-    bool initGeometry(wgpu::Device &device, wgpu::Queue &queue);
+    void initGeometry(wgpu::Device &device, wgpu::Queue &queue);
     void terminateGeometry();
 
 private:

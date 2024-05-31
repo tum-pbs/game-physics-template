@@ -42,6 +42,7 @@ struct GLFWwindow;
 class Renderer
 {
 public:
+	Renderer();
 	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
 	uint32_t drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	uint32_t drawSphere(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags = 0);
@@ -50,8 +51,6 @@ public:
 	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
-	// A function called only once at the beginning. Returns false is init failed.
-	bool onInit();
 
 	// A function called at each frame, guaranteed never to be called before `onInit`.
 	void onFrame();
@@ -99,36 +98,36 @@ public:
 	MyUniforms m_uniforms;
 
 private:
-	bool initWindowAndDevice();
+	void initWindowAndDevice();
 	void terminateWindowAndDevice();
 
-	bool initSwapChain();
+	void initSwapChain();
 	void terminateSwapChain();
 
-	bool initRenderTexture();
+	void initRenderTexture();
 	void terminateRenderTexture();
 
-	bool initDepthBuffer();
+	void initDepthBuffer();
 	void terminateDepthBuffer();
 
-	bool initUniforms();
+	void initUniforms();
 	void terminateUniforms();
 
-	bool initLightingUniforms();
+	void initLightingUniforms();
 	void terminateLightingUniforms();
 	void updateLightingUniforms();
 
-	bool initBindGroupLayout();
+	void initBindGroupLayout();
 	void terminateBindGroupLayout();
 
-	bool initBindGroup();
+	void initBindGroup();
 	void terminateBindGroup();
 
 	void updateProjectionMatrix();
 	void updateViewMatrix();
 	void updateDragInertia();
 
-	bool initGui();										// called in onInit
+	void initGui();										// called in onInit
 	void terminateGui();								// called in onFinish
 	void updateGui(wgpu::RenderPassEncoder renderPass); // called in onFrame
 

@@ -29,11 +29,8 @@
 
 int main(int, char **)
 {
-	Renderer renderer;
+	Renderer renderer = Renderer();
 	Simulator simulator(renderer);
-
-	if (!renderer.onInit())
-		return 1;
 
 	simulator.init();
 	while (renderer.isRunning())
