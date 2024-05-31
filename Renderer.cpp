@@ -73,6 +73,8 @@ bool Renderer::onInit()
 		return false;
 	if (!initDepthBuffer())
 		return false;
+	if (!initRenderTexture())
+		return false;
 	if (!m_instancingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout))
 		return false;
 	if (!m_linePipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout))
@@ -324,6 +326,7 @@ void Renderer::onFinish()
 	m_linePipeline.terminate();
 	m_postProcessingPipeline.terminate();
 	terminateBindGroupLayout();
+	terminateRenderTexture();
 	terminateDepthBuffer();
 	terminateSwapChain();
 	terminateWindowAndDevice();
@@ -339,10 +342,12 @@ void Renderer::onResize()
 	// Terminate in reverse order
 	terminateDepthBuffer();
 	terminateSwapChain();
+	terminateRenderTexture();
 
 	// Re-init
 	initSwapChain();
 	initDepthBuffer();
+	initRenderTexture();
 
 	updateProjectionMatrix();
 }
@@ -450,7 +455,6 @@ bool Renderer::initWindowAndDevice()
 	requiredLimits.limits.maxTextureDimension2D = 2048;
 	requiredLimits.limits.maxTextureArrayLayers = 1;
 	requiredLimits.limits.maxSampledTexturesPerShaderStage = 2;
-	//                                                       ^ This was 1
 	requiredLimits.limits.maxSamplersPerShaderStage = 1;
 
 	DeviceDescriptor deviceDesc;
@@ -523,6 +527,17 @@ bool Renderer::initSwapChain()
 	swapChainDesc.presentMode = PresentMode::Immediate;
 	m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
 
+	return m_swapChain != nullptr;
+}
+
+void Renderer::terminateSwapChain()
+{
+	m_swapChain.release();
+}
+
+bool Renderer::initRenderTexture()
+{
+
 	TextureDescriptor postProcessTextureDesc;
 	postProcessTextureDesc.dimension = TextureDimension::_2D;
 	postProcessTextureDesc.format = m_swapChainFormat;
@@ -571,18 +586,15 @@ bool Renderer::initSwapChain()
 	bindGroupDescPost.entries = bindingsPost.data();
 	m_postBindGroup = m_device.createBindGroup(bindGroupDescPost);
 
-	return m_swapChain != nullptr;
+	return m_postTexture != nullptr && m_postTextureView != nullptr && m_postSampler != nullptr && m_postBindGroup != nullptr;
 }
 
-void Renderer::terminateSwapChain()
+void Renderer::terminateRenderTexture()
 {
 	m_postTexture.destroy();
 	m_postTexture.release();
 	m_postBindGroup.release();
-	// m_postTextureView.release();
-	m_swapChain.release();
 }
-
 bool Renderer::initDepthBuffer()
 {
 	// Get the current size of the window's framebuffer:
@@ -815,6 +827,8 @@ bool Renderer::initBindGroupLayout()
 	bindGroupLayoutDesc.entryCount = (uint32_t)bindingLayoutEntries.size();
 	bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
 	m_bindGroupLayout = m_device.createBindGroupLayout(bindGroupLayoutDesc);
+
+	// Post processing bind group layout
 
 	std::vector<BindGroupLayoutEntry> bindingLayoutEntriesPost(2, Default);
 

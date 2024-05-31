@@ -105,6 +105,9 @@ private:
 	bool initSwapChain();
 	void terminateSwapChain();
 
+	bool initRenderTexture();
+	void terminateRenderTexture();
+
 	bool initDepthBuffer();
 	void terminateDepthBuffer();
 
@@ -234,6 +237,7 @@ private:
 	wgpu::Texture m_postTexture = nullptr;
 	wgpu::TextureView m_postTextureView = nullptr;
 	wgpu::Sampler m_postSampler = nullptr;
+	wgpu::Sampler m_depthSampler = nullptr;
 
 	// Bind Group
 	wgpu::BindGroup m_bindGroup = nullptr;
