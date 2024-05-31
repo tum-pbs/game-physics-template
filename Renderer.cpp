@@ -385,10 +385,8 @@ void Renderer::initWindowAndDevice()
 		if (that != nullptr) that->onScroll(xoffset, yoffset); });
 
 	adapter.release();
-	if (!m_device)
-	{
+	if (m_device == nullptr)
 		throw std::runtime_error("Could not create device!");
-	}
 }
 
 void Renderer::terminateWindowAndDevice()
