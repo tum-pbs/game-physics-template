@@ -299,6 +299,7 @@ void Renderer::initWindowAndDevice()
 
 	if (!glfwInit())
 		throw std::runtime_error("Could not initialize GLFW!");
+
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
@@ -307,6 +308,10 @@ void Renderer::initWindowAndDevice()
 		throw std::runtime_error("Could not open window!");
 
 	m_surface = glfwGetWGPUSurface(m_instance, m_window);
+
+	if (!m_surface)
+		throw std::runtime_error("Could not create surface!");
+
 	RequestAdapterOptions adapterOpts{};
 	adapterOpts.compatibleSurface = m_surface;
 	Adapter adapter = m_instance.requestAdapter(adapterOpts);
@@ -326,8 +331,8 @@ void Renderer::initWindowAndDevice()
 	requiredLimits.limits.maxUniformBuffersPerShaderStage = 2;
 	requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
 	// Allow textures up to 2K
-	requiredLimits.limits.maxTextureDimension1D = 2048;
-	requiredLimits.limits.maxTextureDimension2D = 2048;
+	requiredLimits.limits.maxTextureDimension1D = 8192;
+	requiredLimits.limits.maxTextureDimension2D = 8192;
 	requiredLimits.limits.maxTextureArrayLayers = 1;
 	requiredLimits.limits.maxSampledTexturesPerShaderStage = 2;
 	requiredLimits.limits.maxSamplersPerShaderStage = 1;
