@@ -10,15 +10,21 @@ struct Transform
     glm::vec3 rotation;
     glm::vec3 scale;
 };
+enum ObjectType
+{
+    Cube,
+    Sphere,
+};
 struct Object
 {
     Transform transform;
     glm::vec3 color;
+    ObjectType type;
 };
 glm::vec3 m_rotation(0, 0, 0);
 glm::vec3 m_scale(0.8, 0.8, 0.8);
-glm::vec3 m_color(1, 0, 0);
-std::vector<Object> cubes;
+glm::vec3 m_color(0, 0.3215686274509804, 0.28627450980392155);
+std::vector<Object> objects;
 
 namespace ImGui
 {
@@ -30,21 +36,21 @@ namespace ImGui
         return changed;
     }
 }
-void addToCubeCube()
+void addObject(ObjectType type = Cube)
 {
-    size_t i = cubes.size();
+    size_t i = objects.size();
     float n = 5;
     float iz = floor(i / n / n);
     float iy = fmod(floor(i / n), n);
     float ix = fmod(i, n);
-    cubes.push_back({{glm::vec3(ix, iy, iz) - (n - 1) / 2, m_rotation, m_scale}, m_color});
+    objects.push_back({{glm::vec3(ix, iy, iz) - (n - 1) / 2, m_rotation, m_scale}, m_color, type});
 }
 
 void Simulator::init()
 {
     for (int i = 0; i < 50; i++)
     {
-        addToCubeCube();
+        addObject();
     }
 }
 
@@ -138,18 +144,22 @@ void Simulator::onGUI()
     ImGui::DragFloat3("Rotation", glm::value_ptr(m_rotation), 0.1f);
     ImGui::DragFloat3("Scale", glm::value_ptr(m_scale), 0.01f);
 
-    ImGui::BeginTable("Cubes", 2);
-    // ImGui::PushButtonRepeat(true);
+    ImGui::BeginTable("Cubes", 3);
     ImGui::TableNextColumn();
     if (ImGui::Button("Add Cube"))
     {
-        addToCubeCube();
+        addObject(Cube);
     }
     ImGui::TableNextColumn();
-    if (ImGui::Button("Remove Cube"))
+    if (ImGui::Button("Remove Object"))
     {
-        if (!cubes.empty())
-            cubes.pop_back();
+        if (!objects.empty())
+            objects.pop_back();
+    }
+    ImGui::TableNextColumn();
+    if (ImGui::Button("Add Sphere"))
+    {
+        addObject(Sphere);
     }
     ImGui::EndTable();
 
@@ -168,9 +178,16 @@ void Simulator::onDraw()
     drawWireCube({0, 0, 0}, {5, 5, 5}, {1, 1, 1});
     if (renderer.m_uniforms.flags & 1)
         drawPlane(renderer.m_uniforms.cullingNormal, renderer.m_uniforms.cullingOffset);
-    for (Object &cube : cubes)
+    for (Object &object : objects)
     {
-        renderer.drawCube(cube.transform.position, glm::quat(glm::radians(cube.transform.rotation)), cube.transform.scale, cube.color);
+        switch (object.type)
+        {
+        case Cube:
+            renderer.drawCube(object.transform.position, glm::quat(glm::radians(object.transform.rotation)), object.transform.scale, object.color);
+            break;
+        case Sphere:
+            renderer.drawSphere(object.transform.position, glm::quat(glm::radians(object.transform.rotation)), object.transform.scale, glm::vec4(object.color, 1));
+            break;
+        }
     }
-    renderer.drawSphere({0, 0, 0}, 1, {1, 1, 1});
 };
