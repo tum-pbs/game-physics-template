@@ -107,6 +107,9 @@ void Renderer::onFrame()
 
 	RenderPassDescriptor renderPassDesc{};
 
+	vec3 correctedBackground = glm::pow(backgroundColor, vec3(2.2f));
+	Color correctedBackgroundColor = Color{correctedBackground.r, correctedBackground.g, correctedBackground.b, 1.0f};
+
 	// TODO maybe rewrite the texture view descriptor
 	TextureViewDescriptor postProcessTextureViewDesc;
 	postProcessTextureViewDesc.aspect = TextureAspect::All;
@@ -122,7 +125,7 @@ void Renderer::onFrame()
 	renderPassColorAttachment.resolveTarget = nullptr;
 	renderPassColorAttachment.loadOp = LoadOp::Clear;
 	renderPassColorAttachment.storeOp = StoreOp::Store;
-	renderPassColorAttachment.clearValue = Color{0.05, 0.05, 0.05, 1.0};
+	renderPassColorAttachment.clearValue = correctedBackgroundColor;
 	renderPassDesc.colorAttachmentCount = 1;
 	renderPassDesc.colorAttachments = &renderPassColorAttachment;
 
@@ -168,7 +171,7 @@ void Renderer::onFrame()
 	renderPassColorAttachment2.resolveTarget = nullptr;
 	renderPassColorAttachment2.loadOp = LoadOp::Clear;
 	renderPassColorAttachment2.storeOp = StoreOp::Store;
-	renderPassColorAttachment2.clearValue = Color{0.05, 0.05, 0.05, 1.0};
+	renderPassColorAttachment2.clearValue = correctedBackgroundColor;
 	RenderPassDescriptor postProcessRenderPassDesc{};
 	postProcessRenderPassDesc.colorAttachmentCount = 1;
 	postProcessRenderPassDesc.colorAttachments = &renderPassColorAttachment2;
@@ -826,4 +829,55 @@ void Renderer::updateGui(RenderPassEncoder renderPass)
 	ImGui::Render();
 	// Execute the low-level drawing commands on the WebGPU backend
 	ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
+}
+
+void Renderer::drawWireCube(vec3 position, vec3 scale, vec3 color)
+{
+	std::vector<vec3> points =
+		{
+			{0, 0, 0},
+			{0, 0, 1},
+
+			{0, 0, 0},
+			{0, 1, 0},
+
+			{0, 0, 0},
+			{1, 0, 0},
+
+			{0, 0, 1},
+			{1, 0, 1},
+
+			{0, 0, 1},
+			{0, 1, 1},
+
+			{0, 1, 0},
+			{1, 1, 0},
+
+			{0, 1, 0},
+			{0, 1, 1},
+
+			{1, 0, 0},
+			{1, 1, 0},
+
+			{1, 0, 0},
+			{1, 0, 1},
+
+			{1, 1, 0},
+			{1, 1, 1},
+
+			{1, 0, 1},
+			{1, 1, 1},
+
+			{0, 1, 1},
+			{1, 1, 1}};
+	for (vec3 &point : points)
+	{
+		point -= 0.5;
+		point *= scale;
+		point += position;
+	}
+	for (int i = 0; i < points.size() / 2; i++)
+	{
+		drawLine(points[i * 2], points[i * 2 + 1], color);
+	}
 }

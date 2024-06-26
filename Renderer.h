@@ -52,6 +52,7 @@ public:
 	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
+	void Renderer::drawWireCube(glm::vec3 position, glm::vec3 scale, glm::vec3 color);
 
 	// A function called at each frame, guaranteed never to be called before `onInit`.
 	void onFrame();
@@ -108,6 +109,7 @@ public:
 
 	MyUniforms m_uniforms;
 	LightingUniforms m_lightingUniforms;
+	glm::vec3 backgroundColor = {0.05f, 0.05f, 0.05f};
 
 private:
 	void initWindowAndDevice();

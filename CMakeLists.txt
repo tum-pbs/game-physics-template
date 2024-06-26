@@ -23,6 +23,12 @@ add_executable(Template
 	Primitives.h
 	Primitives.cpp
 	ResourceManager.h
+	Scenes/SceneIndex.h
+	Scenes/Scene1.cpp
+	Scenes/Scene1.h
+	Scenes/Scene2.cpp
+	Scenes/Scene2.h
+	Scenes/Scene.h
 	pipelines/InstancingPipeline.cpp
 	pipelines/InstancingPipeline.h
 	pipelines/LinePipeline.cpp

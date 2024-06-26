@@ -2,6 +2,8 @@
 #include "Renderer.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
+#include "Scenes/Scene.h"
+#include <memory>
 
 class Simulator
 {
@@ -18,8 +20,8 @@ public:
 
 private:
     using vec3 = glm::vec3;
-    void drawWireCube(vec3 position, vec3 scale, vec3 color);
-    void drawCoordinatesAxes();
-    void drawPlane(vec3 normal, float distance);
     Renderer &renderer;
+    std::unique_ptr<Scene> currentScene;
+    std::string currentSceneName;
+    std::vector<std::string> sceneNames;
 };
