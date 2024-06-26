@@ -17,18 +17,23 @@ add_subdirectory(glfw3webgpu)
 add_subdirectory(imgui)
 
 add_executable(Template
+	Scenes/Scene1.h
+	Scenes/Scene1.cpp
+	Scenes/Scene2.h
+	Scenes/Scene2.cpp
+	Scenes/Scene3.h
+	Scenes/Scene3.cpp
+	Scenes/Scene4.h
+	Scenes/Scene4.cpp
 	main.cpp
 	Renderer.h
 	Renderer.cpp
 	Primitives.h
 	Primitives.cpp
 	ResourceManager.h
-	Scenes/SceneIndex.h
-	Scenes/Scene1.cpp
-	Scenes/Scene1.h
-	Scenes/Scene2.cpp
-	Scenes/Scene2.h
 	Scenes/Scene.h
+	Scenes/Scene.cpp
+	Scenes/SceneIndex.h
 	pipelines/InstancingPipeline.cpp
 	pipelines/InstancingPipeline.h
 	pipelines/LinePipeline.cpp

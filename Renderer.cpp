@@ -47,6 +47,8 @@
 #include <string>
 #include <array>
 
+#include <chrono>
+
 #include "Primitives.h"
 
 using namespace wgpu;
@@ -77,7 +79,7 @@ Renderer::Renderer()
 
 void Renderer::onFrame()
 {
-
+	auto startTime = std::chrono::high_resolution_clock::now();
 	glfwPollEvents();
 	updateDragInertia();
 	updateLightingUniforms();
@@ -197,6 +199,7 @@ void Renderer::onFrame()
 	command.release();
 
 	m_swapChain.present();
+	lastDrawTime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - startTime).count();
 
 #ifdef WEBGPU_BACKEND_DAWN
 	// Check for pending error callbacks

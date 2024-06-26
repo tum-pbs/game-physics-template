@@ -1,6 +1,6 @@
 #include "Scene.h"
 
-class Scene2 : public Scene
+class Scene3 : public Scene
 {
 public:
     void init() override;

@@ -24,4 +24,6 @@ private:
     std::unique_ptr<Scene> currentScene;
     std::string currentSceneName;
     std::vector<std::string> sceneNames;
+    double lastStepTime = 0;
+    double lastDrawPrepTime = 0;
 };

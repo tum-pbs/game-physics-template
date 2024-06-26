@@ -1,7 +1,7 @@
-#include "Scene2.h"
+#include "Scene3.h"
 #include <imgui.h>
 
-void Scene2::init()
+void Scene3::init()
 {
     vec3 position1 = {0, 0, 0};
     vec3 position2 = {0, 2, 0};
@@ -29,13 +29,13 @@ void Scene2::init()
     forces.resize(positions.size());
 }
 
-void Scene2::simulateStep()
+void Scene3::simulateStep()
 {
     if (!pause)
-        integrateEuler(0.005f);
+        integrateMidpoint(0.005f);
 }
 
-void Scene2::onGUI()
+void Scene3::onGUI()
 {
     ImGui::Checkbox("Pause", &pause);
 }

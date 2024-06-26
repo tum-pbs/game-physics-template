@@ -1,51 +1,82 @@
 #include "Scene.h"
-#include <memory>
-#include <imgui.h>
 #include <stdio.h>
+#include <glm/gtx/string_cast.hpp>
 
-void Scene1::init()
+void Scene::onDraw(Renderer &renderer)
 {
-    // Initialize the scene
+    for (int i = 0; i < positions.size(); i++)
+    {
+        renderer.drawSphere(positions[i], 0.1f, {1, 0, 0});
+    }
+    for (auto &spring : springs)
+    {
+        renderer.drawLine(positions[spring.index1], positions[spring.index2], {0, 1, 0});
+    }
 }
 
-void Scene1::simulateStep()
+void Scene::printMassPoint(int i)
 {
-    // Simulate the scene
+    using namespace std;
+    cout << "Mass Point " << i << ":" << endl;
+    cout << "position: " << glm::to_string(positions[i]) << endl;
+    cout << "velocity: " << glm::to_string(velocities[i]) << endl;
+    cout << "mass: " << masses[i] << endl;
 }
 
-void Scene1::onDraw(Renderer &renderer)
+void Scene::integrateMidpoint(float dt)
 {
-    // Draw the scene
-    renderer.drawCube({0, 0, 0}, glm::quat(1, 0, 0, 0), {1, 1, 1}, {1, 1, 1, 1});
+    resetForces();
+    CalculateForces(positions, forces, springs);
+    for (int i = 0; i < positions.size(); i++)
+    {
+        vec3 a = forces[i] / masses[i];
+        vec3 tmpV = velocities[i] + a * dt / 2.0f;
+        tmpPositions[i] = positions[i] + velocities[i] * dt / 2.0f;
+        positions[i] += tmpV * dt;
+    }
+    resetForces();
+    CalculateForces(tmpPositions, forces, springs);
+    for (int i = 0; i < positions.size(); i++)
+    {
+        vec3 a = forces[i] / masses[i];
+        velocities[i] += a * dt;
+    }
 }
 
-void Scene1::onGUI()
+void Scene::integrateEuler(float dt)
 {
-    // Draw the GUI
-    ImGui::Text("hurray");
+    resetForces();
+    CalculateForces(positions, forces, springs);
+    for (int i = 0; i < positions.size(); i++)
+    {
+        vec3 a = forces[i] / masses[i];
+        velocities[i] += a * dt;
+        positions[i] += velocities[i] * dt;
+    }
 }
 
-void Scene2::init()
+void Scene::resetForces()
 {
+    for (auto &force : forces)
+    {
+        force = {0, 0, 0};
+    }
 }
 
-void Scene2::simulateStep()
+void Scene::CalculateForces(std::vector<vec3> &positions_, std::vector<vec3> &forces_, std::vector<Spring> &springs_)
 {
+    for (auto &spring : springs_)
+    {
+        vec3 p1 = positions_[spring.index1];
+        vec3 p2 = positions_[spring.index2];
+        vec3 d = p2 - p1;
+        float l = glm::length(d);
+        vec3 f = spring.stiffness * (l - spring.length) * glm::normalize(d);
+        forces_[spring.index1] += f;
+        forces_[spring.index2] -= f;
+    }
+    for (auto &force : forces_)
+    {
+        force += gravity;
+    }
 }
-
-void Scene2::onDraw(Renderer &renderer)
-{
-    renderer.drawCube({0, 0, 0}, glm::quat(1, 0, 0, 0), {1, 1, 1}, {1, 0, 1, 1});
-}
-
-void Scene2::onGUI()
-{
-}
-
-std::map<std::string, SceneCreator> scenesCreators = {
-    {"Scene1", []()
-     { return std::make_unique<Scene1>(); }},
-    {"Scene2", []()
-     { return std::make_unique<Scene2>(); }},
-    // add more Scene types here
-};

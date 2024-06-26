@@ -54,6 +54,9 @@ public:
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
 	void Renderer::drawWireCube(glm::vec3 position, glm::vec3 scale, glm::vec3 color);
 
+	size_t objectCount() { return current_id; };
+	size_t lineCount() { return m_lines.size() / 2; };
+
 	// A function called at each frame, guaranteed never to be called before `onInit`.
 	void onFrame();
 
@@ -69,6 +72,7 @@ public:
 	void onScroll(double xoffset, double yoffset);
 	void clearScene();
 	std::function<void()> defineGUI = nullptr;
+	double lastDrawTime = 0;
 
 	enum DrawFlags
 	{
@@ -151,7 +155,6 @@ private:
 	using vec4 = glm::vec4;
 	using vec3 = glm::vec3;
 	using vec2 = glm::vec2;
-
 	uint32_t current_id = 0;
 	int width, height;
 

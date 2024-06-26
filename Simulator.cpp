@@ -4,6 +4,7 @@
 #include <glm/ext.hpp>
 #include <glm/gtx/polar_coordinates.hpp>
 #include "Scenes/SceneIndex.h"
+#include <chrono>
 
 void Simulator::init()
 {
@@ -21,13 +22,17 @@ void Simulator::init()
 
 void Simulator::simulateStep()
 {
+    auto startTime = std::chrono::high_resolution_clock::now();
     currentScene->simulateStep();
+    lastStepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 }
 
 void Simulator::onGUI()
 {
     ImGui::Begin("Game Physics");
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Step: %.3f ms, DrawPrep: %.3f, Draw: %.3f ms", lastStepTime * 1000, lastDrawPrepTime * 1000, renderer.lastDrawTime * 1000);
+    ImGui::Text("%d objects, %d lines", renderer.objectCount(), renderer.lineCount());
     ImGui::Separator();
     ImGui::Text("Scene");
     if (ImGui::BeginCombo("Scene", currentSceneName.c_str()))
@@ -46,7 +51,7 @@ void Simulator::onGUI()
         }
         ImGui::EndCombo();
     }
-    if (ImGui::Button("Reset Scene"))
+    if (ImGui::Button("Reload Scene"))
     {
         currentScene = scenesCreators[currentSceneName]();
     }
@@ -78,6 +83,8 @@ void Simulator::onGUI()
 
 void Simulator::onDraw()
 {
+    auto startTime = std::chrono::high_resolution_clock::now();
     renderer.drawWireCube({0, 0, 0}, {5, 5, 5}, {1, 1, 1});
     currentScene->onDraw(renderer);
+    lastDrawPrepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 };
