@@ -53,14 +53,11 @@ void Simulator::onGUI()
     ImGui::Separator();
     if (ImGui::CollapsingHeader(currentSceneName.c_str()))
     {
-        ImGui::Indent();
         currentScene->onGUI();
-        ImGui::Unindent();
     }
     ImGui::Separator();
     if (ImGui::CollapsingHeader("Rendering"))
     {
-        ImGui::Indent();
         ImGui::ColorEdit3("Background Color", glm::value_ptr(renderer.backgroundColor));
         ImGui::Separator();
 
@@ -74,7 +71,6 @@ void Simulator::onGUI()
         ImGui::DragFloat("Specular Alpha", &renderer.m_lightingUniforms.alpha, 0.1f, 0.0, 100.0);
         ImGui::Separator();
         ImGui::DragFloat("Diffuse Intensity", &renderer.m_lightingUniforms.diffuse_intensity, 0.01f, 0.0, 1.0);
-        ImGui::Unindent();
     }
 
     ImGui::End();
