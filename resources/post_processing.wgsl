@@ -40,5 +40,5 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4<f32> {
     var uv2 = uv * (1.0 - uv.yx);
     var vignette = uv2.x * uv2.y * 15.0;
     effect = pow(vignette, 0.5);
-    return vec4f(color.rgb * effect, 1.0);
+    return vec4f(color.rgb, 1.0);
 }
