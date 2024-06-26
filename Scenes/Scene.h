@@ -4,9 +4,9 @@
 class Scene
 {
 public:
-    virtual void init() = 0;
-    virtual void simulateStep() = 0;
-    virtual void onDraw(Renderer &renderer) = 0;
-    virtual void onGUI() = 0;
+    virtual void init() {};
+    virtual void simulateStep() {};
+    virtual void onDraw(Renderer &renderer) { (void)renderer; };
+    virtual void onGUI() {};
     virtual ~Scene() = default;
 };
