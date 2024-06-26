@@ -576,10 +576,13 @@ void Renderer::initLightingUniforms()
 	m_lightingUniformBuffer = m_device.createBuffer(bufferDesc);
 
 	// Initial values
-	m_lightingUniforms.directions[0] = {0.5f, -0.9f, 0.1f, 0.0f};
-	m_lightingUniforms.directions[1] = {0.2f, 0.4f, 0.3f, 0.0f};
-	m_lightingUniforms.colors[0] = {1.0f, 0.9f, 0.6f, 1.0f};
-	m_lightingUniforms.colors[1] = {0.6f, 0.9f, 1.0f, 1.0f};
+	m_lightingUniforms.direction = vec3(2.0, 0.5, 1);
+	m_lightingUniforms.ambient = vec3(1, 1, 1);
+	m_lightingUniforms.ambient_intensity = 0.1f;
+	m_lightingUniforms.specular = vec3(1, 1, 1);
+	m_lightingUniforms.diffuse_intensity = 1.0f;
+	m_lightingUniforms.specular_intensity = 0.2f;
+	m_lightingUniforms.alpha = 32;
 
 	updateLightingUniforms();
 
@@ -595,11 +598,7 @@ void Renderer::terminateLightingUniforms()
 
 void Renderer::updateLightingUniforms()
 {
-	if (m_lightingUniformsChanged)
-	{
-		m_queue.writeBuffer(m_lightingUniformBuffer, 0, &m_lightingUniforms, sizeof(LightingUniforms));
-		m_lightingUniformsChanged = false;
-	}
+	m_queue.writeBuffer(m_lightingUniformBuffer, 0, &m_lightingUniforms, sizeof(LightingUniforms));
 }
 
 void Renderer::initBindGroupLayout()

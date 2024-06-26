@@ -93,7 +93,21 @@ public:
 	};
 	static_assert(sizeof(MyUniforms) % 16 == 0);
 
+	struct LightingUniforms
+	{
+		glm::vec3 direction;
+		float diffuse_intensity = 1.0f;
+		glm::vec3 ambient;
+		float ambient_intensity = 0.1f;
+		glm::vec3 specular;
+		float specular_intensity = 0.5f;
+		float alpha = 32.0f;
+		float _pad[3];
+	};
+	static_assert(sizeof(LightingUniforms) % 16 == 0);
+
 	MyUniforms m_uniforms;
+	LightingUniforms m_lightingUniforms;
 
 private:
 	void initWindowAndDevice();
@@ -138,20 +152,6 @@ private:
 
 	uint32_t current_id = 0;
 	int width, height;
-
-	struct LightingUniforms
-	{
-		std::array<vec4, 2> directions;
-		std::array<vec4, 2> colors;
-
-		// Material properties
-		float hardness = 32.0f;
-		float kd = 1.0f;
-		float ks = 0.5f;
-
-		float _pad[1];
-	};
-	static_assert(sizeof(LightingUniforms) % 16 == 0);
 
 	struct CameraState
 	{
@@ -211,8 +211,6 @@ private:
 	// Uniforms
 	wgpu::Buffer m_uniformBuffer = nullptr;
 	wgpu::Buffer m_lightingUniformBuffer = nullptr;
-	LightingUniforms m_lightingUniforms;
-	bool m_lightingUniformsChanged = true;
 
 	// Bind Group Layout
 	wgpu::BindGroupLayout m_bindGroupLayout = nullptr;

@@ -52,13 +52,17 @@ void Simulator::init()
     {
         addObject();
     }
+    for (int i = 0; i < 10; i++)
+    {
+        addObject(Sphere);
+    }
 }
 
 void Simulator::drawCoordinatesAxes()
 {
-    renderer.drawCube({1, 0, 0}, glm::quat(vec3()), {2, 0.1, 0.1}, {1, 0, 0}, Renderer::dontCull); // pos x is red
-    renderer.drawCube({0, 1, 0}, glm::quat(vec3()), {0.1, 2, 0.1}, {0, 1, 0}, Renderer::dontCull); // pos y is green
-    renderer.drawCube({0, 0, 1}, glm::quat(vec3()), {0.1, 0.1, 2}, {0, 0, 1}, Renderer::dontCull); // pos z is blue
+    renderer.drawCube({1, 0, 0}, glm::quat(vec3()), {2, 0.1, 0.1}, {1, 0, 0}, Renderer::dontCull | Renderer::unlit); // pos x is red
+    renderer.drawCube({0, 1, 0}, glm::quat(vec3()), {0.1, 2, 0.1}, {0, 1, 0}, Renderer::dontCull | Renderer::unlit); // pos y is green
+    renderer.drawCube({0, 0, 1}, glm::quat(vec3()), {0.1, 0.1, 2}, {0, 0, 1}, Renderer::dontCull | Renderer::unlit); // pos z is blue
 }
 
 void Simulator::drawWireCube(vec3 position, vec3 scale, vec3 color)
@@ -169,6 +173,16 @@ void Simulator::onGUI()
         ImGui::DragDirection("CullDirection", renderer.m_uniforms.cullingNormal);
         ImGui::DragFloat("CullOffset", &renderer.m_uniforms.cullingOffset, 0.01f);
     }
+
+    ImGui::End();
+    ImGui::Begin("Lighting");
+    ImGui::DragFloat3("Light Position", glm::value_ptr(renderer.m_lightingUniforms.direction), 0.01f);
+    ImGui::ColorEdit3("Ambient Color", glm::value_ptr(renderer.m_lightingUniforms.ambient));
+    ImGui::DragFloat("Ambient Intensity", &renderer.m_lightingUniforms.ambient_intensity, 0.01f, 0.0, 1.0);
+    ImGui::ColorEdit3("Specular Color", glm::value_ptr(renderer.m_lightingUniforms.specular));
+    ImGui::DragFloat("Specular Intensity", &renderer.m_lightingUniforms.specular_intensity, 0.01f, 0.0, 1.0);
+    ImGui::DragFloat("Diffuse Intensity", &renderer.m_lightingUniforms.diffuse_intensity, 0.01f, 0.0, 1.0);
+    ImGui::DragFloat("Specular Alpha", &renderer.m_lightingUniforms.alpha, 0.1f, 0.0, 100.0);
     ImGui::End();
 }
 

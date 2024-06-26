@@ -22,9 +22,6 @@ struct VertexOutput {
     @location(4) flags: u32
 };
 
-//
-// A structure holding the value of our uniforms
-//
 struct MyUniforms {
 	projectionMatrix: mat4x4f,
 	viewMatrix: mat4x4f,
@@ -36,8 +33,18 @@ struct MyUniforms {
     flags: u32,
 };
 
-@group(0) @binding(0) var<uniform> uMyUniforms: MyUniforms;
+struct LightingUniforms {
+    direction: vec3f,
+    diffuse_intensity: f32,
+    ambient: vec3f,
+    ambient_intensity: f32,
+    specular: vec3f,
+    specular_intensity: f32,
+    alpha: f32
+};
 
+@group(0) @binding(0) var<uniform> myUniforms: MyUniforms;
+@group(0) @binding(1) var<uniform> lightingUniforms: LightingUniforms;
 
 fn quatDot(q1: vec4f, q2: vec4f) -> vec4f {
     let scalar = q1.w * q2.w - dot(q1.xyz, q2.xyz);
@@ -65,7 +72,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     let worldpos = transform(in.world_pos, in.rotation, in.scale, in.position);
 
-    out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * vec4f(worldpos, 1.0);
+    out.position = myUniforms.projectionMatrix * myUniforms.viewMatrix * vec4f(worldpos, 1.0);
     out.normal = quatMul(in.rotation, in.normal);
     out.color = in.color;
     out.id = in.id;
@@ -77,22 +84,24 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
-    if (uMyUniforms.flags & UNIFORM_CULLING_PLANE) != 0u && (in.flags & INSTANCE_NO_CULLING_PLANE) == 0u {
-        let distance = uMyUniforms.cullingDistance - dot(in.worldpos, uMyUniforms.cullingNormal);
+    if (myUniforms.flags & UNIFORM_CULLING_PLANE) != 0u && (in.flags & INSTANCE_NO_CULLING_PLANE) == 0u {
+        let distance = myUniforms.cullingDistance - dot(in.worldpos, myUniforms.cullingNormal);
         if distance < 0.0 {
         discard;
         }
     }
     // Basic phong shading
-    var color = in.color.xyz;
+    var diffuse = in.color.xyz;
+    var color = diffuse;
 
     if (in.flags & INSTANCE_UNLIT) == 0u {
 
-        let light_dir = normalize(vec3f(2.0, 0.5, 1.0));
+        let light_dir = normalize(lightingUniforms.direction);
         let normal = normalize(in.normal);
-        let diffuse = max(dot(normal, light_dir), 0.0);
-        let ambient = 0.1;
-        color = color * (diffuse + ambient);
+        let diffuse_color = diffuse * lightingUniforms.diffuse_intensity * max(dot(normal, light_dir), 0.0);
+        let specular_color = lightingUniforms.specular * lightingUniforms.specular_intensity * pow(max(dot(reflect(-light_dir, normal), normalize(myUniforms.cameraWorldPosition - in.worldpos)), 0.0), lightingUniforms.alpha);
+
+        color = lightingUniforms.ambient * lightingUniforms.ambient_intensity + diffuse_color + specular_color;
     }
 	// Gamma-correction
     let corrected_color = pow(color, vec3f(2.2));
