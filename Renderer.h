@@ -52,7 +52,7 @@ public:
 	uint32_t drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags = 0);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
-	void Renderer::drawWireCube(glm::vec3 position, glm::vec3 scale, glm::vec3 color);
+	void drawWireCube(glm::vec3 position, glm::vec3 scale, glm::vec3 color);
 
 	size_t objectCount() { return current_id; };
 	size_t lineCount() { return m_lines.size() / 2; };

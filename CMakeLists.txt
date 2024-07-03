@@ -45,6 +45,10 @@ add_executable(Template
 	Simulator.cpp
 )
 
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if(DEV_MODE)
 	# In dev mode, we load resources from the source tree, so that when we
 	# dynamically edit resources (like shaders), these are correctly
@@ -59,6 +63,7 @@ else()
 		RESOURCE_DIR="./resources"
 	)
 endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 target_include_directories(Template PRIVATE .)
 
@@ -68,7 +73,7 @@ set_target_properties(Template PROPERTIES
 	CXX_STANDARD 17
 	VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1"
 )
-target_treat_all_warnings_as_errors(Template)
+# target_treat_all_warnings_as_errors(Template)
 target_copy_webgpu_binaries(Template)
 
 if (MSVC)

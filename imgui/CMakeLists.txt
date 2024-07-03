@@ -1,3 +1,7 @@
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Define an ImGui target that fits our use case
 add_library(imgui STATIC
 	# Among the different backends available, we are interested in connecting
