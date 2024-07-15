@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1...3.25)
 project(
-	LearnWebGPU
+	GamePhysicsTemplate
 	VERSION 0.1.0
 	LANGUAGES CXX C
 )
@@ -15,25 +15,15 @@ add_subdirectory(glfw)
 add_subdirectory(webgpu)
 add_subdirectory(glfw3webgpu)
 add_subdirectory(imgui)
+# add_subdirectory(Scenes)
 
 add_executable(Template
-	Scenes/Scene1.h
-	Scenes/Scene1.cpp
-	Scenes/Scene2.h
-	Scenes/Scene2.cpp
-	Scenes/Scene3.h
-	Scenes/Scene3.cpp
-	Scenes/Scene4.h
-	Scenes/Scene4.cpp
 	main.cpp
 	Renderer.h
 	Renderer.cpp
 	Primitives.h
 	Primitives.cpp
 	ResourceManager.h
-	Scenes/Scene.h
-	Scenes/Scene.cpp
-	Scenes/SceneIndex.h
 	pipelines/InstancingPipeline.cpp
 	pipelines/InstancingPipeline.h
 	pipelines/LinePipeline.cpp
@@ -44,6 +34,18 @@ add_executable(Template
 	implementations.cpp
 	Simulator.cpp
 )
+
+
+
+file(GLOB_RECURSE SCENE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/*.cpp
+)
+
+file(GLOB_RECURSE SCENE_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/*.h
+)
+target_sources(Template PRIVATE ${SCENE_SOURCES} ${SCENE_HEADERS})
+
 
 
 set(CMAKE_CXX_STANDARD 17)
