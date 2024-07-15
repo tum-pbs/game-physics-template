@@ -54,6 +54,7 @@ void Simulator::onGUI()
     if (ImGui::Button("Reload Scene"))
     {
         currentScene = scenesCreators[currentSceneName]();
+        currentScene->init();
     }
     ImGui::Separator();
     if (ImGui::CollapsingHeader(currentSceneName.c_str()))
