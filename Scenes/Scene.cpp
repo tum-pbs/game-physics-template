@@ -50,8 +50,8 @@ void Scene::integrateEuler(float dt)
     for (int i = 0; i < positions.size(); i++)
     {
         vec3 a = forces[i] / masses[i];
-        velocities[i] += a * dt;
         positions[i] += velocities[i] * dt;
+        velocities[i] += a * dt;
     }
 }
 
