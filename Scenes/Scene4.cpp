@@ -43,8 +43,8 @@ void Scene4::initCube(int res, float stiffness)
 
 void Scene4::init()
 {
-    initCube(3, 40);
-    gravity = {0, 0, -1};
+    initCube(3, k);
+    gravity = {0, 0, -1.0};
 }
 
 void Scene4::simulateStep()
@@ -82,14 +82,14 @@ void Scene4::onGUI()
     ImGui::Checkbox("Pause", &pause);
     if (ImGui::Button("Reset"))
     {
-        initCube(cubeRes, 40);
+        initCube(cubeRes, k);
     }
     ImGui::DragFloat("timescale", &timescale, 0.1f, 0.0001f, 100.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
     ImGui::Text("Physics dt: %.4f", dt);
     ImGui::DragFloat3("Gravity", glm::value_ptr(gravity), 0.01f, -50.0f, 50.0f, "%.2f");
     if (ImGui::DragInt("Cube Resolution", &cubeRes, 1, 1, 20))
     {
-        initCube(cubeRes, 40);
+        initCube(cubeRes, k);
     }
 }
 
