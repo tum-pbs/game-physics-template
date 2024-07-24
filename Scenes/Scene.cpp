@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <glm/gtx/string_cast.hpp>
 
+using namespace glm;
+
 void Scene::onDraw(Renderer &renderer)
 {
     for (int i = 0; i < positions.size(); i++)
@@ -70,8 +72,8 @@ void Scene::CalculateForces(std::vector<vec3> &positions_, std::vector<vec3> &fo
         vec3 p1 = positions_[spring.index1];
         vec3 p2 = positions_[spring.index2];
         vec3 d = p2 - p1;
-        float l = glm::length(d);
-        vec3 f = spring.stiffness * (l - spring.length) * glm::normalize(d);
+        float l = length(d);
+        vec3 f = spring.stiffness * (l - spring.length) * normalize(d);
         forces_[spring.index1] += f;
         forces_[spring.index2] -= f;
     }
