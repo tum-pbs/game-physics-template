@@ -64,6 +64,14 @@ void Simulator::onGUI()
     ImGui::Separator();
     if (ImGui::CollapsingHeader("Rendering"))
     {
+        if(ImGui::Checkbox("Limit FPS", &limitFPS))
+        {
+            if(limitFPS)
+                renderer.setPresentMode(wgpu::PresentMode::Fifo);
+            else
+                renderer.setPresentMode(wgpu::PresentMode::Immediate);
+        }
+
         ImGui::ColorEdit3("Background Color", glm::value_ptr(renderer.backgroundColor));
         ImGui::Separator();
 

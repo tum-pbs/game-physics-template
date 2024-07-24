@@ -26,4 +26,5 @@ private:
     std::vector<std::string> sceneNames;
     double lastStepTime = 0;
     double lastDrawPrepTime = 0;
+    bool limitFPS = true;
 };

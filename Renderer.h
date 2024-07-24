@@ -71,6 +71,7 @@ public:
 	void onMouseButton(int button, int action, int mods);
 	void onScroll(double xoffset, double yoffset);
 	void clearScene();
+	void setPresentMode(wgpu::PresentMode mode);
 	std::function<void()> defineGUI = nullptr;
 	double lastDrawTime = 0;
 
@@ -157,6 +158,8 @@ private:
 	using vec2 = glm::vec2;
 	uint32_t current_id = 0;
 	int width, height;
+	wgpu::PresentMode presentMode = wgpu::PresentMode::Fifo;
+	bool reinitSwapChain = false;
 
 	struct CameraState
 	{

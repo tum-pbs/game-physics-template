@@ -83,6 +83,12 @@ void Renderer::onFrame()
 	glfwPollEvents();
 	updateDragInertia();
 	updateLightingUniforms();
+	if (reinitSwapChain)
+	{
+		terminateSwapChain();
+		initSwapChain();
+		reinitSwapChain = false;
+	}
 
 	// Update uniform buffer
 	m_uniforms.time = static_cast<float>(glfwGetTime());
@@ -401,6 +407,14 @@ void Renderer::terminateWindowAndDevice()
 	glfwTerminate();
 }
 
+void Renderer::setPresentMode(PresentMode mode)
+{
+	if (mode == presentMode)
+		return;
+	presentMode = mode;
+	reinitSwapChain = true;
+}
+
 void Renderer::initSwapChain()
 {
 	// Get the current size of the window's framebuffer:
@@ -411,7 +425,7 @@ void Renderer::initSwapChain()
 	swapChainDesc.height = static_cast<uint32_t>(height);
 	swapChainDesc.usage = TextureUsage::RenderAttachment;
 	swapChainDesc.format = m_swapChainFormat;
-	swapChainDesc.presentMode = PresentMode::Immediate;
+	swapChainDesc.presentMode = presentMode;
 	m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
 
 	if (!m_swapChain)
