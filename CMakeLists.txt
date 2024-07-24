@@ -15,7 +15,6 @@ add_subdirectory(glfw)
 add_subdirectory(webgpu)
 add_subdirectory(glfw3webgpu)
 add_subdirectory(imgui)
-# add_subdirectory(Scenes)
 
 add_executable(Template
 	main.cpp
