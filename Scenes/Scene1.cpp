@@ -6,15 +6,10 @@
 
 void Scene1::init()
 {
-    Rigidbody rb(
-        vec3(0, 0, 0),
-        vec3(1, 0.6, 0.5),
-        2);
-    rb.rotation = glm::angleAxis(glm::radians(90.0f), vec3(0, 0, 1));
-    rb.update(0.0f);
+    Rigidbody rb = Rigidbody(vec3(0), glm::angleAxis(glm::radians(90.0f), vec3(0, 0, 1)), vec3(1, 0.6, 0.5), 2);
     vec3 force = vec3(1, 1, 0);
     vec3 fwhere = vec3(0.3, 0.5, 0.25);
-    rb.addForceWorld(force, fwhere);
+    rb.addWorldForce(force, fwhere);
     rigidbodies.push_back(rb);
     update(2.0f);
     rb = rigidbodies[0];

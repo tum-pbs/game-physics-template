@@ -206,7 +206,7 @@ namespace collisionTools
     CollisionInfo checkCollisionSATHelper(const mat4 &worldFromObj_A, const mat4 &worldFromObj_B, vec3 size_A, vec3 size_B)
     {
         CollisionInfo info;
-        info.isValid = false;
+        info.isColliding = false;
         vec3 collisionPoint = vec3(0.0);
         float smallOverlap = 10000.0f;
         vec3 axis;
@@ -362,7 +362,7 @@ namespace collisionTools
         break;
         }
 
-        info.isValid = true;
+        info.isColliding = true;
         info.collisionPointWorld = collisionPoint;
         info.depth = smallOverlap;
         info.normalWorld = -normal;
@@ -393,7 +393,7 @@ namespace collisionTools
 
             // check for collision
             CollisionInfo simpletest = checkCollisionSAT(AM, BM); // should find out a collision here
-            if (!simpletest.isValid)
+            if (!simpletest.isColliding)
                 std::cout << "No Collision" << std::endl;
             else
             {
@@ -419,7 +419,7 @@ namespace collisionTools
             // check for collision
             CollisionInfo simpletest = checkCollisionSAT(AM, BM); // should find out a collision here
 
-            if (!simpletest.isValid)
+            if (!simpletest.isColliding)
                 std::cout << "No Collision" << std::endl;
             else
             {
@@ -446,7 +446,7 @@ namespace collisionTools
             // check for collision
             CollisionInfo simpletest = checkCollisionSAT(AM, BM); // should find out a collision here
 
-            if (!simpletest.isValid)
+            if (!simpletest.isColliding)
                 std::cout << "No Collision" << std::endl;
             else
             {

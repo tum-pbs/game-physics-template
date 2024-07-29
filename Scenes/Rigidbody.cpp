@@ -6,22 +6,36 @@ using mat4 = glm::mat4;
 using quat = glm::quat;
 using vec4 = glm::vec4;
 
+Rigidbody::Rigidbody(vec3 &position, quat &rotation, vec3 &scale, float mass)
+    : position(position),
+      rotation(rotation),
+      scale(scale),
+      mass(mass),
+      velocity(vec3(0)),
+      angularMomentum(vec3(0)),
+      frameForce(vec3(0)),
+      frameTorque(vec3(0))
+{
+    inverseInertiaTensor = glm::inverse(getInertiaTensor());
+}
+
+Rigidbody::Rigidbody(vec3 &position, vec3 &scale, float mass) : Rigidbody(position, quat(1, 0, 0, 0), scale, mass){};
+
 bool Rigidbody::collide(Rigidbody &body0, Rigidbody &body1)
 {
-    CollisionInfo info = collisionTools::checkCollisionSAT(body0.worldFromObj, body1.worldFromObj); //, body0.m_scale, body1.m_scale
-    if (!info.isValid)
+    mat4 worldFromObj_0 = body0.getWorldFromObj();
+    mat4 worldFromObj_1 = body1.getWorldFromObj();
+    mat4 objFromWorld_0 = glm::inverse(worldFromObj_0);
+    mat4 objFromWorld_1 = glm::inverse(worldFromObj_1);
+    CollisionInfo info = collisionTools::checkCollisionSAT(worldFromObj_0, worldFromObj_1);
+    if (!info.isColliding)
         return false;
-    body0.collisonPoint = info.collisionPointWorld;
-    body1.collisonPoint = body0.collisonPoint;
-    body0.collisioNormal = info.normalWorld;
-    body1.collisioNormal = -info.normalWorld;
+
     vec3 xaWorld = info.collisionPointWorld - body0.position;
     vec3 xbWorld = info.collisionPointWorld - body1.position;
 
-    // these obj positions are just used to print some message in cmd. Only for debug, not used in the impulse calculation
-    vec3 xa_objA = body0.objFromWorld * vec4(info.collisionPointWorld, 1);
-    vec3 xb_objB = body1.objFromWorld * vec4(info.collisionPointWorld, 1);
-    // end obj positions
+    vec3 xa_objA = objFromWorld_0 * vec4(info.collisionPointWorld, 1);
+    vec3 xb_objB = objFromWorld_1 * vec4(info.collisionPointWorld, 1);
 
     mat4 rotation0 = glm::toMat4(body0.rotation);
     mat4 rotation1 = glm::toMat4(body1.rotation);
@@ -35,9 +49,6 @@ bool Rigidbody::collide(Rigidbody &body0, Rigidbody &body1)
     vec3 velocityA = body0.velocity + glm::cross(angularVel_A, xaWorld);
     vec3 velocityB = body1.velocity + glm::cross(angularVel_B, xbWorld);
 
-    body0.relVelocity = velocityA - velocityB;
-    body0.totalVelocity = velocityA;
-    body1.totalVelocity = velocityB;
     float relVelonNormal = glm::dot(velocityA - velocityB, info.normalWorld);
     if (relVelonNormal > 0.0f)
         return false; // leaving each other, collide before
@@ -63,75 +74,19 @@ bool Rigidbody::collide(Rigidbody &body0, Rigidbody &body1)
     return true;
 }
 
-std::vector<vec3> Rigidbody::getCorners()
-{
-    const vec3 worldCenter = worldFromObj * vec4(0, 0, 0, 1);
-    vec3 worldEdges[3];
-    for (size_t i = 0; i < 3; ++i)
-    {
-        vec3 objEdge = vec3(0.0);
-        objEdge[i] = 0.5f;
-        worldEdges[i] = worldFromObj * vec4(objEdge, 0);
-    }
-    std::vector<vec3> results;
-    results.push_back(worldCenter - worldEdges[0] - worldEdges[1] - worldEdges[2]);
-    results.push_back(worldCenter + worldEdges[0] - worldEdges[1] - worldEdges[2]);
-    results.push_back(worldCenter - worldEdges[0] + worldEdges[1] - worldEdges[2]);
-    results.push_back(worldCenter + worldEdges[0] + worldEdges[1] - worldEdges[2]); // this +,+,-
-    results.push_back(worldCenter - worldEdges[0] - worldEdges[1] + worldEdges[2]);
-    results.push_back(worldCenter + worldEdges[0] - worldEdges[1] + worldEdges[2]); // this +,-,+
-    results.push_back(worldCenter - worldEdges[0] + worldEdges[1] + worldEdges[2]); // this -,+,+
-    results.push_back(worldCenter + worldEdges[0] + worldEdges[1] + worldEdges[2]); // this +,+,+
-    return results;
-}
-Rigidbody::Rigidbody() : position(),
-                         rotation(0, 0, 0, 1),
-                         scale(1.0f),
-                         velocity(),
-                         angularMomentum(),
-                         mass(1.0f),
-                         inverseInertiaTensor(computeInertiaTensorInverse(scale, 1 / mass)),
-                         worldFromObj(),
-                         m_scaledObjToWorld(),
-                         m_worldToScaledObj(),
-                         frameForce(),
-                         frameTorque()
-{
-}
-
-Rigidbody::Rigidbody(const vec3 center, const vec3 size, float mass) : position(center),
-                                                                       rotation(0, 0, 0, 1),
-                                                                       scale(size),
-                                                                       velocity(),
-                                                                       angularMomentum(),
-                                                                       mass(mass),
-                                                                       inverseInertiaTensor(computeInertiaTensorInverse(scale, 1 / mass)),
-                                                                       worldFromObj(),
-                                                                       m_scaledObjToWorld(),
-                                                                       m_worldToScaledObj(),
-                                                                       frameForce(),
-                                                                       frameTorque()
-{
-}
-
-Rigidbody::~Rigidbody()
-{
-}
-
-void Rigidbody::addForce(const vec3 force, const vec3 where)
+void Rigidbody::addLocalForce(vec3 &force, vec3 &where)
 {
     frameForce += force;
     frameTorque += glm::cross(where, force);
 }
 
-void Rigidbody::addForceWorld(const vec3 force, const vec3 where)
+void Rigidbody::addWorldForce(vec3 &force, vec3 &where)
 {
-    addForce(force, where - position);
+    addLocalForce(force, where - position);
 }
 
 void Rigidbody::update(float deltaTime)
 {
-
     // x_cm <- x_cm + h * v_cm
     position += deltaTime * velocity;
 
@@ -156,40 +111,26 @@ void Rigidbody::update(float deltaTime)
 
     frameForce = vec3(0);
     frameTorque = vec3(0);
+}
 
+mat4 Rigidbody::getWorldFromObj()
+{
+    mat4 rotationMatrix = glm::toMat4(rotation);
     mat4 scaleMatrix = glm::scale(mat4(1), scale);
     mat4 translationMatrix = glm::translate(mat4(1), position);
-    m_scaledObjToWorld = translationMatrix * rotationMatrix;
-    m_worldToScaledObj = glm::inverse(m_scaledObjToWorld);
-
-    worldFromObj = translationMatrix * rotationMatrix * scaleMatrix;
-    objFromWorld = glm::inverse(worldFromObj);
+    return translationMatrix * rotationMatrix * scaleMatrix;
 }
 
-mat4 Rigidbody::computeInertiaTensorInverse(const vec3 size, float massInverse)
+mat4 Rigidbody::getInertiaTensor()
 {
     // assumption: homogenous cuboid
-    const float x = size.x;
-    const float y = size.y;
-    const float z = size.z;
-    const float xSquared = x * x;
-    const float ySquared = y * y;
-    const float zSquared = z * z;
+    const float xSquared = scale.x * scale.x;
+    const float ySquared = scale.y * scale.y;
+    const float zSquared = scale.z * scale.z;
 
     return mat4(
-        12.0f * massInverse / (ySquared + zSquared), 0.0f, 0.0f, 0.0f,
-        0.0f, 12.0f * massInverse / (xSquared + zSquared), 0.0f, 0.0f,
-        0.0f, 0.0f, 12.0f * massInverse / (xSquared + ySquared), 0.0f,
+        1 / 12.0f * mass * (ySquared + zSquared), 0.0f, 0.0f, 0.0f,
+        0.0f, 1 / 12.0f * mass * (xSquared + zSquared), 0.0f, 0.0f,
+        0.0f, 0.0f, 1 / 12.0f * mass * (xSquared + ySquared), 0.0f,
         0.0f, 0.0f, 0.0f, 1.0f);
 }
-
-const vec3 Rigidbody::s_corners[8] =
-    {
-        vec3(-0.5f, -0.5f, -0.5f),
-        vec3(0.5f, -0.5f, -0.5f),
-        vec3(-0.5f, 0.5f, -0.5f),
-        vec3(0.5f, 0.5f, -0.5f),
-        vec3(-0.5f, -0.5f, 0.5f),
-        vec3(0.5f, -0.5f, 0.5f),
-        vec3(-0.5f, 0.5f, 0.5f),
-        vec3(0.5f, 0.5f, 0.5f)};
