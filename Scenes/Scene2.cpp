@@ -1,41 +1,20 @@
 #include "Scene2.h"
 #include <imgui.h>
+#include <stdio.h>
+#include "CollisionDetection.h"
 
 void Scene2::init()
 {
-    vec3 position1 = {0, 0, 0};
-    vec3 position2 = {0, 2, 0};
-    vec3 velocity1 = {-1, 0, 0};
-    vec3 velocity2 = {1, 0, 0};
-    float mass1 = 10;
-    float mass2 = 10;
-    float L = 1;
-    float k = 40;
-    positions.clear();
-    velocities.clear();
-    tmpPositions.clear();
-    masses.clear();
-    forces.clear();
-    springs.clear();
-    positions.push_back(position1);
-    positions.push_back(position2);
-    velocities.push_back(velocity1);
-    velocities.push_back(velocity2);
-    masses.push_back(mass1);
-    masses.push_back(mass2);
-    Spring spring = {0, 1, k, L};
-    springs.push_back(spring);
-    tmpPositions.resize(positions.size());
-    forces.resize(positions.size());
+    rigidbodies.emplace_back(vec3(0), vec3(1, 0.6, 0.5), 2);
+    rigidbodies.back().rotation = glm::angleAxis(glm::radians(90.0f), vec3(0, 0, 1));
+    rigidbodies.back().update(0.0f);
+
+    vec3 force = vec3(1.0);
+    vec3 fwhere = vec3(0.3, 0.5, 0.25);
+    rigidbodies.back().addForceWorld(force, fwhere);
 }
 
 void Scene2::simulateStep()
 {
-    if (!pause)
-        integrateEuler(0.005f);
-}
-
-void Scene2::onGUI()
-{
-    ImGui::Checkbox("Pause", &pause);
+    update(0.1f);
 }

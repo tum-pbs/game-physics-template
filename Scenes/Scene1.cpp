@@ -1,48 +1,39 @@
 #include "Scene1.h"
 #include <imgui.h>
 #include <stdio.h>
-
-void Scene1::resetValues()
-{
-    vec3 position1 = {0, 0, 0};
-    vec3 position2 = {0, 2, 0};
-    vec3 velocity1 = {-1, 0, 0};
-    vec3 velocity2 = {1, 0, 0};
-    float mass1 = 10;
-    float mass2 = 10;
-    float L = 1;
-    float k = 40;
-    positions.clear();
-    velocities.clear();
-    tmpPositions.clear();
-    masses.clear();
-    forces.clear();
-    springs.clear();
-    positions.push_back(position1);
-    positions.push_back(position2);
-    velocities.push_back(velocity1);
-    velocities.push_back(velocity2);
-    masses.push_back(mass1);
-    masses.push_back(mass2);
-    Spring spring = {0, 1, k, L};
-    springs.push_back(spring);
-    tmpPositions.resize(positions.size());
-    forces.resize(positions.size());
-}
+#include <glm/gtx/string_cast.hpp>
+#include "CollisionDetection.h"
 
 void Scene1::init()
 {
-    resetValues();
-    std::cout << "Initial Values:" << std::endl;
-    printMassPoint(0);
-    printMassPoint(1);
-    integrateMidpoint(0.1f);
-    std::cout << "After 0.1s using Midpoint Method:" << std::endl;
-    printMassPoint(0);
-    printMassPoint(1);
-    resetValues();
-    integrateEuler(0.1f);
-    std::cout << "After 0.1s using Euler Method:" << std::endl;
-    printMassPoint(0);
-    printMassPoint(1);
+    Rigidbody rb(
+        vec3(0, 0, 0),
+        vec3(1, 0.6, 0.5),
+        2);
+    rb.rotation = glm::angleAxis(glm::radians(90.0f), vec3(0, 0, 1));
+    rb.update(0.0f);
+    vec3 force = vec3(1, 1, 0);
+    vec3 fwhere = vec3(0.3, 0.5, 0.25);
+    rb.addForceWorld(force, fwhere);
+    rigidbodies.push_back(rb);
+    update(2.0f);
+    rb = rigidbodies[0];
+
+    std::cout << "new Position: " << glm::to_string(rb.position) << std::endl;
+    std::cout << "new Velocity: " << glm::to_string(rb.velocity) << std::endl;
+    std::cout << "new Angular Velocity: " << glm::to_string(rb.angularVelocity) << std::endl;
+
+    vec3 xa_world = vec3(-0.3f, -0.5f, -0.25f) - rb.position;
+    vec3 velocityA = rb.velocity + cross(rb.angularVelocity, xa_world);
+
+    std::cout << "vel at P(-0.3, -0.5, -0.25), " << glm::to_string(velocityA) << std::endl;
+
+    // new Position, x, 0, y, 0, z, 0
+    // new Velocity, x, 1, y, 1, z, 0
+    // new Angular V, x, -2.4, y, 4.91803, z, -1.76471
+    // vel at P(-0.3, -0.5, -0.25), x, -1.11186, y, 0.929412, z, 2.67541
+
+    collisionTools::testCheckCollision(1);
+    collisionTools::testCheckCollision(2);
+    collisionTools::testCheckCollision(3);
 }
