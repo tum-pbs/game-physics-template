@@ -64,9 +64,9 @@ void Simulator::onGUI()
     ImGui::Separator();
     if (ImGui::CollapsingHeader("Rendering"))
     {
-        if(ImGui::Checkbox("Limit FPS", &limitFPS))
+        if (ImGui::Checkbox("Limit FPS", &limitFPS))
         {
-            if(limitFPS)
+            if (limitFPS)
                 renderer.setPresentMode(wgpu::PresentMode::Fifo);
             else
                 renderer.setPresentMode(wgpu::PresentMode::Immediate);
