@@ -57,7 +57,7 @@ void Simulator::onGUI()
         currentScene->init();
     }
     ImGui::Separator();
-    if (ImGui::CollapsingHeader(currentSceneName.c_str()))
+    if (ImGui::CollapsingHeader(currentSceneName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     {
         currentScene->onGUI();
     }
