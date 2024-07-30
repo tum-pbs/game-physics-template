@@ -25,7 +25,6 @@ struct VertexOutput {
 struct MyUniforms {
 	projectionMatrix: mat4x4f,
 	viewMatrix: mat4x4f,
-	modelMatrix: mat4x4f,
 	cameraWorldPosition: vec3f,
 	time: f32,
     cullingNormal: vec3f,

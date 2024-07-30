@@ -77,6 +77,8 @@ Renderer::Renderer()
 	initGui();
 }
 
+Camera Renderer::camera = Camera();
+
 void Renderer::onFrame()
 {
 	auto startTime = std::chrono::high_resolution_clock::now();
@@ -557,16 +559,13 @@ void Renderer::clearScene()
 
 void Renderer::initUniforms()
 {
-	// Create uniform buffer
 	BufferDescriptor bufferDesc;
 	bufferDesc.size = sizeof(MyUniforms);
 	bufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
 	bufferDesc.mappedAtCreation = false;
 	m_uniformBuffer = m_device.createBuffer(bufferDesc);
-	// Upload the initial value of the uniforms
-	m_uniforms.modelMatrix = mat4x4(1.0);
-	m_uniforms.viewMatrix = glm::lookAt(vec3(-2.0f, -3.0f, 2.0f), vec3(0.0f), vec3(0, 0, 1));
-	m_uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), 640.0f / 480.0f, 0.01f, 100.0f);
+	m_uniforms.viewMatrix = camera.viewMatrix;
+	m_uniforms.projectionMatrix = camera.projectionMatrix();
 	m_uniforms.time = 1.0f;
 	m_uniforms.cullingNormal = {0.0f, 0.0f, 1.0f};
 	m_uniforms.cullingOffset = 0.0f;
@@ -711,10 +710,8 @@ void Renderer::terminateBindGroup()
 
 void Renderer::updateProjectionMatrix()
 {
-	// Update projection matrix
-	glfwGetFramebufferSize(m_window, &width, &height);
-	float ratio = width / (float)height;
-	m_uniforms.projectionMatrix = glm::perspective(glm::radians(45.0f), ratio, 0.01f, 100.0f);
+	glfwGetFramebufferSize(m_window, &camera.width, &camera.height);
+	m_uniforms.projectionMatrix = camera.projectionMatrix();
 	m_queue.writeBuffer(
 		m_uniformBuffer,
 		offsetof(MyUniforms, projectionMatrix),
@@ -728,14 +725,15 @@ void Renderer::updateViewMatrix()
 	float sx = sin(m_cameraState.angles.x);
 	float cy = cos(m_cameraState.angles.y);
 	float sy = sin(m_cameraState.angles.y);
-	vec3 position = vec3(cx * cy, sx * cy, sy) * std::exp(-m_cameraState.zoom);
-	m_uniforms.viewMatrix = glm::lookAt(position, vec3(0.0f), vec3(0, 0, 1));
+	camera.position = vec3(cx * cy, sx * cy, sy) * std::exp(-m_cameraState.zoom);
+	camera.lookAt(vec3(0.0f));
+	m_uniforms.viewMatrix = camera.viewMatrix;
 	m_queue.writeBuffer(
 		m_uniformBuffer,
 		offsetof(MyUniforms, viewMatrix),
 		&m_uniforms.viewMatrix,
 		sizeof(MyUniforms::viewMatrix));
-	m_uniforms.cameraWorldPosition = position;
+	m_uniforms.cameraWorldPosition = camera.position;
 	m_queue.writeBuffer(
 		m_uniformBuffer,
 		offsetof(MyUniforms, cameraWorldPosition),

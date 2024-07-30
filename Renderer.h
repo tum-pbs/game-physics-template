@@ -35,6 +35,7 @@
 #include "pipelines/InstancingPipeline.h"
 #include "pipelines/LinePipeline.h"
 #include "pipelines/PostProcessingPipeline.h"
+#include "Camera.h"
 
 // Forward declare
 struct GLFWwindow;
@@ -84,12 +85,13 @@ public:
 	{
 		cullingPlane = 1 << 0,
 	};
+
+	static Camera camera;
 	struct MyUniforms
 	{
 		// We add transform matrices
-		glm::mat4x4 projectionMatrix;
-		glm::mat4x4 viewMatrix;
-		glm::mat4x4 modelMatrix;
+		glm::mat4 projectionMatrix;
+		glm::mat4 viewMatrix;
 		glm::vec3 cameraWorldPosition;
 		float time;
 		glm::vec3 cullingNormal;
@@ -152,7 +154,7 @@ private:
 
 private:
 	// (Just aliases to make notations lighter)
-	using mat4x4 = glm::mat4x4;
+	using mat4 = glm::mat4;
 	using vec4 = glm::vec4;
 	using vec3 = glm::vec3;
 	using vec2 = glm::vec2;
@@ -165,7 +167,7 @@ private:
 	{
 		// angles.x is the rotation of the camera around the global vertical axis, affected by mouse.x
 		// angles.y is the rotation of the camera around its local horizontal axis, affected by mouse.y
-		vec2 angles = {0.8f, 0.5f};
+		vec2 angles = {0.0f, 0.0f};
 		// zoom is the position of the camera along its local forward axis, affected by the scroll wheel
 		float zoom = -1.2f;
 	};
