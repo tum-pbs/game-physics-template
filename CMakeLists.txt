@@ -32,6 +32,8 @@ add_executable(Template
 	ResourceManager.cpp
 	implementations.cpp
 	Simulator.cpp
+	Camera.h
+	Camera.cpp
 )
 
 
