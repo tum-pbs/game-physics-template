@@ -22,6 +22,7 @@ void Scene2::onGUI()
     ImVec2 delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
     float forceScale = 0.001f;
     vec3 force = forceScale * (-Renderer::camera.up() * delta.y + Renderer::camera.right() * delta.x);
+    ImGui::Text("Drag right mouse button to apply force");
     ImGui::Text("Force: (%.2f, %.2f, %.2f)", force.x, force.y, force.z);
     for (Rigidbody &rb : rigidbodies)
     {
