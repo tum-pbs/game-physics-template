@@ -162,11 +162,7 @@ void Renderer::onFrame()
 
 	m_linePipeline.drawLines(renderPass);
 
-	m_instancingPipeline.drawCubes(renderPass);
-
-	m_instancingPipeline.drawSpheres(renderPass);
-
-	m_instancingPipeline.drawQuads(renderPass);
+	m_instancingPipeline.draw(renderPass);
 
 	renderPass.end();
 	renderPass.release();

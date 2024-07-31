@@ -8,11 +8,9 @@ public:
     void init(wgpu::Device &device_, wgpu::Queue &queue_, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms_, wgpu::Buffer &lightingUniforms_);
     void terminate();
     void updateCubes(std::vector<ResourceManager::InstancedVertexAttributes> &cubes);
-    void drawCubes(wgpu::RenderPassEncoder renderPass);
     void updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres);
-    void drawSpheres(wgpu::RenderPassEncoder renderPass);
     void updateQuads(std::vector<ResourceManager::InstancedVertexAttributes> &quads);
-    void drawQuads(wgpu::RenderPassEncoder renderPass);
+    void draw(wgpu::RenderPassEncoder &renderPass);
     void initGeometry();
     void terminateGeometry();
 
@@ -48,9 +46,13 @@ private:
     wgpu::BindGroupLayout bindGroupLayout = nullptr;
     wgpu::BindGroup bindGroup = nullptr;
 
+    void drawCubes(wgpu::RenderPassEncoder renderPass);
+    void drawSpheres(wgpu::RenderPassEncoder renderPass);
+    void drawQuads(wgpu::RenderPassEncoder renderPass);
+
     void initBindGroupLayout();
     void initBindGroup();
 
     void reallocateBuffer(wgpu::Buffer &buffer, size_t count);
-    void draw(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances);
+    void drawInstanced(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances);
 };

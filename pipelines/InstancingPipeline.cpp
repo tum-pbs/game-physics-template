@@ -184,7 +184,7 @@ void InstancingPipeline::updateCubes(std::vector<ResourceManager::InstancedVerte
 
 void InstancingPipeline::drawCubes(wgpu::RenderPassEncoder renderPass)
 {
-    draw(renderPass, instanceBuffer, dataBuffer, cubeIndexBuffer, cubeInstances);
+    drawInstanced(renderPass, instanceBuffer, dataBuffer, cubeIndexBuffer, cubeInstances);
 }
 
 void InstancingPipeline::updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres)
@@ -202,7 +202,7 @@ void InstancingPipeline::updateSpheres(std::vector<ResourceManager::InstancedVer
 
 void InstancingPipeline::drawSpheres(wgpu::RenderPassEncoder renderPass)
 {
-    draw(renderPass, sphereInstanceBuffer, sphereVertexBuffer, sphereIndexBuffer, sphereInstances);
+    drawInstanced(renderPass, sphereInstanceBuffer, sphereVertexBuffer, sphereIndexBuffer, sphereInstances);
 }
 
 void InstancingPipeline::updateQuads(std::vector<ResourceManager::InstancedVertexAttributes> &quads)
@@ -218,9 +218,16 @@ void InstancingPipeline::updateQuads(std::vector<ResourceManager::InstancedVerte
     prevQuadInstances = quadInstances;
 }
 
+void InstancingPipeline::draw(RenderPassEncoder &renderPass)
+{
+    drawCubes(renderPass);
+    drawSpheres(renderPass);
+    drawQuads(renderPass);
+}
+
 void InstancingPipeline::drawQuads(wgpu::RenderPassEncoder renderPass)
 {
-    draw(renderPass, quadInstanceBuffer, quadVertexBuffer, quadIndexBuffer, quadInstances);
+    drawInstanced(renderPass, quadInstanceBuffer, quadVertexBuffer, quadIndexBuffer, quadInstances);
 }
 
 void InstancingPipeline::initGeometry()
@@ -391,7 +398,7 @@ void InstancingPipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count)
     buffer = device.createBuffer(bufferDesc);
 }
 
-void InstancingPipeline::draw(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances)
+void InstancingPipeline::drawInstanced(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances)
 {
     if (instances > 0)
     {
