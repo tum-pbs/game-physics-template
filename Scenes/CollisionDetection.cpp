@@ -369,10 +369,6 @@ namespace collisionTools
         return info;
     }
 
-    /* params:
-    obj2World_A, the transfer matrix from object space of A to the world space
-    obj2World_B, the transfer matrix from object space of B to the world space
-    */
     CollisionInfo checkCollisionSAT(glm::mat4 &worldFromObj_A, glm::mat4 &worldFromObj_B)
     {
         using namespace collisionTools;

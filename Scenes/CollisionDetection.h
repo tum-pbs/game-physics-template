@@ -25,10 +25,10 @@ namespace collisionTools
     std::vector<glm::vec3> getAxisNormalToFaces(const glm::mat4 &worldFromObj);
 
     // Get the pair of edges
-    std::vector<glm::vec3> getPairOfEdges(const glm::mat4 &obj2World_A, const glm::mat4 &obj2World_B);
+    std::vector<glm::vec3> getPairOfEdges(const glm::mat4 &worldFromObj_A, const glm::mat4 &worldFromObj_B);
 
     // project a shape on an axis
-    Projection project(const glm::mat4 &obj2World, glm::vec3 axis);
+    Projection project(const glm::mat4 &worldFromObj, glm::vec3 axis);
 
     bool overlap(Projection p1, Projection p2);
 
@@ -47,15 +47,15 @@ namespace collisionTools
         // we use one's midpoint, otherwise we use two's.
         bool useOne);
 
-    glm::vec3 handleVertexToface(const glm::mat4 &obj2World, const glm::vec3 &toCenter);
+    glm::vec3 handleVertexToface(const glm::mat4 &worldFromObj, const glm::vec3 &toCenter);
 
-    CollisionInfo checkCollisionSATHelper(const glm::mat4 &obj2World_A, const glm::mat4 &obj2World_B, glm::vec3 size_A, glm::vec3 size_B);
+    CollisionInfo checkCollisionSATHelper(const glm::mat4 &worldFromObj_A, const glm::mat4 &worldFromObj_B, glm::vec3 size_A, glm::vec3 size_B);
 
     /* params:
     obj2World_A, the transfer matrix from object space of A to the world space
     obj2World_B, the transfer matrix from object space of B to the world space
     */
-    CollisionInfo checkCollisionSAT(glm::mat4 &obj2World_A, glm::mat4 &obj2World_B);
+    CollisionInfo checkCollisionSAT(glm::mat4 &worldFromObj_A, glm::mat4 &worldFromObj_B);
 
     // example of using the checkCollisionSAT function
     void testCheckCollision(int caseid);
