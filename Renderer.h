@@ -54,9 +54,14 @@ public:
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
 	void drawWireCube(glm::vec3 position, glm::vec3 scale, glm::vec3 color);
+	void drawImage(std::vector<float> data, int height, int width, glm::vec2 screenPosition = {0, 0}, glm::vec2 screenSize = {1, 1});
 
-	size_t objectCount() { return current_id; };
+	size_t objectCount()
+	{
+		return current_id;
+	};
 	size_t lineCount() { return m_lines.size() / 2; };
+	size_t imageCount() { return m_images.size(); };
 
 	// A function called at each frame, guaranteed never to be called before `onInit`.
 	void onFrame();
@@ -138,12 +143,6 @@ private:
 	void terminateLightingUniforms();
 	void updateLightingUniforms();
 
-	void initBindGroupLayout();
-	void terminateBindGroupLayout();
-
-	void initBindGroup();
-	void terminateBindGroup();
-
 	void updateProjectionMatrix();
 	void updateViewMatrix();
 
@@ -192,17 +191,14 @@ private:
 	wgpu::Device m_device = nullptr;
 	wgpu::Queue m_queue = nullptr;
 	wgpu::TextureFormat m_swapChainFormat = wgpu::TextureFormat::Undefined;
-	// Keep the error callback alive
 	std::unique_ptr<wgpu::ErrorCallback> m_errorCallbackHandle;
 
-	// Swap Chain
 	wgpu::SwapChain m_swapChain = nullptr;
 
 	InstancingPipeline m_instancingPipeline;
 	LinePipeline m_linePipeline;
 	PostProcessingPipeline m_postProcessingPipeline;
 
-	// Depth Buffer
 	wgpu::TextureFormat m_depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
 	wgpu::Texture m_depthTexture = nullptr;
 	wgpu::TextureView m_depthTextureView = nullptr;
@@ -211,23 +207,14 @@ private:
 	std::vector<ResourceManager::InstancedVertexAttributes> m_spheres;
 	std::vector<ResourceManager::InstancedVertexAttributes> m_quads;
 	std::vector<ResourceManager::LineVertexAttributes> m_lines;
+	std::vector<ResourceManager::ImageAttributes> m_images;
+	std::vector<float> m_imageData;
 
-	// Uniforms
 	wgpu::Buffer m_uniformBuffer = nullptr;
 	wgpu::Buffer m_lightingUniformBuffer = nullptr;
 
-	// Bind Group Layout
-	wgpu::BindGroupLayout m_bindGroupLayout = nullptr;
-	wgpu::BindGroupLayout m_postBindGroupLayout = nullptr;
-
 	wgpu::Texture m_postTexture = nullptr;
 	wgpu::TextureView m_postTextureView = nullptr;
-	wgpu::Sampler m_postSampler = nullptr;
-	wgpu::Sampler m_depthSampler = nullptr;
-
-	// Bind Group
-	wgpu::BindGroup m_bindGroup = nullptr;
-	wgpu::BindGroup m_postBindGroup = nullptr;
 
 	CameraState m_cameraState;
 	DragState m_drag;

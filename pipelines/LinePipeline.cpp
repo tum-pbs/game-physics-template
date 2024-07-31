@@ -1,15 +1,19 @@
 #include "LinePipeline.h"
 #include "ResourceManager.h"
+#include "ResourceManager.h"
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
 #endif
+#include "Renderer.h"
 
 using namespace wgpu;
 using LineVertexAttributes = ResourceManager::LineVertexAttributes;
 
-void LinePipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
+void LinePipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms_, wgpu::Buffer &lightingUniforms_)
 {
+    cameraUniforms = cameraUniforms_;
+    lightingUniforms = lightingUniforms_;
     device = device_;
     queue = queue_;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", device);
@@ -85,6 +89,9 @@ void LinePipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChain
     pipelineDesc.multisample.mask = ~0u;
     pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
+    initBindGroupLayout();
+    initBindGroup();
+
     // Create the pipeline layout
     PipelineLayoutDescriptor layoutDesc{};
     layoutDesc.bindGroupLayoutCount = 1;
@@ -106,6 +113,10 @@ void LinePipeline::terminate()
         pipeline.release();
     if (lineVertexBuffer != nullptr)
         lineVertexBuffer.release();
+    if (bindGroupLayout != nullptr)
+        bindGroupLayout.release();
+    if (bindGroup != nullptr)
+        bindGroup.release();
 }
 
 void LinePipeline::updateLines(std::vector<ResourceManager::LineVertexAttributes> &lines)
@@ -131,9 +142,63 @@ void LinePipeline::drawLines(wgpu::RenderPassEncoder renderPass)
 {
     if (lineCount > 0)
     {
+        renderPass.setBindGroup(0, bindGroup, 0, nullptr);
         renderPass.setPipeline(pipeline);
         renderPass.setVertexBuffer(0, lineVertexBuffer, 0, lineCount * sizeof(LineVertexAttributes));
 
         renderPass.draw(lineCount, 1, 0, 0);
     }
+}
+
+void LinePipeline::initBindGroupLayout()
+{
+
+    std::vector<BindGroupLayoutEntry> bindingLayoutEntries(2, Default);
+
+    // The uniform buffer binding
+    BindGroupLayoutEntry &bindingLayout = bindingLayoutEntries[0];
+    bindingLayout.binding = 0;
+    bindingLayout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
+    bindingLayout.buffer.type = BufferBindingType::Uniform;
+    bindingLayout.buffer.minBindingSize = sizeof(Renderer::MyUniforms);
+
+    // The lighting uniform buffer binding
+    BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[1];
+    lightingUniformLayout.binding = 1;
+    lightingUniformLayout.visibility = ShaderStage::Fragment;
+    lightingUniformLayout.buffer.type = BufferBindingType::Uniform;
+    lightingUniformLayout.buffer.minBindingSize = sizeof(Renderer::LightingUniforms);
+
+    // Create a bind group layout
+    BindGroupLayoutDescriptor bindGroupLayoutDesc{};
+    bindGroupLayoutDesc.entryCount = (uint32_t)bindingLayoutEntries.size();
+    bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
+    bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDesc);
+
+    if (bindGroupLayout == nullptr)
+        throw std::runtime_error("Could not create bind group layout!");
+}
+
+void LinePipeline::initBindGroup()
+{
+    std::vector<BindGroupEntry> bindings(2);
+
+    bindings[0].binding = 0;
+    bindings[0].buffer = cameraUniforms;
+    bindings[0].offset = 0;
+    bindings[0].size = sizeof(Renderer::MyUniforms);
+
+    bindings[1].binding = 1;
+    bindings[1].buffer = lightingUniforms;
+    bindings[1].offset = 0;
+    bindings[1].size = sizeof(Renderer::LightingUniforms);
+
+    BindGroupDescriptor bindGroupDesc;
+    bindGroupDesc.layout = bindGroupLayout;
+    bindGroupDesc.entryCount = (uint32_t)bindings.size();
+    bindGroupDesc.entries = bindings.data();
+    bindGroup = device.createBindGroup(bindGroupDesc);
+
+    if (bindGroup == nullptr)
+        throw std::runtime_error("Could not create bind group!");
 }

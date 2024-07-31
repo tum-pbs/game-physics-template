@@ -1,10 +1,11 @@
+#pragma once
 #include <webgpu/webgpu.hpp>
 #include <ResourceManager.h>
 
 class InstancingPipeline
 {
 public:
-    void init(wgpu::Device &device_, wgpu::Queue &queue_, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::BindGroupLayout &bindGroupLayout);
+    void init(wgpu::Device &device_, wgpu::Queue &queue_, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms_, wgpu::Buffer &lightingUniforms_);
     void terminate();
     void updateCubes(std::vector<ResourceManager::InstancedVertexAttributes> &cubes);
     void drawCubes(wgpu::RenderPassEncoder renderPass);
@@ -29,8 +30,11 @@ private:
     wgpu::ShaderModule shaderModule = nullptr;
     wgpu::RenderPipeline pipeline = nullptr;
 
-    wgpu::Buffer cubeInstanceBuffer = nullptr;
-    wgpu::Buffer cubeVertexBuffer = nullptr;
+    wgpu::Buffer cameraUniforms = nullptr;
+    wgpu::Buffer lightingUniforms = nullptr;
+
+    wgpu::Buffer instanceBuffer = nullptr;
+    wgpu::Buffer dataBuffer = nullptr;
     wgpu::Buffer cubeIndexBuffer = nullptr;
 
     wgpu::Buffer sphereInstanceBuffer = nullptr;
@@ -40,6 +44,12 @@ private:
     wgpu::Buffer quadInstanceBuffer = nullptr;
     wgpu::Buffer quadVertexBuffer = nullptr;
     wgpu::Buffer quadIndexBuffer = nullptr;
+
+    wgpu::BindGroupLayout bindGroupLayout = nullptr;
+    wgpu::BindGroup bindGroup = nullptr;
+
+    void initBindGroupLayout();
+    void initBindGroup();
 
     void reallocateBuffer(wgpu::Buffer &buffer, size_t count);
     void draw(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances);

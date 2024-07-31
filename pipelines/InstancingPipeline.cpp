@@ -1,5 +1,6 @@
 #include "InstancingPipeline.h"
 #include "Primitives.h"
+#include "Renderer.h"
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
@@ -9,22 +10,21 @@ using namespace wgpu;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
 using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
 
-void InstancingPipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
+void InstancingPipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms_, wgpu::Buffer &lightingUniforms_)
 {
+    cameraUniforms = cameraUniforms_;
+    lightingUniforms = lightingUniforms_;
     device = device_;
     queue = queue_;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
 
-    // This is for instanced rendering
     std::vector<VertexAttribute> lineVertexAttribs(2);
 
-    // Position attribute
     lineVertexAttribs[0].shaderLocation = 0;
     lineVertexAttribs[0].format = VertexFormat::Float32x3;
     lineVertexAttribs[0].offset = offsetof(PrimitiveVertexAttributes, position);
 
-    // Normal attribute
     lineVertexAttribs[1].shaderLocation = 1;
     lineVertexAttribs[1].format = VertexFormat::Float32x3;
     lineVertexAttribs[1].offset = offsetof(PrimitiveVertexAttributes, normal);
@@ -124,7 +124,9 @@ void InstancingPipeline::init(Device &device_, Queue &queue_, TextureFormat &swa
     pipelineDesc.multisample.mask = ~0u;
     pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
-    // Create the pipeline layout
+    initBindGroupLayout();
+    initBindGroup();
+
     PipelineLayoutDescriptor layoutDesc{};
     layoutDesc.bindGroupLayoutCount = 1;
     layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&bindGroupLayout;
@@ -145,10 +147,10 @@ void InstancingPipeline::terminate()
         shaderModule.release();
     if (pipeline != nullptr)
         pipeline.release();
-    if (cubeInstanceBuffer != nullptr)
+    if (instanceBuffer != nullptr)
     {
-        cubeInstanceBuffer.destroy();
-        cubeInstanceBuffer.release();
+        instanceBuffer.destroy();
+        instanceBuffer.release();
     }
     if (sphereInstanceBuffer != nullptr)
     {
@@ -160,6 +162,10 @@ void InstancingPipeline::terminate()
         quadInstanceBuffer.destroy();
         quadInstanceBuffer.release();
     }
+    if (bindGroupLayout != nullptr)
+        bindGroupLayout.release();
+    if (bindGroup != nullptr)
+        bindGroup.release();
     terminateGeometry();
 }
 
@@ -168,17 +174,17 @@ void InstancingPipeline::updateCubes(std::vector<ResourceManager::InstancedVerte
     cubeInstances = cubes.size();
 
     if (cubeInstances != prevCubeInstances)
-        reallocateBuffer(cubeInstanceBuffer, cubeInstances);
+        reallocateBuffer(instanceBuffer, cubeInstances);
 
     if (cubeInstances > 0)
-        queue.writeBuffer(cubeInstanceBuffer, 0, cubes.data(), sizeof(InstancedVertexAttributes) * cubeInstances);
+        queue.writeBuffer(instanceBuffer, 0, cubes.data(), sizeof(InstancedVertexAttributes) * cubeInstances);
 
     prevCubeInstances = cubeInstances;
 }
 
 void InstancingPipeline::drawCubes(wgpu::RenderPassEncoder renderPass)
 {
-    draw(renderPass, cubeInstanceBuffer, cubeVertexBuffer, cubeIndexBuffer, cubeInstances);
+    draw(renderPass, instanceBuffer, dataBuffer, cubeIndexBuffer, cubeInstances);
 }
 
 void InstancingPipeline::updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres)
@@ -225,8 +231,8 @@ void InstancingPipeline::initGeometry()
     cubeVertexBufferDesc.size = cube::vertices.size() * sizeof(PrimitiveVertexAttributes);
     cubeVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
     cubeVertexBufferDesc.mappedAtCreation = false;
-    cubeVertexBuffer = device.createBuffer(cubeVertexBufferDesc);
-    queue.writeBuffer(cubeVertexBuffer, 0, cube::vertices.data(), cubeVertexBufferDesc.size);
+    dataBuffer = device.createBuffer(cubeVertexBufferDesc);
+    queue.writeBuffer(dataBuffer, 0, cube::vertices.data(), cubeVertexBufferDesc.size);
 
     BufferDescriptor cubeIndexBufferDesc;
     cubeIndexBufferDesc.size = cube::triangles.size() * sizeof(Triangle);
@@ -271,7 +277,7 @@ void InstancingPipeline::initGeometry()
     quadIndexBuffer = device.createBuffer(quadIndexBufferDesc);
     queue.writeBuffer(quadIndexBuffer, 0, quad::triangles.data(), quadIndexBufferDesc.size);
 
-    if (cubeVertexBuffer == nullptr)
+    if (dataBuffer == nullptr)
         throw std::runtime_error("Failed to create cube vertex buffer");
     if (cubeIndexBuffer == nullptr)
         throw std::runtime_error("Failed to create cube index buffer");
@@ -287,10 +293,10 @@ void InstancingPipeline::initGeometry()
 
 void InstancingPipeline::terminateGeometry()
 {
-    if (cubeVertexBuffer != nullptr)
+    if (dataBuffer != nullptr)
     {
-        cubeVertexBuffer.destroy();
-        cubeVertexBuffer.release();
+        dataBuffer.destroy();
+        dataBuffer.release();
     }
     if (cubeIndexBuffer != nullptr)
     {
@@ -319,6 +325,58 @@ void InstancingPipeline::terminateGeometry()
     }
 }
 
+void InstancingPipeline::initBindGroupLayout()
+{
+    std::vector<BindGroupLayoutEntry> bindingLayoutEntries(2, Default);
+
+    // The uniform buffer binding
+    BindGroupLayoutEntry &bindingLayout = bindingLayoutEntries[0];
+    bindingLayout.binding = 0;
+    bindingLayout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
+    bindingLayout.buffer.type = BufferBindingType::Uniform;
+    bindingLayout.buffer.minBindingSize = sizeof(Renderer::MyUniforms);
+
+    // The lighting uniform buffer binding
+    BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[1];
+    lightingUniformLayout.binding = 1;
+    lightingUniformLayout.visibility = ShaderStage::Fragment;
+    lightingUniformLayout.buffer.type = BufferBindingType::Uniform;
+    lightingUniformLayout.buffer.minBindingSize = sizeof(Renderer::LightingUniforms);
+
+    // Create a bind group layout
+    BindGroupLayoutDescriptor bindGroupLayoutDesc{};
+    bindGroupLayoutDesc.entryCount = (uint32_t)bindingLayoutEntries.size();
+    bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
+    bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDesc);
+
+    if (bindGroupLayout == nullptr)
+        throw std::runtime_error("Could not create bind group layout!");
+}
+
+void InstancingPipeline::initBindGroup()
+{
+    std::vector<BindGroupEntry> bindings(2);
+
+    bindings[0].binding = 0;
+    bindings[0].buffer = cameraUniforms;
+    bindings[0].offset = 0;
+    bindings[0].size = sizeof(Renderer::MyUniforms);
+
+    bindings[1].binding = 1;
+    bindings[1].buffer = lightingUniforms;
+    bindings[1].offset = 0;
+    bindings[1].size = sizeof(Renderer::LightingUniforms);
+
+    BindGroupDescriptor bindGroupDesc;
+    bindGroupDesc.layout = bindGroupLayout;
+    bindGroupDesc.entryCount = (uint32_t)bindings.size();
+    bindGroupDesc.entries = bindings.data();
+    bindGroup = device.createBindGroup(bindGroupDesc);
+
+    if (bindGroup == nullptr)
+        throw std::runtime_error("Could not create bind group!");
+}
+
 void InstancingPipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count)
 {
     if (buffer != nullptr)
@@ -338,6 +396,7 @@ void InstancingPipeline::draw(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &
     if (instances > 0)
     {
         renderPass.setPipeline(pipeline);
+        renderPass.setBindGroup(0, bindGroup, 0, nullptr);
         renderPass.setVertexBuffer(0, vertexBuffer, 0, vertexBuffer.getSize());
         renderPass.setVertexBuffer(1, instanceBuffer, 0, instances * sizeof(InstancedVertexAttributes));
         renderPass.setIndexBuffer(indexBuffer, IndexFormat::Uint16, 0, indexBuffer.getSize());

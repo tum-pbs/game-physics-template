@@ -56,6 +56,15 @@ public:
 		vec3 color;
 	};
 
+	struct ImageAttributes
+	{
+		vec2 position;
+		vec2 size;
+		int offset;
+		int width;
+		int height;
+	};
+
 	struct InstancedVertexAttributes
 	{
 		vec3 position;

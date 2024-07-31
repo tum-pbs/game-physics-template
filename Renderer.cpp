@@ -64,16 +64,15 @@ Renderer::Renderer()
 {
 	// TODO: do some more robust initialization
 	initWindowAndDevice();
-	initBindGroupLayout();
+	glfwGetFramebufferSize(m_window, &width, &height);
 	initSwapChain();
 	initDepthBuffer();
 	initRenderTexture();
-	m_instancingPipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
-	m_linePipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_bindGroupLayout);
-	m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_depthTextureFormat, m_postBindGroupLayout);
 	initUniforms();
 	initLightingUniforms();
-	initBindGroup();
+	m_instancingPipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_uniformBuffer, m_lightingUniformBuffer);
+	m_linePipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_uniformBuffer, m_lightingUniformBuffer);
+	m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_postTextureView);
 	initGui();
 }
 
@@ -161,9 +160,6 @@ void Renderer::onFrame()
 	renderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
-	// Set binding group
-	renderPass.setBindGroup(0, m_bindGroup, 0, nullptr);
-
 	m_linePipeline.drawLines(renderPass);
 
 	m_instancingPipeline.drawCubes(renderPass);
@@ -188,9 +184,7 @@ void Renderer::onFrame()
 	postProcessRenderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPassPost = encoder.beginRenderPass(postProcessRenderPassDesc);
 
-	renderPassPost.setPipeline(m_postProcessingPipeline.pipeline);
-	renderPassPost.setBindGroup(0, m_postBindGroup, 0, nullptr);
-	renderPassPost.draw(6, 1, 0, 0);
+	m_postProcessingPipeline.draw(renderPassPost);
 
 	updateGui(renderPassPost);
 	renderPassPost.end();
@@ -217,13 +211,11 @@ void Renderer::onFrame()
 Renderer::~Renderer()
 {
 	terminateGui();
-	terminateBindGroup();
 	terminateLightingUniforms();
 	terminateUniforms();
 	m_instancingPipeline.terminate();
 	m_linePipeline.terminate();
 	m_postProcessingPipeline.terminate();
-	terminateBindGroupLayout();
 	terminateRenderTexture();
 	terminateDepthBuffer();
 	terminateSwapChain();
@@ -237,11 +229,11 @@ bool Renderer::isRunning()
 
 void Renderer::onResize()
 {
+	glfwGetFramebufferSize(m_window, &width, &height);
 	// Terminate in reverse order
 	terminateDepthBuffer();
 	terminateSwapChain();
 	terminateRenderTexture();
-
 	// Re-init
 	initSwapChain();
 	initDepthBuffer();
@@ -414,9 +406,6 @@ void Renderer::setPresentMode(PresentMode mode)
 
 void Renderer::initSwapChain()
 {
-	// Get the current size of the window's framebuffer:
-	glfwGetFramebufferSize(m_window, &width, &height);
-
 	SwapChainDescriptor swapChainDesc;
 	swapChainDesc.width = static_cast<uint32_t>(width);
 	swapChainDesc.height = static_cast<uint32_t>(height);
@@ -436,7 +425,6 @@ void Renderer::terminateSwapChain()
 
 void Renderer::initRenderTexture()
 {
-
 	TextureDescriptor postProcessTextureDesc;
 	postProcessTextureDesc.dimension = TextureDimension::_2D;
 	postProcessTextureDesc.format = m_swapChainFormat;
@@ -458,48 +446,16 @@ void Renderer::initRenderTexture()
 	postProcessTextureViewDesc.format = m_postTexture.getFormat();
 	m_postTextureView = m_postTexture.createView(postProcessTextureViewDesc);
 
-	std::vector<BindGroupEntry> bindingsPost(2);
-
-	bindingsPost[0].binding = 0;
-	bindingsPost[0].textureView = m_postTextureView;
-
-	SamplerDescriptor samplerDesc;
-	samplerDesc.addressModeU = AddressMode::ClampToEdge;
-	samplerDesc.addressModeV = AddressMode::ClampToEdge;
-	samplerDesc.addressModeW = AddressMode::ClampToEdge;
-	samplerDesc.magFilter = FilterMode::Linear;
-	samplerDesc.minFilter = FilterMode::Linear;
-	samplerDesc.mipmapFilter = MipmapFilterMode::Linear;
-	samplerDesc.lodMinClamp = 0.0f;
-	samplerDesc.lodMaxClamp = 1.0f;
-	samplerDesc.compare = CompareFunction::Undefined;
-	samplerDesc.maxAnisotropy = 1;
-	m_postSampler = m_device.createSampler(samplerDesc);
-
-	bindingsPost[1].binding = 1;
-	bindingsPost[1].sampler = m_postSampler;
-
-	BindGroupDescriptor bindGroupDescPost;
-	bindGroupDescPost.layout = m_postBindGroupLayout;
-	bindGroupDescPost.entryCount = (uint32_t)bindingsPost.size();
-	bindGroupDescPost.entries = bindingsPost.data();
-	m_postBindGroup = m_device.createBindGroup(bindGroupDescPost);
-
 	if (m_postTexture == nullptr)
 		throw std::runtime_error("Could not create post process texture!");
 	if (m_postTextureView == nullptr)
 		throw std::runtime_error("Could not create post process texture view!");
-	if (m_postSampler == nullptr)
-		throw std::runtime_error("Could not create post process sampler!");
-	if (m_postBindGroup == nullptr)
-		throw std::runtime_error("Could not create post process bind group!");
 }
 
 void Renderer::terminateRenderTexture()
 {
 	m_postTexture.destroy();
 	m_postTexture.release();
-	m_postBindGroup.release();
 }
 void Renderer::initDepthBuffer()
 {
@@ -549,6 +505,8 @@ void Renderer::clearScene()
 	m_spheres.clear();
 	m_quads.clear();
 	m_lines.clear();
+	m_images.clear();
+	m_imageData.clear();
 	current_id = 0;
 }
 
@@ -613,94 +571,6 @@ void Renderer::terminateLightingUniforms()
 void Renderer::updateLightingUniforms()
 {
 	m_queue.writeBuffer(m_lightingUniformBuffer, 0, &m_lightingUniforms, sizeof(LightingUniforms));
-}
-
-void Renderer::initBindGroupLayout()
-{
-	std::vector<BindGroupLayoutEntry> bindingLayoutEntries(2, Default);
-
-	// The uniform buffer binding
-	BindGroupLayoutEntry &bindingLayout = bindingLayoutEntries[0];
-	bindingLayout.binding = 0;
-	bindingLayout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
-	bindingLayout.buffer.type = BufferBindingType::Uniform;
-	bindingLayout.buffer.minBindingSize = sizeof(MyUniforms);
-
-	// The lighting uniform buffer binding
-	BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[1];
-	lightingUniformLayout.binding = 1;
-	lightingUniformLayout.visibility = ShaderStage::Fragment; // only Fragment is needed
-	lightingUniformLayout.buffer.type = BufferBindingType::Uniform;
-	lightingUniformLayout.buffer.minBindingSize = sizeof(LightingUniforms);
-
-	// Create a bind group layout
-	BindGroupLayoutDescriptor bindGroupLayoutDesc{};
-	bindGroupLayoutDesc.entryCount = (uint32_t)bindingLayoutEntries.size();
-	bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
-	m_bindGroupLayout = m_device.createBindGroupLayout(bindGroupLayoutDesc);
-
-	// Post processing bind group layout
-
-	std::vector<BindGroupLayoutEntry> bindingLayoutEntriesPost(2, Default);
-
-	BindGroupLayoutEntry &bindingLayoutPost = bindingLayoutEntriesPost[0];
-	bindingLayoutPost.binding = 0;
-	bindingLayoutPost.visibility = ShaderStage::Fragment;
-	bindingLayoutPost.texture.sampleType = TextureSampleType::Float;
-	bindingLayoutPost.texture.viewDimension = TextureViewDimension::_2D;
-
-	BindGroupLayoutEntry &bindingLayoutPost2 = bindingLayoutEntriesPost[1];
-	bindingLayoutPost2.binding = 1;
-	bindingLayoutPost2.visibility = ShaderStage::Fragment;
-	bindingLayoutPost2.sampler.type = SamplerBindingType::Filtering;
-
-	BindGroupLayoutDescriptor bindGroupLayoutDescPost{};
-	bindGroupLayoutDescPost.entryCount = (uint32_t)bindingLayoutEntriesPost.size();
-	bindGroupLayoutDescPost.entries = bindingLayoutEntriesPost.data();
-	m_postBindGroupLayout = m_device.createBindGroupLayout(bindGroupLayoutDescPost);
-
-	if (m_bindGroupLayout == nullptr)
-		throw std::runtime_error("Could not create bind group layout!");
-
-	if (m_postBindGroupLayout == nullptr)
-		throw std::runtime_error("Could not create post bind group layout!");
-}
-
-void Renderer::terminateBindGroupLayout()
-{
-	m_bindGroupLayout.release();
-	m_postBindGroupLayout.release();
-}
-
-void Renderer::initBindGroup()
-{
-	// Create a binding
-	std::vector<BindGroupEntry> bindings(2);
-
-	bindings[0].binding = 0;
-	bindings[0].buffer = m_uniformBuffer;
-	bindings[0].offset = 0;
-	bindings[0].size = sizeof(MyUniforms);
-
-	bindings[1].binding = 1;
-	bindings[1].buffer = m_lightingUniformBuffer;
-	bindings[1].offset = 0;
-	bindings[1].size = sizeof(LightingUniforms);
-
-	BindGroupDescriptor bindGroupDesc;
-	bindGroupDesc.layout = m_bindGroupLayout;
-	bindGroupDesc.entryCount = (uint32_t)bindings.size();
-	bindGroupDesc.entries = bindings.data();
-	m_bindGroup = m_device.createBindGroup(bindGroupDesc);
-
-	if (m_bindGroup == nullptr)
-		throw std::runtime_error("Could not create bind group!");
-}
-
-void Renderer::terminateBindGroup()
-{
-	m_bindGroup.release();
-	m_postBindGroup.release();
 }
 
 void Renderer::updateProjectionMatrix()
@@ -870,4 +740,17 @@ void Renderer::drawWireCube(vec3 position, vec3 scale, vec3 color)
 	{
 		drawLine(points[i * 2], points[i * 2 + 1], color);
 	}
+}
+
+void Renderer::drawImage(std::vector<float> data, int height, int width, glm::vec2 screenPosition, glm::vec2 screenSize)
+{
+	// expects
+	// [[0,1,2,3],
+	//  [4,5,6,7],
+	//  [8,9,10,11]]
+	// for width = 4, height = 3
+	// v.insert(v.end(), std::begin(a), std::end(a));
+	int offset = m_imageData.size();
+	m_imageData.insert(m_imageData.end(), data.begin(), data.end());
+	m_images.push_back({screenPosition, screenSize, offset, width, height});
 }
