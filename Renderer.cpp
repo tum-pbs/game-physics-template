@@ -83,7 +83,6 @@ void Renderer::onFrame()
 {
 	auto startTime = std::chrono::high_resolution_clock::now();
 	glfwPollEvents();
-	updateDragInertia();
 	updateLightingUniforms();
 	if (reinitSwapChain)
 	{
@@ -261,10 +260,6 @@ void Renderer::onMouseMove(double xpos, double ypos)
 		// Clamp to avoid going too far when orbitting up/down
 		m_cameraState.angles.y = glm::clamp(m_cameraState.angles.y, -glm::half_pi<float>() + 1e-5f, glm::half_pi<float>() - 1e-5f);
 		updateViewMatrix();
-
-		// Inertia
-		m_drag.velocity = delta - m_drag.previousDelta;
-		m_drag.previousDelta = delta;
 	}
 }
 
@@ -739,26 +734,6 @@ void Renderer::updateViewMatrix()
 		offsetof(MyUniforms, cameraWorldPosition),
 		&m_uniforms.cameraWorldPosition,
 		sizeof(MyUniforms::cameraWorldPosition));
-}
-
-void Renderer::updateDragInertia()
-{
-	constexpr float eps = 1e-4f;
-	// Apply inertia only when the user released the click.
-	if (!m_drag.active)
-	{
-		// Avoid updating the matrix when the velocity is no longer noticeable
-		if (std::abs(m_drag.velocity.x) < eps && std::abs(m_drag.velocity.y) < eps)
-		{
-			return;
-		}
-		m_cameraState.angles += m_drag.velocity;
-		m_cameraState.angles.y = glm::clamp(m_cameraState.angles.y, -glm::half_pi<float>() + 1e-5f, glm::half_pi<float>() - 1e-5f);
-		// Dampen the velocity so that it decreases exponentially and stops
-		// after a few frames.
-		m_drag.velocity *= m_drag.intertia;
-		updateViewMatrix();
-	}
 }
 
 void Renderer::initGui()

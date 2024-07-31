@@ -146,7 +146,6 @@ private:
 
 	void updateProjectionMatrix();
 	void updateViewMatrix();
-	void updateDragInertia();
 
 	void initGui();										// called in onInit
 	void terminateGui();								// called in onFinish
@@ -184,11 +183,6 @@ private:
 		// Constant settings
 		float sensitivity = 0.01f;
 		float scrollSensitivity = 0.1f;
-
-		// Inertia
-		vec2 velocity = {0.0, 0.0};
-		vec2 previousDelta;
-		float intertia = 0.9f;
 	};
 
 	// Window and Device
