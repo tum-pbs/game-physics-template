@@ -28,9 +28,7 @@ void Scene::update(float deltaTime)
     {
         for (size_t j = i + 1; j < rigidbodies.size(); ++j)
         {
-            if (Rigidbody::collide(rigidbodies[i], rigidbodies[j]))
-            {
-            }
+            CollisionInfo info = Rigidbody::collide(rigidbodies[i], rigidbodies[j]);
         }
     }
 }

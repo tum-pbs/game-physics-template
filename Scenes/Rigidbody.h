@@ -7,7 +7,7 @@
 class Rigidbody
 {
 public:
-	static bool collide(Rigidbody &body1, Rigidbody &body2);
+	static CollisionInfo collide(Rigidbody &body1, Rigidbody &body2);
 
 	Rigidbody();
 	Rigidbody(glm::vec3 &position = glm::vec3(0), glm::vec3 &scale = glm::vec3(1), float mass = 1);
