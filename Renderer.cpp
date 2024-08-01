@@ -230,10 +230,12 @@ void Renderer::onResize()
 	terminateDepthBuffer();
 	terminateSwapChain();
 	terminateRenderTexture();
+
 	// Re-init
 	initSwapChain();
 	initDepthBuffer();
 	initRenderTexture();
+	m_postProcessingPipeline.updateBindGroup(m_postTextureView);
 
 	updateProjectionMatrix();
 }
