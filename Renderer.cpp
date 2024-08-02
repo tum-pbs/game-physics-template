@@ -73,6 +73,7 @@ Renderer::Renderer()
 	m_instancingPipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_uniformBuffer, m_lightingUniformBuffer);
 	m_linePipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_uniformBuffer, m_lightingUniformBuffer);
 	m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_postTextureView);
+	m_imagePipeline.init(m_device, m_swapChainFormat, m_queue);
 	initGui();
 }
 
@@ -104,6 +105,9 @@ void Renderer::onFrame()
 
 	// prepare line buffers
 	m_linePipeline.updateLines(m_lines);
+
+	// prepare image buffers
+	m_imagePipeline.updateImages(m_images, m_imageData);
 
 	TextureView nextTexture = m_swapChain.getCurrentTextureView();
 	if (!nextTexture)
@@ -181,6 +185,8 @@ void Renderer::onFrame()
 	RenderPassEncoder renderPassPost = encoder.beginRenderPass(postProcessRenderPassDesc);
 
 	m_postProcessingPipeline.draw(renderPassPost);
+
+	m_imagePipeline.draw(renderPassPost);
 
 	updateGui(renderPassPost);
 	renderPassPost.end();
@@ -329,7 +335,6 @@ void Renderer::initWindowAndDevice()
 	requiredLimits.limits.maxBindGroups = 2;
 	requiredLimits.limits.maxUniformBuffersPerShaderStage = 2;
 	requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
-	// Allow textures up to 2K
 	requiredLimits.limits.maxTextureDimension1D = 8192;
 	requiredLimits.limits.maxTextureDimension2D = 8192;
 	requiredLimits.limits.maxTextureArrayLayers = 1;
@@ -750,5 +755,5 @@ void Renderer::drawImage(std::vector<float> data, int height, int width, glm::ve
 	// v.insert(v.end(), std::begin(a), std::end(a));
 	int offset = m_imageData.size();
 	m_imageData.insert(m_imageData.end(), data.begin(), data.end());
-	m_images.push_back({screenPosition, screenSize, offset, width, height});
+	m_images.push_back({screenPosition.x, screenPosition.y, screenSize.x, screenSize.y, offset, width, height, 0.0f});
 }

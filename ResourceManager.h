@@ -58,11 +58,14 @@ public:
 
 	struct ImageAttributes
 	{
-		vec2 position;
-		vec2 size;
+		float x;
+		float y;
+		float sx;
+		float sy;
 		int offset;
 		int width;
 		int height;
+		float _pad;
 	};
 
 	struct InstancedVertexAttributes

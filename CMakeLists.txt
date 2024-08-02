@@ -23,12 +23,6 @@ add_executable(Template
 	Primitives.h
 	Primitives.cpp
 	ResourceManager.h
-	pipelines/InstancingPipeline.cpp
-	pipelines/InstancingPipeline.h
-	pipelines/LinePipeline.cpp
-	pipelines/LinePipeline.h
-	pipelines/PostProcessingPipeline.cpp
-	pipelines/PostProcessingPipeline.h
 	ResourceManager.cpp
 	implementations.cpp
 	Simulator.cpp
@@ -46,6 +40,15 @@ file(GLOB_RECURSE SCENE_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/*.h
 )
 target_sources(Template PRIVATE ${SCENE_SOURCES} ${SCENE_HEADERS})
+
+file(GLOB_RECURSE PIPELINE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/pipelines/*.cpp
+)
+
+file(GLOB_RECURSE PIPELINE_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/pipelines/*.h
+)
+target_sources(Template PRIVATE ${PIPELINE_SOURCES} ${PIPELINE_HEADERS})
 
 
 
