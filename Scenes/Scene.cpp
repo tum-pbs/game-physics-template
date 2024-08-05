@@ -9,12 +9,15 @@ using namespace glm;
 
 void Scene::onDraw(Renderer &renderer)
 {
-    Grid grid(2, 2);
-    grid(0, 0) = 1;
-    grid(0, 1) = 0;
-    grid(1, 0) = 0;
-    grid(1, 1) = fmod(ImGui::GetTime(), 1.0);
-    renderer.drawImage(grid.data, grid.height, grid.width, vec2(0, 0), vec2(0.5, 0.5));
-    renderer.drawImage(grid.data, grid.height, grid.width, vec2(0.5, glm::sin(ImGui::GetTime() * 6.0)), vec2(0.1, 0.1));
-    renderer.drawCube({0, 0, 0}, {1, 0, 0, 0}, {1, 1, 1}, {1, 0, 0}, 0);
+    if (grid.width > 0)
+        renderer.drawImage(grid.data, grid.height, grid.width, vec2(0, 0), vec2(1.0, 1.0));
+}
+
+void Scene::randomInit(size_t width, size_t height)
+{
+    grid = Grid(height, width);
+    for (size_t i = 0; i < width * height; i++)
+    {
+        grid.data[i] = rand() / (float)RAND_MAX;
+    }
 }

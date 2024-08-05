@@ -1,10 +1,11 @@
+#pragma once
 #include <vector>
 class Grid
 {
 public:
     Grid(int height, int width) : width(width), height(height)
     {
-        data.resize(width * height);
+        data.assign(width * height, 0);
     }
     int width;
     int height;
