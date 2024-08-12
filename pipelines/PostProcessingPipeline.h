@@ -8,7 +8,7 @@ public:
     bool init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFormat_, wgpu::TextureView &textureView);
     void draw(wgpu::RenderPassEncoder &renderPass);
     void terminate();
-    void PostProcessingPipeline::updateBindGroup(wgpu::TextureView &textureView);
+    void updateBindGroup(wgpu::TextureView &textureView);
 
 private:
     wgpu::Device device = nullptr;

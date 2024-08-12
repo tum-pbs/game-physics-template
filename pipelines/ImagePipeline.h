@@ -43,5 +43,5 @@ private:
 
     void copyDataToTextures();
     void copyDataToTexture(ResourceManager::ImageAttributes &image, std::vector<float> &data, wgpu::Texture &texture);
-    void ImagePipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count);
+    void reallocateBuffer(wgpu::Buffer &buffer, size_t count);
 };
