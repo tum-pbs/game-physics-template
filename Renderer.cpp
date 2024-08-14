@@ -93,6 +93,7 @@ void Renderer::onFrame()
 
 	// Update uniform buffer
 	m_uniforms.time = static_cast<float>(glfwGetTime());
+	updateViewMatrix();
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingNormal), &m_uniforms.cullingNormal, sizeof(MyUniforms::cullingNormal));
 	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingOffset), &m_uniforms.cullingOffset, sizeof(MyUniforms::cullingOffset));
@@ -246,56 +247,6 @@ void Renderer::onResize()
 	updateProjectionMatrix();
 }
 
-void Renderer::onMouseMove(double xpos, double ypos)
-{
-	if (m_drag.active)
-	{
-		vec2 currentMouse = vec2(-(float)xpos, (float)ypos);
-		vec2 delta = (currentMouse - m_drag.startMouse) * m_drag.sensitivity;
-		m_cameraState.angles = m_drag.startCameraState.angles + delta;
-		// Clamp to avoid going too far when orbitting up/down
-		m_cameraState.angles.y = glm::clamp(m_cameraState.angles.y, -glm::half_pi<float>() + 1e-5f, glm::half_pi<float>() - 1e-5f);
-		updateViewMatrix();
-	}
-}
-
-void Renderer::onMouseButton(int button, int action, int /* modifiers */)
-{
-	ImGuiIO &io = ImGui::GetIO();
-	if (io.WantCaptureMouse)
-	{
-		// Don't rotate the camera if the mouse is already captured by an ImGui
-		// interaction at this frame.
-		return;
-	}
-
-	if (button == GLFW_MOUSE_BUTTON_LEFT)
-	{
-		switch (action)
-		{
-		case GLFW_PRESS:
-			m_drag.active = true;
-			double xpos, ypos;
-			glfwGetCursorPos(m_window, &xpos, &ypos);
-			m_drag.startMouse = vec2(-(float)xpos, (float)ypos);
-			m_drag.startCameraState = m_cameraState;
-			break;
-		case GLFW_RELEASE:
-			m_drag.active = false;
-			break;
-		}
-	}
-}
-
-void Renderer::onScroll(double /* xoffset */, double yoffset)
-{
-	m_cameraState.zoom += m_drag.scrollSensitivity * static_cast<float>(yoffset);
-	updateViewMatrix();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Private methods
-
 void Renderer::initWindowAndDevice()
 {
 	m_instance = createInstance(InstanceDescriptor{});
@@ -363,25 +314,11 @@ void Renderer::initWindowAndDevice()
 	m_swapChainFormat = TextureFormat::BGRA8Unorm;
 #endif
 
-	// Add window callbacks
-	// Set the user pointer to be "this"
 	glfwSetWindowUserPointer(m_window, this);
 	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow *window, int, int)
 								   {
 		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 		if (that != nullptr) that->onResize(); });
-	glfwSetCursorPosCallback(m_window, [](GLFWwindow *window, double xpos, double ypos)
-							 {
-		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
-		if (that != nullptr) that->onMouseMove(xpos, ypos); });
-	glfwSetMouseButtonCallback(m_window, [](GLFWwindow *window, int button, int action, int mods)
-							   {
-		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
-		if (that != nullptr) that->onMouseButton(button, action, mods); });
-	glfwSetScrollCallback(m_window, [](GLFWwindow *window, double xoffset, double yoffset)
-						  {
-		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
-		if (that != nullptr) that->onScroll(xoffset, yoffset); });
 
 	adapter.release();
 	if (m_device == nullptr)
@@ -589,12 +526,12 @@ void Renderer::updateProjectionMatrix()
 
 void Renderer::updateViewMatrix()
 {
-	float cx = cos(m_cameraState.angles.x);
-	float sx = sin(m_cameraState.angles.x);
-	float cy = cos(m_cameraState.angles.y);
-	float sy = sin(m_cameraState.angles.y);
-	camera.position = vec3(cx * cy, sx * cy, sy) * std::exp(-m_cameraState.zoom);
-	camera.lookAt(vec3(0.0f));
+	// float cx = cos(m_cameraState.angles.x);
+	// float sx = sin(m_cameraState.angles.x);
+	// float cy = cos(m_cameraState.angles.y);
+	// float sy = sin(m_cameraState.angles.y);
+	// camera.position = vec3(cx * cy, sx * cy, sy) * std::exp(-m_cameraState.zoom);
+	// camera.lookAt(vec3(0.0f));
 	m_uniforms.viewMatrix = camera.viewMatrix;
 	m_queue.writeBuffer(
 		m_uniformBuffer,

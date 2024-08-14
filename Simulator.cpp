@@ -20,6 +20,26 @@ void Simulator::init()
     currentScene->init();
 }
 
+void Simulator::updateCamera()
+{
+    ImVec2 screenDelta = ImGui::GetMouseDragDelta();
+    vec2 angleDelta = vec2(-screenDelta.x, screenDelta.y) * cameraSensitivity;
+    vec2 tmpAngles = cameraAngles + angleDelta;
+    tmpAngles.y = glm::clamp(tmpAngles.y, -glm::half_pi<float>() + 1e-5f, glm::half_pi<float>() - 1e-5f);
+    float cx = cos(tmpAngles.x);
+    float sx = sin(tmpAngles.x);
+    float cy = cos(tmpAngles.y);
+    float sy = sin(tmpAngles.y);
+    zoom += ImGui::GetIO().MouseWheel * zoomSensitivity;
+    Renderer::camera.position = vec3(cx * cy, sx * cy, sy) * std::exp(-zoom);
+    Renderer::camera.lookAt(vec3(0.0f));
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    {
+        auto delta = ImGui::GetMouseDragDelta();
+        cameraAngles = cameraAngles + angleDelta;
+    }
+}
+
 void Simulator::simulateStep()
 {
     auto startTime = std::chrono::high_resolution_clock::now();
@@ -29,6 +49,7 @@ void Simulator::simulateStep()
 
 void Simulator::onGUI()
 {
+    updateCamera();
     ImGui::Begin("Game Physics");
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::Text("Step: %.3f ms, DrawPrep: %.3f, Draw: %.3f ms", lastStepTime * 1000, lastDrawPrepTime * 1000, renderer.lastDrawTime * 1000);

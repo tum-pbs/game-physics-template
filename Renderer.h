@@ -47,10 +47,6 @@ public:
 	// A function called when the window is resized.
 	void onResize();
 
-	// Mouse events
-	void onMouseMove(double xpos, double ypos);
-	void onMouseButton(int button, int action, int mods);
-	void onScroll(double xoffset, double yoffset);
 	void clearScene();
 	void setPresentMode(wgpu::PresentMode mode);
 	std::function<void()> defineGUI = nullptr;
@@ -136,29 +132,6 @@ private:
 	wgpu::PresentMode presentMode = wgpu::PresentMode::Fifo;
 	bool reinitSwapChain = false;
 
-	struct CameraState
-	{
-		// angles.x is the rotation of the camera around the global vertical axis, affected by mouse.x
-		// angles.y is the rotation of the camera around its local horizontal axis, affected by mouse.y
-		vec2 angles = {-0.1f, 0.2f};
-		// zoom is the position of the camera along its local forward axis, affected by the scroll wheel
-		float zoom = -2.0f;
-	};
-
-	struct DragState
-	{
-		// Whether a drag action is ongoing (i.e., we are between mouse press and mouse release)
-		bool active = false;
-		// The position of the mouse at the beginning of the drag action
-		vec2 startMouse;
-		// The camera state at the beginning of the drag action
-		CameraState startCameraState;
-
-		// Constant settings
-		float sensitivity = 0.01f;
-		float scrollSensitivity = 0.1f;
-	};
-
 	// Window and Device
 	GLFWwindow *m_window = nullptr;
 	wgpu::Instance m_instance = nullptr;
@@ -191,7 +164,4 @@ private:
 
 	wgpu::Texture m_postTexture = nullptr;
 	wgpu::TextureView m_postTextureView = nullptr;
-
-	CameraState m_cameraState;
-	DragState m_drag;
 };
