@@ -51,7 +51,7 @@ void Simulator::onGUI()
     Begin("Game Physics");
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / GetIO().Framerate, GetIO().Framerate);
     Text("Step: %.3f ms, DrawPrep: %.3f, Draw: %.3f ms", lastStepTime * 1000, lastDrawPrepTime * 1000, renderer.lastDrawTime * 1000);
-    Text("%d objects, %d lines", renderer.objectCount(), renderer.lineCount());
+    Text("%ld objects, %ld lines", renderer.objectCount(), renderer.lineCount());
     Separator();
     Text("Scene");
     if (BeginCombo("Scene", currentSceneName.c_str()))
