@@ -6,8 +6,8 @@ class LinePipeline
 {
 public:
     void init(
-        wgpu::Device &device_,
-        wgpu::Queue &queue_,
+        wgpu::Device &device,
+        wgpu::Queue &queue,
         wgpu::TextureFormat &swapChainFormat,
         wgpu::TextureFormat &depthTextureFormat,
         wgpu::Buffer &cameraUniforms,

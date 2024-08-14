@@ -11,7 +11,7 @@ Camera::Camera()
       width(800),
       height(600)
 {
-    viewMatrix = glm::lookAt(position, position + worldForward, worldUp);
+    lookAt(position + worldForward);
 }
 
 float Camera::aspectRatio()
@@ -24,17 +24,17 @@ mat4 Camera::projectionMatrix()
     return perspective(radians(fov), aspectRatio(), near, far);
 }
 
-glm::vec3 Camera::forward()
+vec3 Camera::forward()
 {
     return inverse(viewMatrix) * vec4(0, 0, 1, 0);
 }
 
-glm::vec3 Camera::up()
+vec3 Camera::up()
 {
     return inverse(viewMatrix) * vec4(0, 1, 0, 0);
 }
 
-glm::vec3 Camera::right()
+vec3 Camera::right()
 {
     return inverse(viewMatrix) * vec4(1, 0, 0, 0);
 }

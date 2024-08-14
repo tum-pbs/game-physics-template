@@ -10,12 +10,12 @@ using namespace wgpu;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
 using InstancedVertexAttributes = ResourceManager::InstancedVertexAttributes;
 
-void InstancingPipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms_, wgpu::Buffer &lightingUniforms_)
+void InstancingPipeline::init(Device &device, Queue &queue, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms, wgpu::Buffer &lightingUniforms)
 {
-    cameraUniforms = cameraUniforms_;
-    lightingUniforms = lightingUniforms_;
-    device = device_;
-    queue = queue_;
+    this->cameraUniforms = cameraUniforms;
+    this->lightingUniforms = lightingUniforms;
+    this->device = device;
+    this->queue = queue;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
 

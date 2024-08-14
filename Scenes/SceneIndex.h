@@ -1,7 +1,5 @@
 #include "Scene.h"
-#include <memory>
 #include <map>
-#include <functional>
 
 #include "Scene1.h"
 #include "Scene2.h"

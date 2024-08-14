@@ -11,8 +11,6 @@ public:
     void updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres);
     void updateQuads(std::vector<ResourceManager::InstancedVertexAttributes> &quads);
     void draw(wgpu::RenderPassEncoder &renderPass);
-    void initGeometry();
-    void terminateGeometry();
 
 private:
     size_t cubeInstances = 0;
@@ -45,6 +43,9 @@ private:
 
     wgpu::BindGroupLayout bindGroupLayout = nullptr;
     wgpu::BindGroup bindGroup = nullptr;
+
+    void terminateGeometry();
+    void initGeometry();
 
     void drawCubes(wgpu::RenderPassEncoder renderPass);
     void drawSpheres(wgpu::RenderPassEncoder renderPass);

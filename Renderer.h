@@ -1,11 +1,10 @@
 #pragma once
 
 #include <webgpu/webgpu.hpp>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_RIGHT_HANDED
 #include <glm/glm.hpp>
 #include "ResourceManager.h"
-#include <functional>
-#include <array>
-#include <utility>
 #include "pipelines/InstancingPipeline.h"
 #include "pipelines/LinePipeline.h"
 #include "pipelines/PostProcessingPipeline.h"

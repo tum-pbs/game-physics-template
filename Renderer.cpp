@@ -1,68 +1,23 @@
-/**
- * This file is part of the "Learn WebGPU for C++" book.
- *   https://github.com/eliemichel/LearnWebGPU
- *
- * MIT License
- * Copyright (c) 2022-2023 Elie Michel
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
 
 #include "Renderer.h"
-#include "ResourceManager.h"
 
 #include <glfw3webgpu.h>
 #include <GLFW/glfw3.h>
-
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_LEFT_HANDED
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-#include <glm/gtx/polar_coordinates.hpp>
 
 #include <imgui.h>
 #include <backends/imgui_impl_wgpu.h>
 #include <backends/imgui_impl_glfw.h>
 
-#include <iostream>
-#include <cassert>
-#include <filesystem>
-#include <sstream>
-#include <string>
-#include <array>
-
-#include <chrono>
-
 #include "Primitives.h"
 
 using namespace wgpu;
-using VertexAttributes = ResourceManager::VertexAttributes;
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
 #endif
-///////////////////////////////////////////////////////////////////////////////
-// Public methods
 
 Renderer::Renderer()
 {
-	// TODO: do some more robust initialization
 	initWindowAndDevice();
 	glfwGetFramebufferSize(m_window, &width, &height);
 	initSwapChain();
@@ -123,7 +78,6 @@ void Renderer::onFrame()
 	vec3 correctedBackground = glm::pow(backgroundColor, vec3(2.2f));
 	Color correctedBackgroundColor = Color{correctedBackground.r, correctedBackground.g, correctedBackground.b, 1.0f};
 
-	// TODO maybe rewrite the texture view descriptor
 	TextureViewDescriptor postProcessTextureViewDesc;
 	postProcessTextureViewDesc.aspect = TextureAspect::All;
 	postProcessTextureViewDesc.baseArrayLayer = 0;
@@ -233,12 +187,10 @@ bool Renderer::isRunning()
 void Renderer::onResize()
 {
 	glfwGetFramebufferSize(m_window, &width, &height);
-	// Terminate in reverse order
 	terminateDepthBuffer();
 	terminateSwapChain();
 	terminateRenderTexture();
 
-	// Re-init
 	initSwapChain();
 	initDepthBuffer();
 	initRenderTexture();
@@ -275,11 +227,13 @@ void Renderer::initWindowAndDevice()
 	SupportedLimits supportedLimits;
 	adapter.getLimits(&supportedLimits);
 
+	int largestVertexBuffer = sizeof(ResourceManager::InstancedVertexAttributes);
+
 	RequiredLimits requiredLimits = Default;
 	requiredLimits.limits.maxVertexAttributes = 8;
 	requiredLimits.limits.maxVertexBuffers = 3;
-	requiredLimits.limits.maxBufferSize = 150000 * sizeof(VertexAttributes);
-	requiredLimits.limits.maxVertexBufferArrayStride = sizeof(VertexAttributes);
+	requiredLimits.limits.maxBufferSize = 150000 * largestVertexBuffer;
+	requiredLimits.limits.maxVertexBufferArrayStride = largestVertexBuffer;
 	requiredLimits.limits.minStorageBufferOffsetAlignment = supportedLimits.limits.minStorageBufferOffsetAlignment;
 	requiredLimits.limits.minUniformBufferOffsetAlignment = supportedLimits.limits.minUniformBufferOffsetAlignment;
 	requiredLimits.limits.maxInterStageShaderComponents = 17;
@@ -299,7 +253,6 @@ void Renderer::initWindowAndDevice()
 	deviceDesc.defaultQueue.label = "The default queue";
 	m_device = adapter.requestDevice(deviceDesc);
 
-	// Add an error callback for more debug info
 	m_errorCallbackHandle = m_device.setUncapturedErrorCallback([](ErrorType type, char const *message)
 																{
 		std::cout << "Device error: type " << type;
@@ -399,10 +352,8 @@ void Renderer::terminateRenderTexture()
 }
 void Renderer::initDepthBuffer()
 {
-	// Get the current size of the window's framebuffer:
 	glfwGetFramebufferSize(m_window, &width, &height);
 
-	// Create the depth texture
 	TextureDescriptor depthTextureDesc;
 	depthTextureDesc.dimension = TextureDimension::_2D;
 	depthTextureDesc.format = m_depthTextureFormat;
@@ -414,7 +365,6 @@ void Renderer::initDepthBuffer()
 	depthTextureDesc.viewFormats = (WGPUTextureFormat *)&m_depthTextureFormat;
 	m_depthTexture = m_device.createTexture(depthTextureDesc);
 
-	// Create the view of the depth texture manipulated by the rasterizer
 	TextureViewDescriptor depthTextureViewDesc;
 	depthTextureViewDesc.aspect = TextureAspect::DepthOnly;
 	depthTextureViewDesc.baseArrayLayer = 0;
@@ -480,14 +430,12 @@ void Renderer::terminateUniforms()
 
 void Renderer::initLightingUniforms()
 {
-	// Create uniform buffer
 	BufferDescriptor bufferDesc;
 	bufferDesc.size = sizeof(LightingUniforms);
 	bufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
 	bufferDesc.mappedAtCreation = false;
 	m_lightingUniformBuffer = m_device.createBuffer(bufferDesc);
 
-	// Initial values
 	m_lightingUniforms.direction = vec3(2.0, 0.5, 1);
 	m_lightingUniforms.ambient = vec3(1, 1, 1);
 	m_lightingUniforms.ambient_intensity = 0.1f;
@@ -526,12 +474,6 @@ void Renderer::updateProjectionMatrix()
 
 void Renderer::updateViewMatrix()
 {
-	// float cx = cos(m_cameraState.angles.x);
-	// float sx = sin(m_cameraState.angles.x);
-	// float cy = cos(m_cameraState.angles.y);
-	// float sy = sin(m_cameraState.angles.y);
-	// camera.position = vec3(cx * cy, sx * cy, sy) * std::exp(-m_cameraState.zoom);
-	// camera.lookAt(vec3(0.0f));
 	m_uniforms.viewMatrix = camera.viewMatrix;
 	m_queue.writeBuffer(
 		m_uniformBuffer,
@@ -548,12 +490,10 @@ void Renderer::updateViewMatrix()
 
 void Renderer::initGui()
 {
-	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::GetIO();
 
-	// Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOther(m_window, true);
 	ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat);
 }
@@ -615,19 +555,15 @@ void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 colo
 
 void Renderer::updateGui(RenderPassEncoder renderPass)
 {
-	// Start the Dear ImGui frame
 	ImGui_ImplWGPU_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
 	defineGUI();
 
-	// Draw the UI
 	ImGui::EndFrame();
-	// Convert the UI defined above into low-level drawing commands
 
 	ImGui::Render();
-	// Execute the low-level drawing commands on the WebGPU backend
 	ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
 }
 

@@ -5,25 +5,22 @@
 class ImagePipeline
 {
 public:
-    wgpu::ShaderModule shaderModule = nullptr;
-    wgpu::RenderPipeline pipeline = nullptr;
-    bool init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFormat_, wgpu::Queue &queue_);
+    bool init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::Queue &queue);
     void draw(wgpu::RenderPassEncoder &renderPass);
     void updateImages(std::vector<ResourceManager::ImageAttributes> &images, std::vector<float> &data);
     void terminate();
 
 private:
+    wgpu::ShaderModule shaderModule = nullptr;
+    wgpu::RenderPipeline pipeline = nullptr;
+
     std::vector<ResourceManager::ImageAttributes> images;
     std::vector<ResourceManager::ImageAttributes> prevImages;
-
     std::vector<float> data;
 
     wgpu::Queue queue = nullptr;
-
     wgpu::Device device = nullptr;
-
     wgpu::Buffer imageBuffer = nullptr;
-
     wgpu::Sampler sampler = nullptr;
 
     std::vector<wgpu::Texture> textures;

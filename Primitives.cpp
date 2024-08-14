@@ -1,5 +1,6 @@
 #include "Primitives.h"
 #include <array>
+#include <webgpu/webgpu.hpp>
 
 // ---------------------------------------------------------------------------------------------------
 // the following code is adapted from https://schneide.blog/2016/07/15/generating-an-icosphere-in-c/ |

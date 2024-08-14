@@ -3,14 +3,14 @@
 class PostProcessingPipeline
 {
 public:
-    wgpu::ShaderModule shaderModule = nullptr;
-    wgpu::RenderPipeline pipeline = nullptr;
-    bool init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFormat_, wgpu::TextureView &textureView);
+    bool init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::TextureView &textureView);
     void draw(wgpu::RenderPassEncoder &renderPass);
     void terminate();
     void updateBindGroup(wgpu::TextureView &textureView);
 
 private:
+    wgpu::ShaderModule shaderModule = nullptr;
+    wgpu::RenderPipeline pipeline = nullptr;
     wgpu::Device device = nullptr;
 
     wgpu::Sampler sampler = nullptr;

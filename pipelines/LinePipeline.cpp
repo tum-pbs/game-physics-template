@@ -1,21 +1,19 @@
 #include "LinePipeline.h"
-#include "ResourceManager.h"
-#include "ResourceManager.h"
+#include "Renderer.h"
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
 #endif
-#include "Renderer.h"
 
 using namespace wgpu;
 using LineVertexAttributes = ResourceManager::LineVertexAttributes;
 
-void LinePipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms_, wgpu::Buffer &lightingUniforms_)
+void LinePipeline::init(Device &device, Queue &queue, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, Buffer &cameraUniforms, Buffer &lightingUniforms)
 {
-    cameraUniforms = cameraUniforms_;
-    lightingUniforms = lightingUniforms_;
-    device = device_;
-    queue = queue_;
+    this->cameraUniforms = cameraUniforms;
+    this->lightingUniforms = lightingUniforms;
+    this->device = device;
+    this->queue = queue;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
 
@@ -138,7 +136,7 @@ void LinePipeline::updateLines(std::vector<ResourceManager::LineVertexAttributes
     }
 }
 
-void LinePipeline::drawLines(wgpu::RenderPassEncoder renderPass)
+void LinePipeline::drawLines(RenderPassEncoder renderPass)
 {
     if (lineCount > 0)
     {

@@ -7,9 +7,9 @@
 
 using namespace wgpu;
 
-bool PostProcessingPipeline::init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFormat_, TextureView &textureView)
+bool PostProcessingPipeline::init(Device &device, TextureFormat &swapChainFormat, TextureView &textureView)
 {
-    device = device_;
+    this->device = device;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/post_processing.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
     pipelineDesc.label = "Post process pipeline";
@@ -42,7 +42,7 @@ bool PostProcessingPipeline::init(wgpu::Device &device_, wgpu::TextureFormat &sw
     blendState.alpha.operation = BlendOperation::Add;
 
     ColorTargetState colorTarget;
-    colorTarget.format = swapChainFormat_;
+    colorTarget.format = swapChainFormat;
     colorTarget.blend = &blendState;
     colorTarget.writeMask = ColorWriteMask::All;
 
@@ -70,7 +70,7 @@ bool PostProcessingPipeline::init(wgpu::Device &device_, wgpu::TextureFormat &sw
     return pipeline != nullptr;
 }
 
-void PostProcessingPipeline::draw(wgpu::RenderPassEncoder &renderPass)
+void PostProcessingPipeline::draw(RenderPassEncoder &renderPass)
 {
     renderPass.setPipeline(pipeline);
     renderPass.setBindGroup(0, bindGroup, 0, nullptr);
@@ -113,7 +113,7 @@ void PostProcessingPipeline::initBindGroupLayout()
         throw std::runtime_error("Could not create post bind group layout!");
 }
 
-void PostProcessingPipeline::updateBindGroup(wgpu::TextureView &textureView)
+void PostProcessingPipeline::updateBindGroup(TextureView &textureView)
 {
 
     if (sampler != nullptr)

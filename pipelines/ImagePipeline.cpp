@@ -6,7 +6,7 @@
 
 using namespace wgpu;
 
-void ImagePipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count)
+void ImagePipeline::reallocateBuffer(Buffer &buffer, size_t count)
 {
     if (buffer != nullptr)
     {
@@ -20,10 +20,10 @@ void ImagePipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count)
     buffer = device.createBuffer(bufferDesc);
 }
 
-bool ImagePipeline::init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFormat_, wgpu::Queue &queue_)
+bool ImagePipeline::init(Device &device, TextureFormat &swapChainFormat, Queue &queue)
 {
-    device = device_;
-    queue = queue_;
+    this->device = device;
+    this->queue = queue;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/image_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
     pipelineDesc.label = "Image pipeline";
@@ -96,7 +96,7 @@ bool ImagePipeline::init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFo
     blendState.alpha.operation = BlendOperation::Add;
 
     ColorTargetState colorTarget;
-    colorTarget.format = swapChainFormat_;
+    colorTarget.format = swapChainFormat;
     colorTarget.blend = &blendState;
     colorTarget.writeMask = ColorWriteMask::All;
 
@@ -111,7 +111,6 @@ bool ImagePipeline::init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFo
 
     createLayout();
 
-    // Create the pipeline layout
     PipelineLayoutDescriptor layoutDesc{};
     layoutDesc.bindGroupLayoutCount = 1;
     layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&bindGroupLayout;
@@ -123,7 +122,7 @@ bool ImagePipeline::init(wgpu::Device &device_, wgpu::TextureFormat &swapChainFo
     return pipeline != nullptr;
 }
 
-void ImagePipeline::draw(wgpu::RenderPassEncoder &renderPass)
+void ImagePipeline::draw(RenderPassEncoder &renderPass)
 {
     if (images.size() == 0)
         return;
@@ -205,22 +204,15 @@ void ImagePipeline::terminate()
 
 void ImagePipeline::createLayout()
 {
-    std::vector<BindGroupLayoutEntry> layoutEntries(1, Default);
-
-    BindGroupLayoutEntry &layoutEntry0 = layoutEntries[0];
+    BindGroupLayoutEntry layoutEntry0;
     layoutEntry0.binding = 0;
     layoutEntry0.visibility = ShaderStage::Fragment;
     layoutEntry0.texture.sampleType = TextureSampleType::UnfilterableFloat;
     layoutEntry0.texture.viewDimension = TextureViewDimension::_2D;
 
-    // BindGroupLayoutEntry &layoutEntry1 = layoutEntries[1];
-    // layoutEntry1.binding = 1;
-    // layoutEntry1.visibility = ShaderStage::Fragment;
-    // layoutEntry1.sampler.type = SamplerBindingType::NonFiltering;
-
     BindGroupLayoutDescriptor layoutDescriptor{};
-    layoutDescriptor.entryCount = (uint32_t)layoutEntries.size();
-    layoutDescriptor.entries = layoutEntries.data();
+    layoutDescriptor.entryCount = 1;
+    layoutDescriptor.entries = &layoutEntry0;
     bindGroupLayout = device.createBindGroupLayout(layoutDescriptor);
 }
 
@@ -234,18 +226,14 @@ void ImagePipeline::createBindGroups()
     bindGroups.clear();
     for (auto &textureView : textureViews)
     {
-        std::vector<BindGroupEntry> bindGroupEntries(1, Default);
-
-        bindGroupEntries[0].binding = 0;
-        bindGroupEntries[0].textureView = textureView;
-
-        // bindGroupEntries[1].binding = 1;
-        // bindGroupEntries[1].sampler = sampler;
+        BindGroupEntry entry;
+        entry.binding = 0;
+        entry.textureView = textureView;
 
         BindGroupDescriptor bindGroupDesc;
         bindGroupDesc.layout = bindGroupLayout;
-        bindGroupDesc.entryCount = (uint32_t)bindGroupEntries.size();
-        bindGroupDesc.entries = bindGroupEntries.data();
+        bindGroupDesc.entryCount = 1;
+        bindGroupDesc.entries = &entry;
         bindGroups.push_back(device.createBindGroup(bindGroupDesc));
     }
 }
@@ -280,7 +268,7 @@ void ImagePipeline::createTextures()
     }
 }
 
-wgpu::Texture ImagePipeline::createTexture(ResourceManager::ImageAttributes &image)
+Texture ImagePipeline::createTexture(ResourceManager::ImageAttributes &image)
 {
     TextureDescriptor textureDesc;
     textureDesc.dimension = TextureDimension::_2D;
@@ -294,7 +282,7 @@ wgpu::Texture ImagePipeline::createTexture(ResourceManager::ImageAttributes &ima
     return device.createTexture(textureDesc);
 }
 
-wgpu::TextureView ImagePipeline::createTextureView(wgpu::Texture &texture)
+TextureView ImagePipeline::createTextureView(Texture &texture)
 {
     TextureViewDescriptor textureViewDesc;
     textureViewDesc.aspect = TextureAspect::All;
