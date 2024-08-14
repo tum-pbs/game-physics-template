@@ -114,7 +114,6 @@ void Simulator::onGUI()
 void Simulator::onDraw()
 {
     auto startTime = std::chrono::high_resolution_clock::now();
-    renderer.drawWireCube({0, 0, 0}, {5, 5, 5}, {1, 1, 1});
     currentScene->onDraw(renderer);
     lastDrawPrepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 };
