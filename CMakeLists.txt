@@ -7,8 +7,6 @@ project(
 
 include(utils.cmake)
 
-# We add an option to enable different settings when developping the app than
-# when distributing it.
 option(DEV_MODE "Set up development helper settings" ON)
 
 add_subdirectory(glfw)
@@ -69,7 +67,6 @@ else()
 		RESOURCE_DIR="./resources"
 	)
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 target_include_directories(Template PRIVATE .)
 
@@ -79,7 +76,7 @@ set_target_properties(Template PROPERTIES
 	CXX_STANDARD 17
 	VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1"
 )
-# target_treat_all_warnings_as_errors(Template)
+
 target_copy_webgpu_binaries(Template)
 
 if (MSVC)
@@ -88,8 +85,4 @@ if (MSVC)
 	target_compile_options(Template PUBLIC /wd4201)
 	# Disable warning C4305: truncation from 'int' to 'bool' in 'if' condition
 	target_compile_options(Template PUBLIC /wd4305)
-
-	# Ignore a warning that stb_image requires to bypass
-	# Disable warning C4244: conversion from 'int' to 'short', possible loss of data
-	target_compile_options(Template PUBLIC /wd4244)
 endif (MSVC)
