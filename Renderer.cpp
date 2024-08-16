@@ -144,6 +144,7 @@ void Renderer::onFrame()
 	m_imagePipeline.draw(renderPassPost);
 
 	updateGui(renderPassPost);
+
 	renderPassPost.end();
 	renderPassPost.release();
 
@@ -620,12 +621,21 @@ void Renderer::drawWireCube(vec3 position, vec3 scale, vec3 color)
 
 void Renderer::drawImage(std::vector<float> data, int height, int width, glm::vec2 screenPosition, glm::vec2 screenSize)
 {
+	auto [min, max] = std::minmax_element(data.begin(), data.end());
+	drawImage(data, height, width, *min, *max, screenPosition, screenSize);
+}
+
+void Renderer::drawImage(std::vector<float> data, int height, int width, float vmin, float vmax, glm::vec2 screenPosition, glm::vec2 screenSize)
+{
 	// expects
 	// [[0,1,2,3],
 	//  [4,5,6,7],
 	//  [8,9,10,11]]
 	// for width = 4, height = 3
-	// v.insert(v.end(), std::begin(a), std::end(a));
+	for (float &value : data)
+	{
+		value = (value - vmin) / (vmax - vmin);
+	}
 	int offset = m_imageData.size();
 	m_imageData.insert(m_imageData.end(), data.begin(), data.end());
 	m_images.push_back({screenPosition.x, screenPosition.y, screenSize.x, screenSize.y, offset, width, height, 0.0f});

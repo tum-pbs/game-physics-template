@@ -10,7 +10,7 @@ void Scene::init()
 void Scene::onDraw(Renderer &renderer)
 {
     if (grid.width > 0)
-        renderer.drawImage(grid.data, grid.height, grid.width, vec2(0, 0), vec2(1.0, 1.0));
+        renderer.drawImage(grid.data, grid.height, grid.width, 0, 1);
 }
 
 void Scene::onGUI()
