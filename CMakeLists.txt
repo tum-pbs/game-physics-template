@@ -7,23 +7,23 @@ project(
 
 option(DEV_MODE "Set up development helper settings" ON)
 
-add_subdirectory(glfw)
-add_subdirectory(webgpu)
-add_subdirectory(glfw3webgpu)
-add_subdirectory(imgui)
+add_subdirectory(thirdparty/glfw)
+add_subdirectory(thirdparty/webgpu)
+add_subdirectory(thirdparty/glfw3webgpu)
+add_subdirectory(thirdparty/imgui)
 
 add_executable(Template
-	main.cpp
-	Renderer.h
-	Renderer.cpp
-	Primitives.h
-	Primitives.cpp
-	ResourceManager.h
-	ResourceManager.cpp
-	implementations.cpp
-	Simulator.cpp
-	Camera.h
-	Camera.cpp
+	src/main.cpp
+	src/Renderer.h
+	src/Renderer.cpp
+	src/Primitives.h
+	src/Primitives.cpp
+	src/ResourceManager.h
+	src/ResourceManager.cpp
+	src/implementations.cpp
+	src/Simulator.cpp
+	src/Camera.h
+	src/Camera.cpp
 )
 
 
@@ -38,11 +38,11 @@ file(GLOB_RECURSE SCENE_HEADERS
 target_sources(Template PRIVATE ${SCENE_SOURCES} ${SCENE_HEADERS})
 
 file(GLOB_RECURSE PIPELINE_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/pipelines/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/*.cpp
 )
 
 file(GLOB_RECURSE PIPELINE_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/pipelines/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/*.h
 )
 target_sources(Template PRIVATE ${PIPELINE_SOURCES} ${PIPELINE_HEADERS})
 
@@ -67,6 +67,8 @@ else()
 endif()
 
 target_include_directories(Template PRIVATE .)
+target_include_directories(Template PRIVATE src)
+target_include_directories(Template PRIVATE thirdparty)
 
 target_link_libraries(Template PRIVATE glfw webgpu glfw3webgpu imgui)
 

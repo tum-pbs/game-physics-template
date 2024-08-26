@@ -1,5 +1,8 @@
 # Game Physics Template (WIP)
 
+## IDE setup:
+Add src and thirdparty to include directories. Otherwise the build will still work but not the autocomplete.
+
 ## Build
 ```
 cmake . -B build
