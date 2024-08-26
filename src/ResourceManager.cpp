@@ -1,5 +1,5 @@
 #include "ResourceManager.h"
-
+#include "stb_image.h"
 #include <fstream>
 
 using namespace wgpu;
@@ -29,4 +29,20 @@ ShaderModule ResourceManager::loadShaderModule(const std::filesystem::path &path
 #endif
 
 	return device.createShaderModule(shaderDesc);
+}
+
+ResourceManager::Image ResourceManager::loadImage(std::filesystem::path &path)
+{
+	int width, height, channels;
+	unsigned char *data = stbi_load(path.string().c_str(), &width, &height, &channels, 4);
+	Image image;
+	image.width = width;
+	image.height = height;
+	image.data.resize(width * height);
+	for (int i = 0; i < width * height; i++)
+	{
+		image.data[i] = {data[i * 4], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]};
+	}
+	stbi_image_free(data);
+	return image;
 }

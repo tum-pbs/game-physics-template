@@ -15,6 +15,14 @@ public:
 	using quat = glm::quat;
 	using mat3x3 = glm::mat3x3;
 
+	struct Image
+	{
+
+		std::vector<glm::vec<4, uint8_t>> data;
+		int height;
+		int width;
+	};
+
 	struct PrimitiveVertexAttributes
 	{
 		vec3 position;
@@ -36,7 +44,7 @@ public:
 		int offset;
 		int width;
 		int height;
-		float _pad;
+		float cmapOffset;
 	};
 
 	struct InstancedVertexAttributes
@@ -50,4 +58,5 @@ public:
 	};
 
 	static wgpu::ShaderModule loadShaderModule(const std::filesystem::path &path, wgpu::Device device);
+	static Image loadImage(std::filesystem::path &path);
 };

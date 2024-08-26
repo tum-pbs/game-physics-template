@@ -10,6 +10,7 @@
 #include "pipelines/PostProcessingPipeline.h"
 #include "pipelines/ImagePipeline.h"
 #include "Camera.h"
+#include "Colormap.h"
 
 // Forward declare
 struct GLFWwindow;
@@ -28,8 +29,8 @@ public:
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color);
 	void drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2);
 	void drawWireCube(glm::vec3 position, glm::vec3 scale, glm::vec3 color);
-	void drawImage(std::vector<float> data, int height, int width, glm::vec2 screenPosition = {0, 0}, glm::vec2 screenSize = {1, 1});
-	void drawImage(std::vector<float> data, int height, int width, float vmin, float vmax, glm::vec2 screenPosition = {0, 0}, glm::vec2 screenSize = {1, 1});
+	void drawImage(std::vector<float> data, int height, int width, Colormap colormap = Colormap("hot"), glm::vec2 screenPosition = {0, 0}, glm::vec2 screenSize = {1, 1});
+	void drawImage(std::vector<float> data, int height, int width, float vmin, float vmax, Colormap colormap = Colormap("hot"), glm::vec2 screenPosition = {0, 0}, glm::vec2 screenSize = {1, 1});
 
 	size_t objectCount()
 	{

@@ -1,6 +1,7 @@
 struct VertexOutput {
         @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
+        @location(1) cmapOffset: f32,
       }
 
 struct ImageAttributes {
@@ -11,7 +12,7 @@ struct ImageAttributes {
     @location(4) offset: i32,
     @location(5) width: i32,
     @location(6) height: i32,
-    @location(7) _pad: f32,
+    @location(7) cmapOffset: f32,
 
 }
 
@@ -44,19 +45,20 @@ fn vs_main(@builtin(vertex_index) VertexIndex: u32, imageAttributes: ImageAttrib
     output.uv.x *= f32(imageAttributes.width);
     output.uv.y *= f32(imageAttributes.height);
 
+    output.cmapOffset = imageAttributes.cmapOffset;
+
     return output;
 }
 
 @group(0) @binding(0) var texture: texture_2d<f32>;
+@group(0) @binding(1) var cmapTexture: texture_2d<f32>;
+@group(0) @binding(2) var cmapSampler: sampler;
 
-fn grayscale(value: f32) -> vec3f {
-    return vec3f(value, value, value);
-}
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let value = textureLoad(texture, vec2i(in.uv), 0).r;
-    let color = grayscale(value);
+    let color = textureSample(cmapTexture, cmapSampler, vec2f(value, in.cmapOffset)).rgb;
     let corrected = vec4f(pow(color, vec3f(2.2)), 1.0);
     return corrected;
 }

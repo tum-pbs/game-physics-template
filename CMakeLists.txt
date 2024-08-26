@@ -18,12 +18,15 @@ add_executable(Template
 	src/Renderer.cpp
 	src/Primitives.h
 	src/Primitives.cpp
+	thirdparty/stb_image.h
 	src/ResourceManager.h
 	src/ResourceManager.cpp
 	src/implementations.cpp
 	src/Simulator.cpp
 	src/Camera.h
 	src/Camera.cpp
+	src/Colormap.h
+	src/Colormap.cpp
 )
 
 

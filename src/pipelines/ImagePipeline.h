@@ -21,10 +21,13 @@ private:
     wgpu::Queue queue = nullptr;
     wgpu::Device device = nullptr;
     wgpu::Buffer imageBuffer = nullptr;
-    wgpu::Sampler sampler = nullptr;
 
     std::vector<wgpu::Texture> textures;
     std::vector<wgpu::TextureView> textureViews;
+
+    wgpu::Texture colormapTexture = nullptr;
+    wgpu::TextureView colormapTextureView = nullptr;
+    wgpu::Sampler colormapSampler = nullptr;
 
     wgpu::BindGroupLayout bindGroupLayout = nullptr;
     std::vector<wgpu::BindGroup> bindGroups;
@@ -37,6 +40,8 @@ private:
     void createTextures();
     wgpu::TextureView createTextureView(wgpu::Texture &texture);
     void createTextureViews();
+
+    void initColormap();
 
     void copyDataToTextures();
     void copyDataToTexture(ResourceManager::ImageAttributes &image, std::vector<float> &data, wgpu::Texture &texture);

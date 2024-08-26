@@ -1,4 +1,5 @@
 #include "ImagePipeline.h"
+#include "Colormap.h"
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
@@ -60,7 +61,7 @@ bool ImagePipeline::init(Device &device, TextureFormat &swapChainFormat, Queue &
 
     instanceAttribs[7].shaderLocation = 7;
     instanceAttribs[7].format = VertexFormat::Float32;
-    instanceAttribs[7].offset = offsetof(ResourceManager::ImageAttributes, _pad);
+    instanceAttribs[7].offset = offsetof(ResourceManager::ImageAttributes, cmapOffset);
 
     VertexBufferLayout instanceBufferLayout;
     instanceBufferLayout.attributeCount = (uint32_t)instanceAttribs.size();
@@ -110,6 +111,7 @@ bool ImagePipeline::init(Device &device, TextureFormat &swapChainFormat, Queue &
     pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
     createLayout();
+    initColormap();
 
     PipelineLayoutDescriptor layoutDesc{};
     layoutDesc.bindGroupLayoutCount = 1;
@@ -194,12 +196,16 @@ void ImagePipeline::terminate()
         if (bindGroup != nullptr)
             bindGroup.release();
     }
-    if (sampler != nullptr)
-        sampler.release();
+    if (colormapSampler != nullptr)
+        colormapSampler.release();
     if (bindGroupLayout != nullptr)
         bindGroupLayout.release();
     if (imageBuffer != nullptr)
         imageBuffer.release();
+    if (colormapTexture != nullptr)
+        colormapTexture.release();
+    if (colormapTextureView != nullptr)
+        colormapTextureView.release();
 }
 
 void ImagePipeline::createLayout()
@@ -210,9 +216,22 @@ void ImagePipeline::createLayout()
     layoutEntry0.texture.sampleType = TextureSampleType::UnfilterableFloat;
     layoutEntry0.texture.viewDimension = TextureViewDimension::_2D;
 
+    BindGroupLayoutEntry layoutEntry1;
+    layoutEntry1.binding = 1;
+    layoutEntry1.visibility = ShaderStage::Fragment;
+    layoutEntry1.texture.sampleType = TextureSampleType::Float;
+    layoutEntry1.texture.viewDimension = TextureViewDimension::_2D;
+
+    BindGroupLayoutEntry layoutEntry2;
+    layoutEntry2.binding = 2;
+    layoutEntry2.visibility = ShaderStage::Fragment;
+    layoutEntry2.sampler.type = wgpu::SamplerBindingType::Filtering;
+
+    std::vector<BindGroupLayoutEntry> layoutEntries = {layoutEntry0, layoutEntry1, layoutEntry2};
+
     BindGroupLayoutDescriptor layoutDescriptor{};
-    layoutDescriptor.entryCount = 1;
-    layoutDescriptor.entries = &layoutEntry0;
+    layoutDescriptor.entryCount = (uint32_t)layoutEntries.size();
+    layoutDescriptor.entries = layoutEntries.data();
     bindGroupLayout = device.createBindGroupLayout(layoutDescriptor);
 }
 
@@ -230,10 +249,20 @@ void ImagePipeline::createBindGroups()
         entry.binding = 0;
         entry.textureView = textureView;
 
+        BindGroupEntry entry1;
+        entry1.binding = 1;
+        entry1.textureView = colormapTextureView;
+
+        BindGroupEntry entry2;
+        entry2.binding = 2;
+        entry2.sampler = colormapSampler;
+
+        std::vector<BindGroupEntry> entries = {entry, entry1, entry2};
+
         BindGroupDescriptor bindGroupDesc;
         bindGroupDesc.layout = bindGroupLayout;
-        bindGroupDesc.entryCount = 1;
-        bindGroupDesc.entries = &entry;
+        bindGroupDesc.entryCount = (uint32_t)entries.size();
+        bindGroupDesc.entries = entries.data();
         bindGroups.push_back(device.createBindGroup(bindGroupDesc));
     }
 }
@@ -308,6 +337,58 @@ void ImagePipeline::createTextureViews()
     {
         textureViews.push_back(createTextureView(texture));
     }
+}
+
+void ImagePipeline::initColormap()
+{
+    Colormap::init();
+    int width = Colormap::colormaps.width;
+    int height = Colormap::colormaps.height;
+
+    TextureDescriptor textureDesc;
+    textureDesc.dimension = TextureDimension::_2D;
+    textureDesc.size = {(uint32_t)width, (uint32_t)height, 1u};
+    textureDesc.mipLevelCount = 1;
+    textureDesc.sampleCount = 1;
+    textureDesc.format = TextureFormat::RGBA8Unorm;
+    textureDesc.usage = TextureUsage::TextureBinding | TextureUsage::CopyDst;
+    textureDesc.viewFormatCount = 0;
+    textureDesc.viewFormats = nullptr;
+    colormapTexture = device.createTexture(textureDesc);
+
+    SamplerDescriptor samplerDesc{};
+    samplerDesc.addressModeU = AddressMode::ClampToEdge;
+    samplerDesc.addressModeV = AddressMode::ClampToEdge;
+    samplerDesc.addressModeW = AddressMode::ClampToEdge;
+    samplerDesc.magFilter = FilterMode::Linear;
+    samplerDesc.minFilter = FilterMode::Linear;
+    samplerDesc.maxAnisotropy = 1;
+    colormapSampler = device.createSampler(samplerDesc);
+
+    ImageCopyTexture destination;
+    destination.texture = colormapTexture;
+    destination.aspect = TextureAspect::All;
+    destination.mipLevel = 0;
+    destination.origin = {0, 0, 0};
+
+    TextureDataLayout source;
+    source.offset = 0;
+    source.bytesPerRow = width * sizeof(uint8_t) * 4;
+    source.rowsPerImage = height;
+
+    size_t size = width * height * sizeof(uint8_t) * 4;
+
+    queue.writeTexture(destination, Colormap::colormaps.data.data(), size, source, {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1u});
+
+    TextureViewDescriptor textureViewDesc;
+    textureViewDesc.aspect = TextureAspect::All;
+    textureViewDesc.baseArrayLayer = 0;
+    textureViewDesc.arrayLayerCount = 1;
+    textureViewDesc.baseMipLevel = 0;
+    textureViewDesc.mipLevelCount = 1;
+    textureViewDesc.dimension = TextureViewDimension::_2D;
+    textureViewDesc.format = TextureFormat::RGBA8Unorm;
+    colormapTextureView = colormapTexture.createView(textureViewDesc);
 }
 
 void ImagePipeline::copyDataToTextures()
