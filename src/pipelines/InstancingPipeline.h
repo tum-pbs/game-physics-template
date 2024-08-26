@@ -1,29 +1,23 @@
 #pragma once
-#include <webgpu/webgpu.hpp>
+#include "Pipeline.h"
 #include <ResourceManager.h>
 #include "Primitives.h"
 
-class InstancingPipeline
+class InstancingPipeline : public Pipeline
 {
 public:
     void init(wgpu::Device &device, wgpu::Queue &queue, wgpu::TextureFormat &swapChainFormat, wgpu::TextureFormat &depthTextureFormat, wgpu::Buffer &cameraUniforms, wgpu::Buffer &lightingUniforms);
     void addCube(ResourceManager::InstancedVertexAttributes cube);
     void addSphere(ResourceManager::InstancedVertexAttributes sphere);
     void addQuad(ResourceManager::InstancedVertexAttributes quad);
-    void clearAll();
-    void commit();
-    void terminate();
-    void draw(wgpu::RenderPassEncoder &renderPass);
+    void clearAll() override;
+    void commit() override;
+    void terminate() override;
+    void draw(wgpu::RenderPassEncoder &renderPass) override;
+    size_t objectCount() override;
 
 private:
     std::vector<std::vector<ResourceManager::InstancedVertexAttributes>> instances;
-
-    wgpu::Device device = nullptr;
-    wgpu::Queue queue = nullptr;
-
-    wgpu::ShaderModule shaderModule = nullptr;
-    wgpu::RenderPipeline pipeline = nullptr;
-
     wgpu::Buffer cameraUniforms = nullptr;
     wgpu::Buffer lightingUniforms = nullptr;
 
@@ -43,6 +37,5 @@ private:
     void initBindGroupLayout();
     void initBindGroup();
 
-    void reallocateBuffer(wgpu::Buffer &buffer, size_t size);
     void drawInstanced(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances);
 };

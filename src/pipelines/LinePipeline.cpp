@@ -117,20 +117,6 @@ void LinePipeline::terminate()
         bindGroup.release();
 }
 
-void LinePipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t size)
-{
-    if (buffer != nullptr)
-    {
-        buffer.destroy();
-        buffer = nullptr;
-    }
-    BufferDescriptor bufferDesc;
-    bufferDesc.size = size;
-    bufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-    bufferDesc.mappedAtCreation = false;
-    buffer = device.createBuffer(bufferDesc);
-}
-
 void LinePipeline::commit()
 {
     size_t count = lines.size();
@@ -154,7 +140,7 @@ void LinePipeline::addLine(Line line)
     lines.push_back(line.end);
 }
 
-void LinePipeline::draw(RenderPassEncoder renderPass)
+void LinePipeline::draw(RenderPassEncoder &renderPass)
 {
     size_t linePointCount = linePointsBuffer.getSize() / sizeof(LineVertexAttributes);
     if (linePointCount > 0)
@@ -165,6 +151,11 @@ void LinePipeline::draw(RenderPassEncoder renderPass)
 
         renderPass.draw(linePointCount, 1, 0, 0);
     }
+}
+
+size_t LinePipeline::objectCount()
+{
+    return lines.size() / 2;
 }
 
 void LinePipeline::initBindGroupLayout()

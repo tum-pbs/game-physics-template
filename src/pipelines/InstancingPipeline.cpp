@@ -210,6 +210,16 @@ void InstancingPipeline::draw(RenderPassEncoder &renderPass)
     }
 }
 
+size_t InstancingPipeline::objectCount()
+{
+    size_t total = 0;
+    for (auto &instanceList : instances)
+    {
+        total += instanceList.size();
+    }
+    return total;
+}
+
 void InstancingPipeline::addPrimitive(VertexNormalList vertexData, TriangleList triangles)
 {
     BufferDescriptor vertexBufferDescriptor;
@@ -316,20 +326,6 @@ void InstancingPipeline::initBindGroup()
 
     if (bindGroup == nullptr)
         throw std::runtime_error("Could not create bind group!");
-}
-
-void InstancingPipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t size)
-{
-    if (buffer != nullptr)
-    {
-        buffer.destroy();
-        buffer = nullptr;
-    }
-    BufferDescriptor bufferDesc;
-    bufferDesc.size = size;
-    bufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-    bufferDesc.mappedAtCreation = false;
-    buffer = device.createBuffer(bufferDesc);
 }
 
 void InstancingPipeline::drawInstanced(wgpu::RenderPassEncoder renderPass, wgpu::Buffer &instanceBuffer, wgpu::Buffer &vertexBuffer, wgpu::Buffer &indexBuffer, size_t instances)

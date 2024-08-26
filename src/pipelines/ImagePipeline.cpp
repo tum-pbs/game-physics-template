@@ -7,24 +7,11 @@
 
 using namespace wgpu;
 
-void ImagePipeline::reallocateBuffer(Buffer &buffer, size_t count)
-{
-    if (buffer != nullptr)
-    {
-        buffer.destroy();
-        buffer = nullptr;
-    }
-    BufferDescriptor bufferDesc;
-    bufferDesc.size = sizeof(ResourceManager::ImageAttributes) * count;
-    bufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-    bufferDesc.mappedAtCreation = false;
-    buffer = device.createBuffer(bufferDesc);
-}
-
 bool ImagePipeline::init(Device &device, TextureFormat &swapChainFormat, Queue &queue)
 {
     this->device = device;
     this->queue = queue;
+    this->swapChainFormat = swapChainFormat;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/image_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
     pipelineDesc.label = "Image pipeline";
@@ -144,7 +131,7 @@ void ImagePipeline::commit()
         createTextures();
         createTextureViews();
         createBindGroups();
-        reallocateBuffer(imageBuffer, images.size());
+        reallocateBuffer(imageBuffer, images.size() * sizeof(ResourceManager::ImageAttributes));
     }
 
     if (images.size() > 0)
@@ -153,6 +140,11 @@ void ImagePipeline::commit()
         copyDataToTextures();
     }
 }
+
+size_t ImagePipeline::objectCount()
+{
+    return images.size();
+};
 
 void ImagePipeline::addImage(std::vector<float> &data, glm::vec2 position, glm::vec2 scale, size_t width, size_t height, Colormap colormap)
 {

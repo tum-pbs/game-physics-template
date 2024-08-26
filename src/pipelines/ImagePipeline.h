@@ -1,30 +1,25 @@
 #pragma once
-#include <webgpu/webgpu.hpp>
 #include "ResourceManager.h"
 #include <vector>
 #include "Colormap.h"
+#include "Pipeline.h"
 
-class ImagePipeline
+class ImagePipeline : public Pipeline
 {
 public:
     bool init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::Queue &queue);
-    void draw(wgpu::RenderPassEncoder &renderPass);
-    void commit();
-    void clearAll();
     void addImage(std::vector<float> &data, glm::vec2 position, glm::vec2 scale, size_t width, size_t height, Colormap colormap);
-    void terminate();
-    size_t objectCount() { return images.size(); };
+    void draw(wgpu::RenderPassEncoder &renderPass) override;
+    void commit() override;
+    void clearAll() override;
+    void terminate() override;
+    size_t objectCount() override;
 
 private:
-    wgpu::ShaderModule shaderModule = nullptr;
-    wgpu::RenderPipeline pipeline = nullptr;
-
     std::vector<ResourceManager::ImageAttributes> images;
     std::vector<ResourceManager::ImageAttributes> prevImages;
     std::vector<float> data;
 
-    wgpu::Queue queue = nullptr;
-    wgpu::Device device = nullptr;
     wgpu::Buffer imageBuffer = nullptr;
 
     std::vector<wgpu::Texture> textures;
@@ -50,5 +45,4 @@ private:
 
     void copyDataToTextures();
     void copyDataToTexture(ResourceManager::ImageAttributes &image, std::vector<float> &data, wgpu::Texture &texture);
-    void reallocateBuffer(wgpu::Buffer &buffer, size_t count);
 };
