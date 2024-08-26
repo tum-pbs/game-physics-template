@@ -13,6 +13,7 @@ add_subdirectory(thirdparty/glfw3webgpu)
 add_subdirectory(thirdparty/imgui)
 
 add_executable(Template
+	src/implementations.cpp
 	src/main.cpp
 	src/Renderer.h
 	src/Renderer.cpp
@@ -21,7 +22,6 @@ add_executable(Template
 	thirdparty/stb_image.h
 	src/ResourceManager.h
 	src/ResourceManager.cpp
-	src/implementations.cpp
 	src/Simulator.cpp
 	src/Camera.h
 	src/Camera.cpp
@@ -29,7 +29,10 @@ add_executable(Template
 	src/Colormap.cpp
 )
 
-
+target_compile_definitions(Template PRIVATE
+		GLM_FORCE_RIGHT_HANDED
+		GLM_FORCE_DEPTH_ZERO_TO_ONE
+	)
 
 file(GLOB_RECURSE SCENE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/*.cpp
