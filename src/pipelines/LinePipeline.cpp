@@ -158,7 +158,7 @@ void LinePipeline::initBindGroupLayout()
     bindingLayout.binding = 0;
     bindingLayout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
     bindingLayout.buffer.type = BufferBindingType::Uniform;
-    bindingLayout.buffer.minBindingSize = sizeof(Renderer::MyUniforms);
+    bindingLayout.buffer.minBindingSize = sizeof(Renderer::RenderUniforms);
 
     // The lighting uniform buffer binding
     BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[1];
@@ -184,7 +184,7 @@ void LinePipeline::initBindGroup()
     bindings[0].binding = 0;
     bindings[0].buffer = cameraUniforms;
     bindings[0].offset = 0;
-    bindings[0].size = sizeof(Renderer::MyUniforms);
+    bindings[0].size = sizeof(Renderer::RenderUniforms);
 
     bindings[1].binding = 1;
     bindings[1].buffer = lightingUniforms;

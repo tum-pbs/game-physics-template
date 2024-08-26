@@ -19,16 +19,16 @@ using namespace wgpu;
 Renderer::Renderer()
 {
 	initWindowAndDevice();
-	glfwGetFramebufferSize(m_window, &width, &height);
+	glfwGetFramebufferSize(window, &width, &height);
 	initSwapChain();
 	initDepthBuffer();
 	initRenderTexture();
 	initUniforms();
 	initLightingUniforms();
-	m_instancingPipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_uniformBuffer, m_lightingUniformBuffer);
-	m_linePipeline.init(m_device, m_queue, m_swapChainFormat, m_depthTextureFormat, m_uniformBuffer, m_lightingUniformBuffer);
-	m_postProcessingPipeline.init(m_device, m_swapChainFormat, m_postTextureView);
-	m_imagePipeline.init(m_device, m_swapChainFormat, m_queue);
+	instancingPipeline.init(device, queue, swapChainFormat, depthTextureFormat, uniformBuffer, lightingUniformBuffer);
+	linePipeline.init(device, queue, swapChainFormat, depthTextureFormat, uniformBuffer, lightingUniformBuffer);
+	postProcessingPipeline.init(device, swapChainFormat, postTextureView);
+	imagePipeline.init(device, swapChainFormat, queue);
 	initGui();
 }
 
@@ -47,31 +47,29 @@ void Renderer::onFrame()
 	}
 
 	// Update uniform buffer
-	m_uniforms.time = static_cast<float>(glfwGetTime());
+	renderUniforms.time = static_cast<float>(glfwGetTime());
 	updateViewMatrix();
-	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, time), &m_uniforms.time, sizeof(MyUniforms::time));
-	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingNormal), &m_uniforms.cullingNormal, sizeof(MyUniforms::cullingNormal));
-	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, cullingOffset), &m_uniforms.cullingOffset, sizeof(MyUniforms::cullingOffset));
-	m_queue.writeBuffer(m_uniformBuffer, offsetof(MyUniforms, flags), &m_uniforms.flags, sizeof(MyUniforms::flags));
+	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, time), &renderUniforms.time, sizeof(RenderUniforms::time));
+	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, cullingNormal), &renderUniforms.cullingNormal, sizeof(RenderUniforms::cullingNormal));
+	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, cullingOffset), &renderUniforms.cullingOffset, sizeof(RenderUniforms::cullingOffset));
+	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, flags), &renderUniforms.flags, sizeof(RenderUniforms::flags));
 
 	// prepare instanced draw calls
-	m_instancingPipeline.updateCubes(m_cubes);
-	m_instancingPipeline.updateSpheres(m_spheres);
-	m_instancingPipeline.updateQuads(m_quads);
+	instancingPipeline.commit();
 
 	// prepare line buffers
-	m_linePipeline.updateLines(m_lines);
+	linePipeline.updateLines(lines);
 
 	// prepare image buffers
-	m_imagePipeline.updateImages(m_images, m_imageData);
+	imagePipeline.updateImages(images, imageData);
 
-	TextureView nextTexture = m_swapChain.getCurrentTextureView();
+	TextureView nextTexture = swapChain.getCurrentTextureView();
 	if (!nextTexture)
 		throw std::runtime_error("Could not get next texture!");
 
 	CommandEncoderDescriptor commandEncoderDesc;
 	commandEncoderDesc.label = "Command Encoder";
-	CommandEncoder encoder = m_device.createCommandEncoder(commandEncoderDesc);
+	CommandEncoder encoder = device.createCommandEncoder(commandEncoderDesc);
 
 	RenderPassDescriptor renderPassDesc{};
 
@@ -85,10 +83,10 @@ void Renderer::onFrame()
 	postProcessTextureViewDesc.baseMipLevel = 0;
 	postProcessTextureViewDesc.mipLevelCount = 1;
 	postProcessTextureViewDesc.dimension = TextureViewDimension::_2D;
-	postProcessTextureViewDesc.format = m_swapChainFormat;
+	postProcessTextureViewDesc.format = swapChainFormat;
 
 	RenderPassColorAttachment renderPassColorAttachment{};
-	renderPassColorAttachment.view = m_postTextureView;
+	renderPassColorAttachment.view = postTextureView;
 	renderPassColorAttachment.resolveTarget = nullptr;
 	renderPassColorAttachment.loadOp = LoadOp::Clear;
 	renderPassColorAttachment.storeOp = StoreOp::Store;
@@ -97,7 +95,7 @@ void Renderer::onFrame()
 	renderPassDesc.colorAttachments = &renderPassColorAttachment;
 
 	RenderPassDepthStencilAttachment depthStencilAttachment;
-	depthStencilAttachment.view = m_depthTextureView;
+	depthStencilAttachment.view = depthTextureView;
 	depthStencilAttachment.depthClearValue = 1.0f;
 	depthStencilAttachment.depthLoadOp = LoadOp::Clear;
 	depthStencilAttachment.depthStoreOp = StoreOp::Store;
@@ -119,9 +117,9 @@ void Renderer::onFrame()
 	renderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
-	m_linePipeline.drawLines(renderPass);
+	linePipeline.drawLines(renderPass);
 
-	m_instancingPipeline.draw(renderPass);
+	instancingPipeline.draw(renderPass);
 
 	renderPass.end();
 	renderPass.release();
@@ -139,9 +137,9 @@ void Renderer::onFrame()
 	postProcessRenderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPassPost = encoder.beginRenderPass(postProcessRenderPassDesc);
 
-	m_postProcessingPipeline.draw(renderPassPost);
+	postProcessingPipeline.draw(renderPassPost);
 
-	m_imagePipeline.draw(renderPassPost);
+	imagePipeline.draw(renderPassPost);
 
 	updateGui(renderPassPost);
 
@@ -154,15 +152,15 @@ void Renderer::onFrame()
 	cmdBufferDescriptor.label = "Command buffer";
 	CommandBuffer command = encoder.finish(cmdBufferDescriptor);
 	encoder.release();
-	m_queue.submit(command);
+	queue.submit(command);
 	command.release();
 
-	m_swapChain.present();
+	swapChain.present();
 	lastDrawTime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - startTime).count();
 
 #ifdef WEBGPU_BACKEND_DAWN
 	// Check for pending error callbacks
-	m_device.tick();
+	device.tick();
 #endif
 }
 
@@ -171,9 +169,9 @@ Renderer::~Renderer()
 	terminateGui();
 	terminateLightingUniforms();
 	terminateUniforms();
-	m_instancingPipeline.terminate();
-	m_linePipeline.terminate();
-	m_postProcessingPipeline.terminate();
+	instancingPipeline.terminate();
+	linePipeline.terminate();
+	postProcessingPipeline.terminate();
 	terminateRenderTexture();
 	terminateDepthBuffer();
 	terminateSwapChain();
@@ -182,12 +180,12 @@ Renderer::~Renderer()
 
 bool Renderer::isRunning()
 {
-	return !glfwWindowShouldClose(m_window);
+	return !glfwWindowShouldClose(window);
 }
 
 void Renderer::onResize()
 {
-	glfwGetFramebufferSize(m_window, &width, &height);
+	glfwGetFramebufferSize(window, &width, &height);
 	terminateDepthBuffer();
 	terminateSwapChain();
 	terminateRenderTexture();
@@ -195,15 +193,15 @@ void Renderer::onResize()
 	initSwapChain();
 	initDepthBuffer();
 	initRenderTexture();
-	m_postProcessingPipeline.updateBindGroup(m_postTextureView);
+	postProcessingPipeline.updateBindGroup(postTextureView);
 
 	updateProjectionMatrix();
 }
 
 void Renderer::initWindowAndDevice()
 {
-	m_instance = createInstance(InstanceDescriptor{});
-	if (!m_instance)
+	instance = createInstance(InstanceDescriptor{});
+	if (!instance)
 		throw std::runtime_error("Could not initialize WebGPU!");
 
 	if (!glfwInit())
@@ -212,18 +210,18 @@ void Renderer::initWindowAndDevice()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-	m_window = glfwCreateWindow(640, 480, "Game Physics Template", NULL, NULL);
-	if (!m_window)
+	window = glfwCreateWindow(640, 480, "Game Physics Template", NULL, NULL);
+	if (!window)
 		throw std::runtime_error("Could not open window!");
 
-	m_surface = glfwGetWGPUSurface(m_instance, m_window);
+	surface = glfwGetWGPUSurface(instance, window);
 
-	if (!m_surface)
+	if (!surface)
 		throw std::runtime_error("Could not create surface!");
 
 	RequestAdapterOptions adapterOpts{};
-	adapterOpts.compatibleSurface = m_surface;
-	Adapter adapter = m_instance.requestAdapter(adapterOpts);
+	adapterOpts.compatibleSurface = surface;
+	Adapter adapter = instance.requestAdapter(adapterOpts);
 
 	SupportedLimits supportedLimits;
 	adapter.getLimits(&supportedLimits);
@@ -252,41 +250,41 @@ void Renderer::initWindowAndDevice()
 	deviceDesc.requiredFeaturesCount = 0;
 	deviceDesc.requiredLimits = &requiredLimits;
 	deviceDesc.defaultQueue.label = "The default queue";
-	m_device = adapter.requestDevice(deviceDesc);
+	device = adapter.requestDevice(deviceDesc);
 
-	m_errorCallbackHandle = m_device.setUncapturedErrorCallback([](ErrorType type, char const *message)
-																{
+	errorCallbackHandle = device.setUncapturedErrorCallback([](ErrorType type, char const *message)
+															  {
 		std::cout << "Device error: type " << type;
 		if (message) std::cout << " (message: " << message << ")";
 		std::cout << std::endl; });
 
-	m_queue = m_device.getQueue();
+	queue = device.getQueue();
 
 #ifdef WEBGPU_BACKEND_WGPU
-	m_swapChainFormat = m_surface.getPreferredFormat(adapter);
+	swapChainFormat = surface.getPreferredFormat(adapter);
 #else
-	m_swapChainFormat = TextureFormat::BGRA8Unorm;
+	swapChainFormat = TextureFormat::BGRA8Unorm;
 #endif
 
-	glfwSetWindowUserPointer(m_window, this);
-	glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow *window, int, int)
+	glfwSetWindowUserPointer(window, this);
+	glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int, int)
 								   {
 		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 		if (that != nullptr) that->onResize(); });
 
 	adapter.release();
-	if (m_device == nullptr)
+	if (device == nullptr)
 		throw std::runtime_error("Could not create device!");
 }
 
 void Renderer::terminateWindowAndDevice()
 {
-	m_queue.release();
-	m_device.release();
-	m_surface.release();
-	m_instance.release();
+	queue.release();
+	device.release();
+	surface.release();
+	instance.release();
 
-	glfwDestroyWindow(m_window);
+	glfwDestroyWindow(window);
 	glfwTerminate();
 }
 
@@ -304,31 +302,31 @@ void Renderer::initSwapChain()
 	swapChainDesc.width = static_cast<uint32_t>(width);
 	swapChainDesc.height = static_cast<uint32_t>(height);
 	swapChainDesc.usage = TextureUsage::RenderAttachment;
-	swapChainDesc.format = m_swapChainFormat;
+	swapChainDesc.format = swapChainFormat;
 	swapChainDesc.presentMode = presentMode;
-	m_swapChain = m_device.createSwapChain(m_surface, swapChainDesc);
+	swapChain = device.createSwapChain(surface, swapChainDesc);
 
-	if (!m_swapChain)
+	if (!swapChain)
 		throw std::runtime_error("Could not create swap chain!");
 }
 
 void Renderer::terminateSwapChain()
 {
-	m_swapChain.release();
+	swapChain.release();
 }
 
 void Renderer::initRenderTexture()
 {
 	TextureDescriptor postProcessTextureDesc;
 	postProcessTextureDesc.dimension = TextureDimension::_2D;
-	postProcessTextureDesc.format = m_swapChainFormat;
+	postProcessTextureDesc.format = swapChainFormat;
 	postProcessTextureDesc.size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
 	postProcessTextureDesc.usage = TextureUsage::CopySrc | TextureUsage::TextureBinding | TextureUsage::RenderAttachment;
 	postProcessTextureDesc.sampleCount = 1;
 	postProcessTextureDesc.mipLevelCount = 1;
 	postProcessTextureDesc.viewFormatCount = 1;
-	postProcessTextureDesc.viewFormats = (WGPUTextureFormat *)&m_swapChainFormat;
-	m_postTexture = m_device.createTexture(postProcessTextureDesc);
+	postProcessTextureDesc.viewFormats = (WGPUTextureFormat *)&swapChainFormat;
+	postTexture = device.createTexture(postProcessTextureDesc);
 
 	TextureViewDescriptor postProcessTextureViewDesc;
 	postProcessTextureViewDesc.aspect = TextureAspect::All;
@@ -337,34 +335,34 @@ void Renderer::initRenderTexture()
 	postProcessTextureViewDesc.baseMipLevel = 0;
 	postProcessTextureViewDesc.mipLevelCount = 1;
 	postProcessTextureViewDesc.dimension = TextureViewDimension::_2D;
-	postProcessTextureViewDesc.format = m_postTexture.getFormat();
-	m_postTextureView = m_postTexture.createView(postProcessTextureViewDesc);
+	postProcessTextureViewDesc.format = postTexture.getFormat();
+	postTextureView = postTexture.createView(postProcessTextureViewDesc);
 
-	if (m_postTexture == nullptr)
+	if (postTexture == nullptr)
 		throw std::runtime_error("Could not create post process texture!");
-	if (m_postTextureView == nullptr)
+	if (postTextureView == nullptr)
 		throw std::runtime_error("Could not create post process texture view!");
 }
 
 void Renderer::terminateRenderTexture()
 {
-	m_postTexture.destroy();
-	m_postTexture.release();
+	postTexture.destroy();
+	postTexture.release();
 }
 void Renderer::initDepthBuffer()
 {
-	glfwGetFramebufferSize(m_window, &width, &height);
+	glfwGetFramebufferSize(window, &width, &height);
 
 	TextureDescriptor depthTextureDesc;
 	depthTextureDesc.dimension = TextureDimension::_2D;
-	depthTextureDesc.format = m_depthTextureFormat;
+	depthTextureDesc.format = depthTextureFormat;
 	depthTextureDesc.mipLevelCount = 1;
 	depthTextureDesc.sampleCount = 1;
 	depthTextureDesc.size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
 	depthTextureDesc.usage = TextureUsage::RenderAttachment;
 	depthTextureDesc.viewFormatCount = 1;
-	depthTextureDesc.viewFormats = (WGPUTextureFormat *)&m_depthTextureFormat;
-	m_depthTexture = m_device.createTexture(depthTextureDesc);
+	depthTextureDesc.viewFormats = (WGPUTextureFormat *)&depthTextureFormat;
+	depthTexture = device.createTexture(depthTextureDesc);
 
 	TextureViewDescriptor depthTextureViewDesc;
 	depthTextureViewDesc.aspect = TextureAspect::DepthOnly;
@@ -373,60 +371,58 @@ void Renderer::initDepthBuffer()
 	depthTextureViewDesc.baseMipLevel = 0;
 	depthTextureViewDesc.mipLevelCount = 1;
 	depthTextureViewDesc.dimension = TextureViewDimension::_2D;
-	depthTextureViewDesc.format = m_depthTextureFormat;
-	m_depthTextureView = m_depthTexture.createView(depthTextureViewDesc);
+	depthTextureViewDesc.format = depthTextureFormat;
+	depthTextureView = depthTexture.createView(depthTextureViewDesc);
 
-	if (m_depthTexture == nullptr)
+	if (depthTexture == nullptr)
 		throw std::runtime_error("Could not create depth texture!");
 
-	if (m_depthTextureView == nullptr)
+	if (depthTextureView == nullptr)
 		throw std::runtime_error("Could not create depth texture view!");
 }
 
 void Renderer::terminateDepthBuffer()
 {
-	m_depthTextureView.release();
-	m_depthTexture.destroy();
-	m_depthTexture.release();
+	depthTextureView.release();
+	depthTexture.destroy();
+	depthTexture.release();
 }
 
 void Renderer::clearScene()
 {
-	m_cubes.clear();
-	m_spheres.clear();
-	m_quads.clear();
-	m_lines.clear();
-	m_images.clear();
-	m_imageData.clear();
+	instancingPipeline.clearAll();
+	lines.clear();
+	images.clear();
+	imageData.clear();
 	current_id = 0;
 }
 
 void Renderer::initUniforms()
 {
 	BufferDescriptor bufferDesc;
-	bufferDesc.size = sizeof(MyUniforms);
+	bufferDesc.size = sizeof(RenderUniforms);
 	bufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
 	bufferDesc.mappedAtCreation = false;
-	m_uniformBuffer = m_device.createBuffer(bufferDesc);
-	m_uniforms.viewMatrix = camera.viewMatrix;
-	m_uniforms.projectionMatrix = camera.projectionMatrix();
-	m_uniforms.time = 1.0f;
-	m_uniforms.cullingNormal = {0.0f, 0.0f, 1.0f};
-	m_uniforms.cullingOffset = 0.0f;
-	m_uniforms.flags = 0;
-	m_queue.writeBuffer(m_uniformBuffer, 0, &m_uniforms, sizeof(MyUniforms));
+	uniformBuffer = device.createBuffer(bufferDesc);
+	renderUniforms.viewMatrix = camera.viewMatrix;
+	renderUniforms.projectionMatrix = camera.projectionMatrix();
+	renderUniforms.time = 1.0f;
+	renderUniforms.cullingNormal = {0.0f, 0.0f, 1.0f};
+	renderUniforms.cullingOffset = 0.0f;
+	renderUniforms.flags = 0;
+	queue.writeBuffer(uniformBuffer, 0, &renderUniforms, sizeof(RenderUniforms));
 
 	updateProjectionMatrix();
 	updateViewMatrix();
 
-	if (m_uniformBuffer == nullptr)
+	if (uniformBuffer == nullptr)
 		throw std::runtime_error("Could not create uniform buffer!");
 }
 
 void Renderer::terminateUniforms()
 {
-	m_uniformBuffer.destroy();
-	m_uniformBuffer.release();
+	uniformBuffer.destroy();
+	uniformBuffer.release();
 }
 
 void Renderer::initLightingUniforms()
@@ -435,58 +431,58 @@ void Renderer::initLightingUniforms()
 	bufferDesc.size = sizeof(LightingUniforms);
 	bufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
 	bufferDesc.mappedAtCreation = false;
-	m_lightingUniformBuffer = m_device.createBuffer(bufferDesc);
+	lightingUniformBuffer = device.createBuffer(bufferDesc);
 
-	m_lightingUniforms.direction = vec3(2.0, 0.5, 1);
-	m_lightingUniforms.ambient = vec3(1, 1, 1);
-	m_lightingUniforms.ambient_intensity = 0.1f;
-	m_lightingUniforms.specular = vec3(1, 1, 1);
-	m_lightingUniforms.diffuse_intensity = 1.0f;
-	m_lightingUniforms.specular_intensity = 0.2f;
-	m_lightingUniforms.alpha = 32;
+	lightingUniforms.direction = vec3(2.0, 0.5, 1);
+	lightingUniforms.ambient = vec3(1, 1, 1);
+	lightingUniforms.ambient_intensity = 0.1f;
+	lightingUniforms.specular = vec3(1, 1, 1);
+	lightingUniforms.diffuse_intensity = 1.0f;
+	lightingUniforms.specular_intensity = 0.2f;
+	lightingUniforms.alpha = 32;
 
 	updateLightingUniforms();
 
-	if (m_lightingUniformBuffer == nullptr)
+	if (lightingUniformBuffer == nullptr)
 		throw std::runtime_error("Could not create lighting uniform buffer!");
 }
 
 void Renderer::terminateLightingUniforms()
 {
-	m_lightingUniformBuffer.destroy();
-	m_lightingUniformBuffer.release();
+	lightingUniformBuffer.destroy();
+	lightingUniformBuffer.release();
 }
 
 void Renderer::updateLightingUniforms()
 {
-	m_queue.writeBuffer(m_lightingUniformBuffer, 0, &m_lightingUniforms, sizeof(LightingUniforms));
+	queue.writeBuffer(lightingUniformBuffer, 0, &lightingUniforms, sizeof(LightingUniforms));
 }
 
 void Renderer::updateProjectionMatrix()
 {
-	glfwGetFramebufferSize(m_window, &camera.width, &camera.height);
-	m_uniforms.projectionMatrix = camera.projectionMatrix();
-	m_queue.writeBuffer(
-		m_uniformBuffer,
-		offsetof(MyUniforms, projectionMatrix),
-		&m_uniforms.projectionMatrix,
-		sizeof(MyUniforms::projectionMatrix));
+	glfwGetFramebufferSize(window, &camera.width, &camera.height);
+	renderUniforms.projectionMatrix = camera.projectionMatrix();
+	queue.writeBuffer(
+		uniformBuffer,
+		offsetof(RenderUniforms, projectionMatrix),
+		&renderUniforms.projectionMatrix,
+		sizeof(RenderUniforms::projectionMatrix));
 }
 
 void Renderer::updateViewMatrix()
 {
-	m_uniforms.viewMatrix = camera.viewMatrix;
-	m_queue.writeBuffer(
-		m_uniformBuffer,
-		offsetof(MyUniforms, viewMatrix),
-		&m_uniforms.viewMatrix,
-		sizeof(MyUniforms::viewMatrix));
-	m_uniforms.cameraWorldPosition = camera.position;
-	m_queue.writeBuffer(
-		m_uniformBuffer,
-		offsetof(MyUniforms, cameraWorldPosition),
-		&m_uniforms.cameraWorldPosition,
-		sizeof(MyUniforms::cameraWorldPosition));
+	renderUniforms.viewMatrix = camera.viewMatrix;
+	queue.writeBuffer(
+		uniformBuffer,
+		offsetof(RenderUniforms, viewMatrix),
+		&renderUniforms.viewMatrix,
+		sizeof(RenderUniforms::viewMatrix));
+	renderUniforms.cameraWorldPosition = camera.position;
+	queue.writeBuffer(
+		uniformBuffer,
+		offsetof(RenderUniforms, cameraWorldPosition),
+		&renderUniforms.cameraWorldPosition,
+		sizeof(RenderUniforms::cameraWorldPosition));
 }
 
 void Renderer::initGui()
@@ -495,8 +491,8 @@ void Renderer::initGui()
 	ImGui::CreateContext();
 	ImGui::GetIO();
 
-	ImGui_ImplGlfw_InitForOther(m_window, true);
-	ImGui_ImplWGPU_Init(m_device, 3, m_swapChainFormat);
+	ImGui_ImplGlfw_InitForOther(window, true);
+	ImGui_ImplWGPU_Init(device, 3, swapChainFormat);
 }
 
 void Renderer::terminateGui()
@@ -507,12 +503,12 @@ void Renderer::terminateGui()
 
 uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
-	m_cubes.push_back({position,
-					   rotation,
-					   scale,
-					   color,
-					   current_id,
-					   flags});
+	instancingPipeline.addCube({position,
+								rotation,
+								scale,
+								color,
+								current_id,
+								flags});
 	return current_id++;
 }
 
@@ -523,7 +519,7 @@ uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 sc
 
 uint32_t Renderer::drawSphere(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
-	m_spheres.push_back({position, rotation, scale, color, current_id, flags});
+	instancingPipeline.addSphere({position, rotation, scale, color, current_id, flags});
 	return current_id++;
 }
 
@@ -534,7 +530,7 @@ uint32_t Renderer::drawSphere(glm::vec3 position, float scale, glm::vec3 color, 
 
 uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
-	m_quads.push_back({position, rotation, scale, color, current_id, flags});
+	instancingPipeline.addQuad({position, rotation, scale, color, current_id, flags});
 	return current_id++;
 }
 
@@ -545,8 +541,8 @@ uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 sc
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
 {
-	m_lines.push_back({position1, color1});
-	m_lines.push_back({position2, color2});
+	lines.push_back({position1, color1});
+	lines.push_back({position2, color2});
 }
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color)
@@ -636,7 +632,7 @@ void Renderer::drawImage(std::vector<float> data, int height, int width, float v
 	{
 		value = (value - vmin) / (vmax - vmin);
 	}
-	int offset = m_imageData.size();
-	m_imageData.insert(m_imageData.end(), data.begin(), data.end());
-	m_images.push_back({screenPosition.x, screenPosition.y, screenSize.x, screenSize.y, offset, width, height, colormap.textureOffset()});
+	int offset = imageData.size();
+	imageData.insert(imageData.end(), data.begin(), data.end());
+	images.push_back({screenPosition.x, screenPosition.y, screenSize.x, screenSize.y, offset, width, height, colormap.textureOffset()});
 }

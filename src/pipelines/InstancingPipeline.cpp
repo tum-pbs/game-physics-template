@@ -1,5 +1,4 @@
 #include "InstancingPipeline.h"
-#include "Primitives.h"
 #include "Renderer.h"
 
 #ifndef RESOURCE_DIR
@@ -147,20 +146,13 @@ void InstancingPipeline::terminate()
         shaderModule.release();
     if (pipeline != nullptr)
         pipeline.release();
-    if (instanceBuffer != nullptr)
+    for (auto &buffer : instanceBuffers)
     {
-        instanceBuffer.destroy();
-        instanceBuffer.release();
-    }
-    if (sphereInstanceBuffer != nullptr)
-    {
-        sphereInstanceBuffer.destroy();
-        sphereInstanceBuffer.release();
-    }
-    if (quadInstanceBuffer != nullptr)
-    {
-        quadInstanceBuffer.destroy();
-        quadInstanceBuffer.release();
+        if (buffer != nullptr)
+        {
+            buffer.destroy();
+            buffer.release();
+        }
     }
     if (bindGroupLayout != nullptr)
         bindGroupLayout.release();
@@ -169,166 +161,108 @@ void InstancingPipeline::terminate()
     terminateGeometry();
 }
 
-void InstancingPipeline::updateCubes(std::vector<ResourceManager::InstancedVertexAttributes> &cubes)
+void InstancingPipeline::addCube(ResourceManager::InstancedVertexAttributes cube)
 {
-    cubeInstances = cubes.size();
-
-    if (cubeInstances != prevCubeInstances)
-        reallocateBuffer(instanceBuffer, cubeInstances);
-
-    if (cubeInstances > 0)
-        queue.writeBuffer(instanceBuffer, 0, cubes.data(), sizeof(InstancedVertexAttributes) * cubeInstances);
-
-    prevCubeInstances = cubeInstances;
+    instances[0].push_back(cube);
 }
 
-void InstancingPipeline::drawCubes(wgpu::RenderPassEncoder renderPass)
+void InstancingPipeline::addSphere(ResourceManager::InstancedVertexAttributes sphere)
 {
-    drawInstanced(renderPass, instanceBuffer, dataBuffer, cubeIndexBuffer, cubeInstances);
+    instances[1].push_back(sphere);
 }
 
-void InstancingPipeline::updateSpheres(std::vector<ResourceManager::InstancedVertexAttributes> &spheres)
+void InstancingPipeline::addQuad(ResourceManager::InstancedVertexAttributes quad)
 {
-    sphereInstances = spheres.size();
-
-    if (sphereInstances != prevSphereInstances)
-        reallocateBuffer(sphereInstanceBuffer, sphereInstances);
-
-    if (sphereInstances > 0)
-        queue.writeBuffer(sphereInstanceBuffer, 0, spheres.data(), sizeof(InstancedVertexAttributes) * sphereInstances);
-
-    prevSphereInstances = sphereInstances;
+    instances[2].push_back(quad);
 }
 
-void InstancingPipeline::drawSpheres(wgpu::RenderPassEncoder renderPass)
+void InstancingPipeline::clearAll()
 {
-    drawInstanced(renderPass, sphereInstanceBuffer, sphereVertexBuffer, sphereIndexBuffer, sphereInstances);
+    for (auto &instanceList : instances)
+    {
+        instanceList.clear();
+    }
 }
 
-void InstancingPipeline::updateQuads(std::vector<ResourceManager::InstancedVertexAttributes> &quads)
+void InstancingPipeline::update(std::vector<ResourceManager::InstancedVertexAttributes> &instances, wgpu::Buffer &instanceBuffer)
 {
-    quadInstances = quads.size();
+    size_t count = instances.size();
+    size_t new_size = count * sizeof(InstancedVertexAttributes);
+    if (instanceBuffer == nullptr || new_size != instanceBuffer.getSize())
+        reallocateBuffer(instanceBuffer, new_size);
+    if (count > 0)
+        queue.writeBuffer(instanceBuffer, 0, instances.data(), new_size);
+}
 
-    if (quadInstances != prevQuadInstances)
-        reallocateBuffer(quadInstanceBuffer, quadInstances);
-
-    if (quadInstances > 0)
-        queue.writeBuffer(quadInstanceBuffer, 0, quads.data(), sizeof(InstancedVertexAttributes) * quadInstances);
-
-    prevQuadInstances = quadInstances;
+void InstancingPipeline::commit()
+{
+    for (size_t i = 0; i < instanceBuffers.size(); i++)
+    {
+        update(instances[i], instanceBuffers[i]);
+    }
 }
 
 void InstancingPipeline::draw(RenderPassEncoder &renderPass)
 {
-    drawCubes(renderPass);
-    drawSpheres(renderPass);
-    drawQuads(renderPass);
+    for (size_t i = 0; i < instanceBuffers.size(); i++)
+    {
+        drawInstanced(renderPass, instanceBuffers[i], vertexBuffers[i], indexBuffers[i], instanceBuffers[i].getSize() / sizeof(InstancedVertexAttributes));
+    }
 }
 
-void InstancingPipeline::drawQuads(wgpu::RenderPassEncoder renderPass)
+void InstancingPipeline::addPrimitive(VertexNormalList vertexData, TriangleList triangles)
 {
-    drawInstanced(renderPass, quadInstanceBuffer, quadVertexBuffer, quadIndexBuffer, quadInstances);
+    BufferDescriptor vertexBufferDescriptor;
+    vertexBufferDescriptor.size = vertexData.size() * sizeof(PrimitiveVertexAttributes);
+    vertexBufferDescriptor.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
+    vertexBufferDescriptor.mappedAtCreation = false;
+    Buffer vertexBuffer = device.createBuffer(vertexBufferDescriptor);
+    queue.writeBuffer(vertexBuffer, 0, vertexData.data(), vertexBufferDescriptor.size);
+    vertexBuffers.push_back(vertexBuffer);
+    if (vertexBuffer == nullptr)
+        throw std::runtime_error("Failed to create vertex buffer");
+
+    BufferDescriptor indexBufferDescriptor;
+    indexBufferDescriptor.size = triangles.size() * sizeof(Triangle);
+    indexBufferDescriptor.usage = BufferUsage::CopyDst | BufferUsage::Index;
+    indexBufferDescriptor.mappedAtCreation = false;
+    Buffer indexBuffer = device.createBuffer(indexBufferDescriptor);
+    queue.writeBuffer(indexBuffer, 0, triangles.data(), indexBufferDescriptor.size);
+    indexBuffers.push_back(indexBuffer);
+
+    if (indexBuffer == nullptr)
+        throw std::runtime_error("Failed to create index buffer");
+
+    instanceBuffers.push_back(nullptr);
+    instances.push_back({});
 }
 
 void InstancingPipeline::initGeometry()
 {
     // Load cube geometry
-
-    BufferDescriptor cubeVertexBufferDesc;
-    cubeVertexBufferDesc.size = cube::vertices.size() * sizeof(PrimitiveVertexAttributes);
-    cubeVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-    cubeVertexBufferDesc.mappedAtCreation = false;
-    dataBuffer = device.createBuffer(cubeVertexBufferDesc);
-    queue.writeBuffer(dataBuffer, 0, cube::vertices.data(), cubeVertexBufferDesc.size);
-
-    BufferDescriptor cubeIndexBufferDesc;
-    cubeIndexBufferDesc.size = cube::triangles.size() * sizeof(Triangle);
-    cubeIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
-    cubeIndexBufferDesc.mappedAtCreation = false;
-    cubeIndexBuffer = device.createBuffer(cubeIndexBufferDesc);
-    queue.writeBuffer(cubeIndexBuffer, 0, cube::triangles.data(), cubeIndexBufferDesc.size);
+    addPrimitive(cube::vertices, cube::triangles);
 
     // Load sphere geometry
-
     IndexedMesh sphereMesh = make_icosphere(2);
     VertexNormalList sphereVertices = sphereMesh.first;
     TriangleList sphereTriangles = sphereMesh.second;
-
-    BufferDescriptor sphereVertexBufferSDesc;
-    sphereVertexBufferSDesc.size = sphereVertices.size() * sizeof(PrimitiveVertexAttributes);
-    sphereVertexBufferSDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-    sphereVertexBufferSDesc.mappedAtCreation = false;
-    sphereVertexBuffer = device.createBuffer(sphereVertexBufferSDesc);
-    queue.writeBuffer(sphereVertexBuffer, 0, sphereVertices.data(), sphereVertexBufferSDesc.size);
-
-    BufferDescriptor sphereIndexBufferDesc;
-    sphereIndexBufferDesc.size = sphereTriangles.size() * sizeof(Triangle);
-    sphereIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
-    sphereIndexBufferDesc.mappedAtCreation = false;
-    sphereIndexBuffer = device.createBuffer(sphereIndexBufferDesc);
-    queue.writeBuffer(sphereIndexBuffer, 0, sphereTriangles.data(), sphereIndexBufferDesc.size);
+    addPrimitive(sphereVertices, sphereTriangles);
 
     // Load quad geometry
-
-    BufferDescriptor quadVertexBufferDesc;
-    quadVertexBufferDesc.size = quad::vertices.size() * sizeof(PrimitiveVertexAttributes);
-    quadVertexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
-    quadVertexBufferDesc.mappedAtCreation = false;
-    quadVertexBuffer = device.createBuffer(quadVertexBufferDesc);
-    queue.writeBuffer(quadVertexBuffer, 0, quad::vertices.data(), quadVertexBufferDesc.size);
-
-    BufferDescriptor quadIndexBufferDesc;
-    quadIndexBufferDesc.size = quad::triangles.size() * sizeof(Triangle);
-    quadIndexBufferDesc.usage = BufferUsage::CopyDst | BufferUsage::Index;
-    quadIndexBufferDesc.mappedAtCreation = false;
-    quadIndexBuffer = device.createBuffer(quadIndexBufferDesc);
-    queue.writeBuffer(quadIndexBuffer, 0, quad::triangles.data(), quadIndexBufferDesc.size);
-
-    if (dataBuffer == nullptr)
-        throw std::runtime_error("Failed to create cube vertex buffer");
-    if (cubeIndexBuffer == nullptr)
-        throw std::runtime_error("Failed to create cube index buffer");
-    if (sphereVertexBuffer == nullptr)
-        throw std::runtime_error("Failed to create sphere vertex buffer");
-    if (sphereIndexBuffer == nullptr)
-        throw std::runtime_error("Failed to create sphere index buffer");
-    if (quadVertexBuffer == nullptr)
-        throw std::runtime_error("Failed to create quad vertex buffer");
-    if (quadIndexBuffer == nullptr)
-        throw std::runtime_error("Failed to create quad index buffer");
+    addPrimitive(quad::vertices, quad::triangles);
 }
 
 void InstancingPipeline::terminateGeometry()
 {
-    if (dataBuffer != nullptr)
+    for (auto &buffer : vertexBuffers)
     {
-        dataBuffer.destroy();
-        dataBuffer.release();
+        buffer.destroy();
+        buffer.release();
     }
-    if (cubeIndexBuffer != nullptr)
+    for (auto &buffer : indexBuffers)
     {
-        cubeIndexBuffer.destroy();
-        cubeIndexBuffer.release();
-    }
-    if (sphereVertexBuffer != nullptr)
-    {
-        sphereVertexBuffer.destroy();
-        sphereVertexBuffer.release();
-    }
-    if (sphereIndexBuffer != nullptr)
-    {
-        sphereIndexBuffer.destroy();
-        sphereIndexBuffer.release();
-    }
-    if (quadVertexBuffer != nullptr)
-    {
-        quadVertexBuffer.destroy();
-        quadVertexBuffer.release();
-    }
-    if (quadIndexBuffer != nullptr)
-    {
-        quadIndexBuffer.destroy();
-        quadIndexBuffer.release();
+        buffer.destroy();
+        buffer.release();
     }
 }
 
@@ -341,7 +275,7 @@ void InstancingPipeline::initBindGroupLayout()
     bindingLayout.binding = 0;
     bindingLayout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
     bindingLayout.buffer.type = BufferBindingType::Uniform;
-    bindingLayout.buffer.minBindingSize = sizeof(Renderer::MyUniforms);
+    bindingLayout.buffer.minBindingSize = sizeof(Renderer::RenderUniforms);
 
     // The lighting uniform buffer binding
     BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[1];
@@ -367,7 +301,7 @@ void InstancingPipeline::initBindGroup()
     bindings[0].binding = 0;
     bindings[0].buffer = cameraUniforms;
     bindings[0].offset = 0;
-    bindings[0].size = sizeof(Renderer::MyUniforms);
+    bindings[0].size = sizeof(Renderer::RenderUniforms);
 
     bindings[1].binding = 1;
     bindings[1].buffer = lightingUniforms;
@@ -384,7 +318,7 @@ void InstancingPipeline::initBindGroup()
         throw std::runtime_error("Could not create bind group!");
 }
 
-void InstancingPipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count)
+void InstancingPipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t size)
 {
     if (buffer != nullptr)
     {
@@ -392,7 +326,7 @@ void InstancingPipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t count)
         buffer = nullptr;
     }
     BufferDescriptor bufferDesc;
-    bufferDesc.size = sizeof(InstancedVertexAttributes) * count;
+    bufferDesc.size = size;
     bufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
     bufferDesc.mappedAtCreation = false;
     buffer = device.createBuffer(bufferDesc);

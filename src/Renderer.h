@@ -33,8 +33,8 @@ public:
 	{
 		return current_id;
 	};
-	size_t lineCount() { return m_lines.size() / 2; };
-	size_t imageCount() { return m_images.size(); };
+	size_t lineCount() { return lines.size() / 2; };
+	size_t imageCount() { return images.size(); };
 
 	// A function called at each frame, guaranteed never to be called before `onInit`.
 	void onFrame();
@@ -61,9 +61,8 @@ public:
 	};
 
 	static Camera camera;
-	struct MyUniforms
+	struct RenderUniforms
 	{
-		// We add transform matrices
 		glm::mat4 projectionMatrix;
 		glm::mat4 viewMatrix;
 		glm::vec3 cameraWorldPosition;
@@ -73,7 +72,7 @@ public:
 		uint32_t flags;
 		float _pad[3];
 	};
-	static_assert(sizeof(MyUniforms) % 16 == 0);
+	static_assert(sizeof(RenderUniforms) % 16 == 0);
 
 	struct LightingUniforms
 	{
@@ -88,8 +87,8 @@ public:
 	};
 	static_assert(sizeof(LightingUniforms) % 16 == 0);
 
-	MyUniforms m_uniforms;
-	LightingUniforms m_lightingUniforms;
+	RenderUniforms renderUniforms;
+	LightingUniforms lightingUniforms;
 	glm::vec3 backgroundColor = {0.05f, 0.05f, 0.05f};
 
 private:
@@ -130,36 +129,31 @@ private:
 	wgpu::PresentMode presentMode = wgpu::PresentMode::Fifo;
 	bool reinitSwapChain = false;
 
-	// Window and Device
-	GLFWwindow *m_window = nullptr;
-	wgpu::Instance m_instance = nullptr;
-	wgpu::Surface m_surface = nullptr;
-	wgpu::Device m_device = nullptr;
-	wgpu::Queue m_queue = nullptr;
-	wgpu::TextureFormat m_swapChainFormat = wgpu::TextureFormat::Undefined;
-	std::unique_ptr<wgpu::ErrorCallback> m_errorCallbackHandle;
+	GLFWwindow *window = nullptr;
+	wgpu::Instance instance = nullptr;
+	wgpu::Surface surface = nullptr;
+	wgpu::Device device = nullptr;
+	wgpu::Queue queue = nullptr;
+	wgpu::TextureFormat swapChainFormat = wgpu::TextureFormat::Undefined;
+	std::unique_ptr<wgpu::ErrorCallback> errorCallbackHandle;
+	wgpu::SwapChain swapChain = nullptr;
 
-	wgpu::SwapChain m_swapChain = nullptr;
+	InstancingPipeline instancingPipeline;
+	LinePipeline linePipeline;
+	PostProcessingPipeline postProcessingPipeline;
+	ImagePipeline imagePipeline;
 
-	InstancingPipeline m_instancingPipeline;
-	LinePipeline m_linePipeline;
-	PostProcessingPipeline m_postProcessingPipeline;
-	ImagePipeline m_imagePipeline;
+	wgpu::TextureFormat depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
+	wgpu::Texture depthTexture = nullptr;
+	wgpu::TextureView depthTextureView = nullptr;
 
-	wgpu::TextureFormat m_depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
-	wgpu::Texture m_depthTexture = nullptr;
-	wgpu::TextureView m_depthTextureView = nullptr;
+	std::vector<ResourceManager::LineVertexAttributes> lines;
+	std::vector<ResourceManager::ImageAttributes> images;
+	std::vector<float> imageData;
 
-	std::vector<ResourceManager::InstancedVertexAttributes> m_cubes;
-	std::vector<ResourceManager::InstancedVertexAttributes> m_spheres;
-	std::vector<ResourceManager::InstancedVertexAttributes> m_quads;
-	std::vector<ResourceManager::LineVertexAttributes> m_lines;
-	std::vector<ResourceManager::ImageAttributes> m_images;
-	std::vector<float> m_imageData;
+	wgpu::Buffer uniformBuffer = nullptr;
+	wgpu::Buffer lightingUniformBuffer = nullptr;
 
-	wgpu::Buffer m_uniformBuffer = nullptr;
-	wgpu::Buffer m_lightingUniformBuffer = nullptr;
-
-	wgpu::Texture m_postTexture = nullptr;
-	wgpu::TextureView m_postTextureView = nullptr;
+	wgpu::Texture postTexture = nullptr;
+	wgpu::TextureView postTextureView = nullptr;
 };

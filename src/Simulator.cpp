@@ -94,16 +94,16 @@ void Simulator::onGUI()
         ColorEdit3("Background Color", glm::value_ptr(renderer.backgroundColor));
         Separator();
 
-        DragFloat3("Light Position", glm::value_ptr(renderer.m_lightingUniforms.direction), 0.01f);
+        DragFloat3("Light Position", glm::value_ptr(renderer.lightingUniforms.direction), 0.01f);
         Separator();
-        ColorEdit3("Ambient Color", glm::value_ptr(renderer.m_lightingUniforms.ambient));
-        DragFloat("Ambient Intensity", &renderer.m_lightingUniforms.ambient_intensity, 0.01f, 0.0, 1.0);
+        ColorEdit3("Ambient Color", glm::value_ptr(renderer.lightingUniforms.ambient));
+        DragFloat("Ambient Intensity", &renderer.lightingUniforms.ambient_intensity, 0.01f, 0.0, 1.0);
         Separator();
-        ColorEdit3("Specular Color", glm::value_ptr(renderer.m_lightingUniforms.specular));
-        DragFloat("Specular Intensity", &renderer.m_lightingUniforms.specular_intensity, 0.01f, 0.0, 1.0);
-        DragFloat("Specular Alpha", &renderer.m_lightingUniforms.alpha, 0.1f, 0.0, 100.0);
+        ColorEdit3("Specular Color", glm::value_ptr(renderer.lightingUniforms.specular));
+        DragFloat("Specular Intensity", &renderer.lightingUniforms.specular_intensity, 0.01f, 0.0, 1.0);
+        DragFloat("Specular Alpha", &renderer.lightingUniforms.alpha, 0.1f, 0.0, 100.0);
         Separator();
-        DragFloat("Diffuse Intensity", &renderer.m_lightingUniforms.diffuse_intensity, 0.01f, 0.0, 1.0);
+        DragFloat("Diffuse Intensity", &renderer.lightingUniforms.diffuse_intensity, 0.01f, 0.0, 1.0);
     }
 
     End();
