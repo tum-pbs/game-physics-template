@@ -58,7 +58,7 @@ void Renderer::onFrame()
 	instancingPipeline.commit();
 
 	// prepare line buffers
-	linePipeline.updateLines(lines);
+	linePipeline.commit();
 
 	// prepare image buffers
 	imagePipeline.updateImages(images, imageData);
@@ -117,7 +117,7 @@ void Renderer::onFrame()
 	renderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
-	linePipeline.drawLines(renderPass);
+	linePipeline.draw(renderPass);
 
 	instancingPipeline.draw(renderPass);
 
@@ -253,7 +253,7 @@ void Renderer::initWindowAndDevice()
 	device = adapter.requestDevice(deviceDesc);
 
 	errorCallbackHandle = device.setUncapturedErrorCallback([](ErrorType type, char const *message)
-															  {
+															{
 		std::cout << "Device error: type " << type;
 		if (message) std::cout << " (message: " << message << ")";
 		std::cout << std::endl; });
@@ -391,7 +391,7 @@ void Renderer::terminateDepthBuffer()
 void Renderer::clearScene()
 {
 	instancingPipeline.clearAll();
-	lines.clear();
+	linePipeline.clearAll();
 	images.clear();
 	imageData.clear();
 	current_id = 0;
@@ -541,8 +541,7 @@ uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 sc
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
 {
-	lines.push_back({position1, color1});
-	lines.push_back({position2, color2});
+	linePipeline.addLine({{position1, color1}, {position2, color2}});
 }
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color)

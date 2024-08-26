@@ -109,42 +109,61 @@ void LinePipeline::terminate()
         shaderModule.release();
     if (pipeline != nullptr)
         pipeline.release();
-    if (lineVertexBuffer != nullptr)
-        lineVertexBuffer.release();
+    if (linePointsBuffer != nullptr)
+        linePointsBuffer.release();
     if (bindGroupLayout != nullptr)
         bindGroupLayout.release();
     if (bindGroup != nullptr)
         bindGroup.release();
 }
 
-void LinePipeline::updateLines(std::vector<ResourceManager::LineVertexAttributes> &lines)
+void LinePipeline::reallocateBuffer(wgpu::Buffer &buffer, size_t size)
 {
-    lineCount = static_cast<int>(lines.size());
-    if (lineVertexBuffer != nullptr)
+    if (buffer != nullptr)
     {
-        lineVertexBuffer.destroy();
-        lineVertexBuffer = nullptr;
+        buffer.destroy();
+        buffer = nullptr;
     }
-    BufferDescriptor lineBufferDesc;
-    if (lineCount > 0)
+    BufferDescriptor bufferDesc;
+    bufferDesc.size = size;
+    bufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
+    bufferDesc.mappedAtCreation = false;
+    buffer = device.createBuffer(bufferDesc);
+}
+
+void LinePipeline::commit()
+{
+    size_t count = lines.size();
+    size_t new_size = count * sizeof(LineVertexAttributes);
+    if (linePointsBuffer == nullptr || new_size != linePointsBuffer.getSize())
+        reallocateBuffer(linePointsBuffer, new_size);
+    if (count > 0)
     {
-        lineBufferDesc.size = sizeof(LineVertexAttributes) * lineCount;
-        lineBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-        lineBufferDesc.mappedAtCreation = false;
-        lineVertexBuffer = device.createBuffer(lineBufferDesc);
-        queue.writeBuffer(lineVertexBuffer, 0, lines.data(), lineBufferDesc.size);
+        queue.writeBuffer(linePointsBuffer, 0, lines.data(), new_size);
     }
 }
 
-void LinePipeline::drawLines(RenderPassEncoder renderPass)
+void LinePipeline::clearAll()
 {
-    if (lineCount > 0)
+    lines.clear();
+}
+
+void LinePipeline::addLine(Line line)
+{
+    lines.push_back(line.start);
+    lines.push_back(line.end);
+}
+
+void LinePipeline::draw(RenderPassEncoder renderPass)
+{
+    size_t linePointCount = linePointsBuffer.getSize() / sizeof(LineVertexAttributes);
+    if (linePointCount > 0)
     {
         renderPass.setBindGroup(0, bindGroup, 0, nullptr);
         renderPass.setPipeline(pipeline);
-        renderPass.setVertexBuffer(0, lineVertexBuffer, 0, lineCount * sizeof(LineVertexAttributes));
+        renderPass.setVertexBuffer(0, linePointsBuffer, 0, linePointsBuffer.getSize());
 
-        renderPass.draw(lineCount, 1, 0, 0);
+        renderPass.draw(linePointCount, 1, 0, 0);
     }
 }
 
