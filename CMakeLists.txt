@@ -5,8 +5,6 @@ project(
 	LANGUAGES CXX C
 )
 
-include(utils.cmake)
-
 option(DEV_MODE "Set up development helper settings" ON)
 
 add_subdirectory(glfw)
