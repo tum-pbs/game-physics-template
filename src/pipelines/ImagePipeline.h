@@ -1,14 +1,19 @@
+#pragma once
 #include <webgpu/webgpu.hpp>
 #include "ResourceManager.h"
 #include <vector>
+#include "Colormap.h"
 
 class ImagePipeline
 {
 public:
     bool init(wgpu::Device &device, wgpu::TextureFormat &swapChainFormat, wgpu::Queue &queue);
     void draw(wgpu::RenderPassEncoder &renderPass);
-    void updateImages(std::vector<ResourceManager::ImageAttributes> &images, std::vector<float> &data);
+    void commit();
+    void clearAll();
+    void addImage(std::vector<float> &data, glm::vec2 position, glm::vec2 scale, size_t width, size_t height, Colormap colormap);
     void terminate();
+    size_t objectCount() { return images.size(); };
 
 private:
     wgpu::ShaderModule shaderModule = nullptr;

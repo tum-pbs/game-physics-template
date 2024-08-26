@@ -61,7 +61,7 @@ void Renderer::onFrame()
 	linePipeline.commit();
 
 	// prepare image buffers
-	imagePipeline.updateImages(images, imageData);
+	imagePipeline.commit();
 
 	TextureView nextTexture = swapChain.getCurrentTextureView();
 	if (!nextTexture)
@@ -392,8 +392,7 @@ void Renderer::clearScene()
 {
 	instancingPipeline.clearAll();
 	linePipeline.clearAll();
-	images.clear();
-	imageData.clear();
+	imagePipeline.clearAll();
 	current_id = 0;
 }
 
@@ -631,7 +630,5 @@ void Renderer::drawImage(std::vector<float> data, int height, int width, float v
 	{
 		value = (value - vmin) / (vmax - vmin);
 	}
-	int offset = imageData.size();
-	imageData.insert(imageData.end(), data.begin(), data.end());
-	images.push_back({screenPosition.x, screenPosition.y, screenSize.x, screenSize.y, offset, width, height, colormap.textureOffset()});
+	imagePipeline.addImage(data, screenPosition, screenSize, width, height, colormap);
 }

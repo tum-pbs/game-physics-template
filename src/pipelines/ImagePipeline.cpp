@@ -137,11 +137,8 @@ void ImagePipeline::draw(RenderPassEncoder &renderPass)
     }
 }
 
-void ImagePipeline::updateImages(std::vector<ResourceManager::ImageAttributes> &images, std::vector<float> &data)
+void ImagePipeline::commit()
 {
-    prevImages = this->images;
-    this->images = images;
-    this->data = data;
     if (!isPrevLayout())
     {
         createTextures();
@@ -155,6 +152,31 @@ void ImagePipeline::updateImages(std::vector<ResourceManager::ImageAttributes> &
         queue.writeBuffer(imageBuffer, 0, images.data(), sizeof(ResourceManager::ImageAttributes) * images.size());
         copyDataToTextures();
     }
+}
+
+void ImagePipeline::addImage(std::vector<float> &data, glm::vec2 position, glm::vec2 scale, size_t width, size_t height, Colormap colormap)
+{
+    int offset = this->data.size();
+    this->data.insert(this->data.end(), data.begin(), data.end());
+    ResourceManager::ImageAttributes image;
+    image.x = position.x;
+    image.y = position.y;
+    image.sx = scale.x;
+    image.sy = scale.y;
+    image.offset = offset;
+    image.width = width;
+    image.height = height;
+    image.cmapOffset = colormap.textureOffset();
+    images.push_back(image);
+}
+
+void ImagePipeline::clearAll()
+{
+    auto tmp = prevImages;
+    prevImages = images;
+    images = tmp;
+    images.clear();
+    data.clear();
 }
 
 void ImagePipeline::copyDataToTexture(ResourceManager::ImageAttributes &image, std::vector<float> &data, Texture &texture)

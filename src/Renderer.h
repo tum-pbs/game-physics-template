@@ -34,7 +34,7 @@ public:
 		return current_id;
 	};
 	size_t lineCount() { return linePipeline.objectCount(); };
-	size_t imageCount() { return images.size(); };
+	size_t imageCount() { return imagePipeline.objectCount(); };
 
 	// A function called at each frame, guaranteed never to be called before `onInit`.
 	void onFrame();
@@ -146,10 +146,6 @@ private:
 	wgpu::TextureFormat depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
 	wgpu::Texture depthTexture = nullptr;
 	wgpu::TextureView depthTextureView = nullptr;
-
-	// std::vector<ResourceManager::LineVertexAttributes> lines;
-	std::vector<ResourceManager::ImageAttributes> images;
-	std::vector<float> imageData;
 
 	wgpu::Buffer uniformBuffer = nullptr;
 	wgpu::Buffer lightingUniformBuffer = nullptr;
