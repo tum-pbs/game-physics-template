@@ -31,16 +31,18 @@ void Simulator::simulateStep()
 
 void Simulator::onGUI()
 {
+    using namespace ImGui;
     if (currentScene == nullptr)
     {
-        ImGui::Text("No scenes available!");
-        ImGui::Text("Did you forget to add your scene to SceneIndex.h?");
+        Begin("Game Physics", nullptr, ImGuiWindowFlags_NoTitleBar);
+        Text("No scenes available!");
+        Text("Did you forget to add your scene to SceneIndex.h?");
+        End();
         return;
     }
     Renderer::camera.update();
 
-    using namespace ImGui;
-    Begin("Game Physics");
+    Begin("Game Physics", nullptr, ImGuiWindowFlags_NoTitleBar);
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / GetIO().Framerate, GetIO().Framerate);
     Text("Step: %.3f ms, DrawPrep: %.3f, Draw: %.3f ms", lastStepTime * 1000, lastDrawPrepTime * 1000, renderer.lastDrawTime * 1000);
     Text("%ld objects, %ld lines, %ld images", renderer.objectCount(), renderer.lineCount(), renderer.imageCount());
