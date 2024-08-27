@@ -5,36 +5,34 @@ project(
 	LANGUAGES CXX C
 )
 
-include(utils.cmake)
-
-# We add an option to enable different settings when developping the app than
-# when distributing it.
 option(DEV_MODE "Set up development helper settings" ON)
 
-add_subdirectory(glfw)
-add_subdirectory(webgpu)
-add_subdirectory(glfw3webgpu)
-add_subdirectory(imgui)
+add_subdirectory(thirdparty/glfw)
+add_subdirectory(thirdparty/webgpu)
+add_subdirectory(thirdparty/glfw3webgpu)
+add_subdirectory(thirdparty/imgui)
 
 add_executable(Template
-	main.cpp
-	Renderer.h
-	Renderer.cpp
-	Primitives.h
-	Primitives.cpp
-	ResourceManager.h
-	pipelines/InstancingPipeline.cpp
-	pipelines/InstancingPipeline.h
-	pipelines/LinePipeline.cpp
-	pipelines/LinePipeline.h
-	pipelines/PostProcessingPipeline.cpp
-	pipelines/PostProcessingPipeline.h
-	ResourceManager.cpp
-	implementations.cpp
-	Simulator.cpp
+	src/implementations.cpp
+	src/main.cpp
+	src/Renderer.h
+	src/Renderer.cpp
+	src/Primitives.h
+	src/Primitives.cpp
+	thirdparty/stb_image.h
+	src/ResourceManager.h
+	src/ResourceManager.cpp
+	src/Simulator.cpp
+	src/Camera.h
+	src/Camera.cpp
+	src/Colormap.h
+	src/Colormap.cpp
 )
 
-
+target_compile_definitions(Template PRIVATE
+		GLM_FORCE_RIGHT_HANDED
+		GLM_FORCE_DEPTH_ZERO_TO_ONE
+	)
 
 file(GLOB_RECURSE SCENE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/*.cpp
@@ -44,6 +42,15 @@ file(GLOB_RECURSE SCENE_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/Scenes/*.h
 )
 target_sources(Template PRIVATE ${SCENE_SOURCES} ${SCENE_HEADERS})
+
+file(GLOB_RECURSE PIPELINE_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/*.cpp
+)
+
+file(GLOB_RECURSE PIPELINE_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/*.h
+)
+target_sources(Template PRIVATE ${PIPELINE_SOURCES} ${PIPELINE_HEADERS})
 
 
 
@@ -64,9 +71,10 @@ else()
 		RESOURCE_DIR="./resources"
 	)
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 target_include_directories(Template PRIVATE .)
+target_include_directories(Template PRIVATE src)
+target_include_directories(Template PRIVATE thirdparty)
 
 target_link_libraries(Template PRIVATE glfw webgpu glfw3webgpu imgui)
 
@@ -74,7 +82,7 @@ set_target_properties(Template PROPERTIES
 	CXX_STANDARD 17
 	VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1"
 )
-# target_treat_all_warnings_as_errors(Template)
+
 target_copy_webgpu_binaries(Template)
 
 if (MSVC)
@@ -83,8 +91,4 @@ if (MSVC)
 	target_compile_options(Template PUBLIC /wd4201)
 	# Disable warning C4305: truncation from 'int' to 'bool' in 'if' condition
 	target_compile_options(Template PUBLIC /wd4305)
-
-	# Ignore a warning that stb_image requires to bypass
-	# Disable warning C4244: conversion from 'int' to 'short', possible loss of data
-	target_compile_options(Template PUBLIC /wd4244)
 endif (MSVC)

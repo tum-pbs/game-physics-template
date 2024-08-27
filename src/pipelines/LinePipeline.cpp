@@ -1,5 +1,5 @@
 #include "LinePipeline.h"
-#include "ResourceManager.h"
+#include "Renderer.h"
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
@@ -8,10 +8,12 @@
 using namespace wgpu;
 using LineVertexAttributes = ResourceManager::LineVertexAttributes;
 
-void LinePipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, BindGroupLayout &bindGroupLayout)
+void LinePipeline::init(Device &device, Queue &queue, TextureFormat &swapChainFormat, TextureFormat &depthTextureFormat, Buffer &cameraUniforms, Buffer &lightingUniforms)
 {
-    device = device_;
-    queue = queue_;
+    this->cameraUniforms = cameraUniforms;
+    this->lightingUniforms = lightingUniforms;
+    this->device = device;
+    this->queue = queue;
     shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", device);
     RenderPipelineDescriptor pipelineDesc;
 
@@ -85,6 +87,9 @@ void LinePipeline::init(Device &device_, Queue &queue_, TextureFormat &swapChain
     pipelineDesc.multisample.mask = ~0u;
     pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
+    initBindGroupLayout();
+    initBindGroup();
+
     // Create the pipeline layout
     PipelineLayoutDescriptor layoutDesc{};
     layoutDesc.bindGroupLayoutCount = 1;
@@ -104,36 +109,104 @@ void LinePipeline::terminate()
         shaderModule.release();
     if (pipeline != nullptr)
         pipeline.release();
-    if (lineVertexBuffer != nullptr)
-        lineVertexBuffer.release();
+    if (linePointsBuffer != nullptr)
+        linePointsBuffer.release();
+    if (bindGroupLayout != nullptr)
+        bindGroupLayout.release();
+    if (bindGroup != nullptr)
+        bindGroup.release();
 }
 
-void LinePipeline::updateLines(std::vector<ResourceManager::LineVertexAttributes> &lines)
+void LinePipeline::commit()
 {
-    lineCount = static_cast<int>(lines.size());
-    if (lineVertexBuffer != nullptr)
+    size_t count = lines.size();
+    size_t new_size = count * sizeof(LineVertexAttributes);
+    if (linePointsBuffer == nullptr || new_size != linePointsBuffer.getSize())
+        reallocateBuffer(linePointsBuffer, new_size);
+    if (count > 0)
     {
-        lineVertexBuffer.destroy();
-        lineVertexBuffer = nullptr;
-    }
-    BufferDescriptor lineBufferDesc;
-    if (lineCount > 0)
-    {
-        lineBufferDesc.size = sizeof(LineVertexAttributes) * lineCount;
-        lineBufferDesc.usage = BufferUsage::Vertex | BufferUsage::CopyDst;
-        lineBufferDesc.mappedAtCreation = false;
-        lineVertexBuffer = device.createBuffer(lineBufferDesc);
-        queue.writeBuffer(lineVertexBuffer, 0, lines.data(), lineBufferDesc.size);
+        queue.writeBuffer(linePointsBuffer, 0, lines.data(), new_size);
     }
 }
 
-void LinePipeline::drawLines(wgpu::RenderPassEncoder renderPass)
+void LinePipeline::clearAll()
 {
-    if (lineCount > 0)
+    lines.clear();
+}
+
+void LinePipeline::addLine(Line line)
+{
+    lines.push_back(line.start);
+    lines.push_back(line.end);
+}
+
+void LinePipeline::draw(RenderPassEncoder &renderPass)
+{
+    size_t linePointCount = linePointsBuffer.getSize() / sizeof(LineVertexAttributes);
+    if (linePointCount > 0)
     {
+        renderPass.setBindGroup(0, bindGroup, 0, nullptr);
         renderPass.setPipeline(pipeline);
-        renderPass.setVertexBuffer(0, lineVertexBuffer, 0, lineCount * sizeof(LineVertexAttributes));
+        renderPass.setVertexBuffer(0, linePointsBuffer, 0, linePointsBuffer.getSize());
 
-        renderPass.draw(lineCount, 1, 0, 0);
+        renderPass.draw(linePointCount, 1, 0, 0);
     }
+}
+
+size_t LinePipeline::objectCount()
+{
+    return lines.size() / 2;
+}
+
+void LinePipeline::initBindGroupLayout()
+{
+
+    std::vector<BindGroupLayoutEntry> bindingLayoutEntries(2, Default);
+
+    // The uniform buffer binding
+    BindGroupLayoutEntry &bindingLayout = bindingLayoutEntries[0];
+    bindingLayout.binding = 0;
+    bindingLayout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
+    bindingLayout.buffer.type = BufferBindingType::Uniform;
+    bindingLayout.buffer.minBindingSize = sizeof(Renderer::RenderUniforms);
+
+    // The lighting uniform buffer binding
+    BindGroupLayoutEntry &lightingUniformLayout = bindingLayoutEntries[1];
+    lightingUniformLayout.binding = 1;
+    lightingUniformLayout.visibility = ShaderStage::Fragment;
+    lightingUniformLayout.buffer.type = BufferBindingType::Uniform;
+    lightingUniformLayout.buffer.minBindingSize = sizeof(Renderer::LightingUniforms);
+
+    // Create a bind group layout
+    BindGroupLayoutDescriptor bindGroupLayoutDesc{};
+    bindGroupLayoutDesc.entryCount = (uint32_t)bindingLayoutEntries.size();
+    bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
+    bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDesc);
+
+    if (bindGroupLayout == nullptr)
+        throw std::runtime_error("Could not create bind group layout!");
+}
+
+void LinePipeline::initBindGroup()
+{
+    std::vector<BindGroupEntry> bindings(2);
+
+    bindings[0].binding = 0;
+    bindings[0].buffer = cameraUniforms;
+    bindings[0].offset = 0;
+    bindings[0].size = sizeof(Renderer::RenderUniforms);
+
+    bindings[1].binding = 1;
+    bindings[1].buffer = lightingUniforms;
+    bindings[1].offset = 0;
+    bindings[1].size = sizeof(Renderer::LightingUniforms);
+
+    BindGroupDescriptor bindGroupDesc;
+    bindGroupDesc.layout = bindGroupLayout;
+    bindGroupDesc.entryCount = (uint32_t)bindings.size();
+    bindGroupDesc.entries = bindings.data();
+    bindGroup = device.createBindGroup(bindGroupDesc);
+
+    if (bindGroup == nullptr)
+        throw std::runtime_error("Could not create bind group!");
 }
