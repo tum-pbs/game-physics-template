@@ -20,7 +20,7 @@ public:
     /// @brief Draw the scene. Gets called every frame after simulateStep.
     ///
     /// This is where you should call the Renderer draw functions.
-    virtual void onDraw(Renderer &renderer) {};
+    virtual void onDraw(Renderer &renderer);
     /// @brief Define the GUI for the scene. Gets called every frame after onDraw.
     virtual void onGUI() {};
     virtual ~Scene() = default;
