@@ -17,3 +17,8 @@ cmake --build build --config Release
 ```
 build\Release\Template.exe
 ```
+
+## Generate Docs
+```
+doxygen .\docs\Doxyfile
+```
