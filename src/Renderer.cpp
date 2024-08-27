@@ -186,6 +186,8 @@ bool Renderer::isRunning()
 void Renderer::onResize()
 {
 	glfwGetFramebufferSize(window, &width, &height);
+	if (width == 0 || height == 0)
+		return;
 	terminateDepthBuffer();
 	terminateSwapChain();
 	terminateRenderTexture();

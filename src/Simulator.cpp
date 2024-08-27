@@ -10,25 +10,39 @@ void Simulator::init()
         sceneNames.push_back(scene.first);
     }
     if (sceneNames.size() <= 0)
-        throw std::runtime_error("No scenes available");
-    currentSceneName = sceneNames[0];
-    currentScene = scenesCreators[currentSceneName]();
-    currentScene->init();
+    {
+        std::cout << "No scenes available! Did you forget to add your scene to SceneIndex.h?" << std::endl;
+    }
+    else
+    {
+        currentSceneName = sceneNames[0];
+        currentScene = scenesCreators[currentSceneName]();
+        currentScene->init();
+    }
 }
 
 void Simulator::simulateStep()
 {
     auto startTime = std::chrono::high_resolution_clock::now();
-    currentScene->simulateStep();
+    if (currentScene != nullptr)
+        currentScene->simulateStep();
     lastStepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 }
 
 void Simulator::onGUI()
 {
+    using namespace ImGui;
+    if (currentScene == nullptr)
+    {
+        Begin("Game Physics", nullptr, ImGuiWindowFlags_NoTitleBar);
+        Text("No scenes available!");
+        Text("Did you forget to add your scene to SceneIndex.h?");
+        End();
+        return;
+    }
     Renderer::camera.update();
 
-    using namespace ImGui;
-    Begin("Game Physics");
+    Begin("Game Physics", nullptr, ImGuiWindowFlags_NoTitleBar);
     Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / GetIO().Framerate, GetIO().Framerate);
     Text("Step: %.3f ms, DrawPrep: %.3f, Draw: %.3f ms", lastStepTime * 1000, lastDrawPrepTime * 1000, renderer.lastDrawTime * 1000);
     Text("%ld objects, %ld lines, %ld images", renderer.objectCount(), renderer.lineCount(), renderer.imageCount());
@@ -92,6 +106,7 @@ void Simulator::onGUI()
 void Simulator::onDraw()
 {
     auto startTime = std::chrono::high_resolution_clock::now();
-    currentScene->onDraw(renderer);
+    if (currentScene != nullptr)
+        currentScene->onDraw(renderer);
     lastDrawPrepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 };
