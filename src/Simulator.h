@@ -3,6 +3,7 @@
 #include "glm/glm.hpp"
 #include "Scenes/Scene.h"
 
+/// @brief Backend for running and selecting different scenes.
 class Simulator
 {
 public:
@@ -11,9 +12,14 @@ public:
         renderer.defineGUI = [this]()
         { onGUI(); };
     };
+
+    /// @brief Call simulateStep for the currently active Scene
     void simulateStep();
+    /// @brief Call onDraw for the currently active Scene
     void onDraw();
+    /// @brief Call onGUI for the currently active Scene, add scene selection and rendering options
     void onGUI();
+
     void init();
 
 private:
@@ -28,10 +34,4 @@ private:
     double lastStepTime = 0;
     double lastDrawPrepTime = 0;
     bool limitFPS = true;
-
-    void updateCamera();
-    vec2 cameraAngles = vec2(-0.1, 0.2);
-    float zoom = -2;
-    float zoomSensitivity = 0.1;
-    float cameraSensitivity = 0.01;
 };

@@ -6,6 +6,7 @@
 
 #include <filesystem>
 
+/// @brief Backend for loading resources and defining GPU structs
 class ResourceManager
 {
 public:
