@@ -10,21 +10,33 @@ void Simulator::init()
         sceneNames.push_back(scene.first);
     }
     if (sceneNames.size() <= 0)
-        throw std::runtime_error("No scenes available");
-    currentSceneName = sceneNames[0];
-    currentScene = scenesCreators[currentSceneName]();
-    currentScene->init();
+    {
+        std::cout << "No scenes available! Did you forget to add your scene to SceneIndex.h?" << std::endl;
+    }
+    else
+    {
+        currentSceneName = sceneNames[0];
+        currentScene = scenesCreators[currentSceneName]();
+        currentScene->init();
+    }
 }
 
 void Simulator::simulateStep()
 {
     auto startTime = std::chrono::high_resolution_clock::now();
-    currentScene->simulateStep();
+    if (currentScene != nullptr)
+        currentScene->simulateStep();
     lastStepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 }
 
 void Simulator::onGUI()
 {
+    if (currentScene == nullptr)
+    {
+        ImGui::Text("No scenes available!");
+        ImGui::Text("Did you forget to add your scene to SceneIndex.h?");
+        return;
+    }
     Renderer::camera.update();
 
     using namespace ImGui;
@@ -92,6 +104,7 @@ void Simulator::onGUI()
 void Simulator::onDraw()
 {
     auto startTime = std::chrono::high_resolution_clock::now();
-    currentScene->onDraw(renderer);
+    if (currentScene != nullptr)
+        currentScene->onDraw(renderer);
     lastDrawPrepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 };
