@@ -511,31 +511,21 @@ uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 sc
 	return current_id++;
 }
 
-uint32_t Renderer::drawCube(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags)
-{
-	return drawCube(position, rotation, scale, glm::vec4(color, 1.0f), flags);
-}
-
-uint32_t Renderer::drawSphere(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
+uint32_t Renderer::drawEllipsoid(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
 {
 	instancingPipeline.addSphere({position, rotation, scale, color, current_id, flags});
 	return current_id++;
 }
 
-uint32_t Renderer::drawSphere(glm::vec3 position, float scale, glm::vec3 color, uint32_t flags)
+uint32_t Renderer::drawSphere(glm::vec3 position, float scale, glm::vec4 color, uint32_t flags)
 {
-	return drawSphere(position, glm::quat(vec3(0)), vec3(scale), glm::vec4(color, 1.0f), flags);
+	return drawEllipsoid(position, glm::quat(vec3(0)), vec3(scale), color, flags);
 }
 
-uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec4 color, uint32_t flags)
+uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec2 scale, glm::vec4 color, uint32_t flags)
 {
-	instancingPipeline.addQuad({position, rotation, scale, color, current_id, flags});
+	instancingPipeline.addQuad({position, rotation, vec3(scale.x, scale.y, 1), color, current_id, flags});
 	return current_id++;
-}
-
-uint32_t Renderer::drawQuad(glm::vec3 position, glm::quat rotation, glm::vec3 scale, glm::vec3 color, uint32_t flags)
-{
-	return drawQuad(position, rotation, scale, glm::vec4(color, 1.0f), flags);
 }
 
 void Renderer::drawLine(glm::vec3 position1, glm::vec3 position2, glm::vec3 color1, glm::vec3 color2)
@@ -554,7 +544,8 @@ void Renderer::updateGui(RenderPassEncoder renderPass)
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-	defineGUI();
+	if (defineGUI != nullptr)
+		defineGUI();
 
 	ImGui::EndFrame();
 
