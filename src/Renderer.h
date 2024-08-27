@@ -149,7 +149,7 @@ public:
 	///    The scale of the cube. scale (1,1,1) will result in a cube with side length 1
 	/// @param color
 	///    The color of the wire cube: (r, g, b)
-	void drawWireCube(glm::vec3 position, glm::vec3 scale, glm::vec3 color);
+	void drawWireCube(glm::vec3 position = vec3(0), glm::vec3 scale = vec3(1), glm::vec3 color = vec3(1));
 
 	/// @brief Draw an image in the next frame
 	///
