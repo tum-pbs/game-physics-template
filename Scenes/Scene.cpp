@@ -41,7 +41,7 @@ void Scene::onGUI()
                 if (px < 0 || px >= grid.width || py < 0 || py >= grid.height)
                     continue;
                 if (i * i + j * j < 25)
-                    grid(py, px) = 1;
+                    grid(px, py) = 1;
             }
     }
 }
@@ -50,22 +50,22 @@ void Scene::onGUI()
  * This function initializes the grid with random values between 0 and 1.
  * The border of the grid is set to 0.
  */
-void Scene::randomInit(size_t width, size_t height)
+void Scene::randomInit(size_t width, size_t height, size_t depth)
 {
-    grid = Grid(height, width);
-    for (size_t i = 0; i < width * height; i++)
+    grid = Grid(width, height, depth);
+    for (size_t i = 0; i < width * height * depth; i++)
     {
         grid.data[i] = rand() / (float)RAND_MAX;
     }
     for (int x = 0; x < width; x++)
     {
-        grid(0, x) = 0;
-        grid(height - 1, x) = 0;
+        grid(x, 0) = 0;
+        grid(x, height - 1) = 0;
     }
     for (int y = 0; y < height; y++)
     {
-        grid(y, 0) = 0;
-        grid(y, width - 1) = 0;
+        grid(0, y) = 0;
+        grid(width - 1, y) = 0;
     }
 }
 

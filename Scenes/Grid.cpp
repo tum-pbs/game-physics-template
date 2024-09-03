@@ -1,24 +1,28 @@
 #include "Grid.h"
 
-Grid::Grid(int height, int width) : width(width), height(height)
+Grid::Grid(size_t width, size_t height, size_t depth) : width(width), height(height), depth(depth)
 {
-    data.assign(width * height, 0);
+    data.assign(width * height * depth, 0);
 }
 
-float &Grid::operator()(int y, int x)
+float &Grid::operator()(size_t x, size_t y, size_t z)
 {
-    return data[y * width + x];
+    return data[x + y * width + z * width * height];
 }
 
 std::ostream &operator<<(std::ostream &os, Grid &grid)
 {
-    for (int y = 0; y < grid.height; y++)
+    for (size_t z = 0; z < grid.depth; z++)
     {
-        for (int x = 0; x < grid.width; x++)
+        os << "z=" << z << ":" << std::endl;
+        for (size_t y = 0; y < grid.height; y++)
         {
-            os << grid(y, x) << " ";
+            for (size_t x = 0; x < grid.width; x++)
+            {
+                os << grid(x, y, z) << " ";
+            }
+            os << std::endl;
         }
-        os << std::endl;
     }
     return os;
 }

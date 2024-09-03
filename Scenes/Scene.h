@@ -28,7 +28,7 @@ public:
     Grid grid = Grid(0, 0);
 
 protected:
-    void randomInit(size_t width, size_t height);
+    void randomInit(size_t width, size_t height, size_t depth = 1);
     float alpha = 1;
     float dt = 0.01;
     int drawRadius = 5;

@@ -7,28 +7,28 @@ void Scene1::simulateStep()
 
 void Scene1::diffuseExplicit(float dt)
 {
-    Grid newGrid = Grid(grid.height, grid.width);
+    Grid newGrid = Grid(grid.width, grid.height);
 
     for (int x = 1; x < grid.width - 1; x++)
     {
         for (int y = 1; y < grid.height - 1; y++)
         {
-            float plusX = grid(y, x + 1);
-            float minusX = grid(y, x - 1);
-            float plusY = grid(y + 1, x);
-            float minusY = grid(y - 1, x);
-            newGrid(y, x) = grid(y, x) + dt * alpha * (plusX + minusX + plusY + minusY - 4 * grid(y, x));
+            float plusX = grid(x + 1, y);
+            float minusX = grid(x - 1, y);
+            float plusY = grid(x, y + 1);
+            float minusY = grid(x, y - 1);
+            newGrid(x, y) = grid(x, y) + dt * alpha * (plusX + minusX + plusY + minusY - 4 * grid(x, y));
         }
     }
     for (int x = 0; x < grid.width; x++)
     {
-        newGrid(0, x) = grid(0, x);
-        newGrid(grid.height - 1, x) = grid(grid.height - 1, x);
+        newGrid(x, 0) = grid(x, 0);
+        newGrid(x, grid.height - 1) = grid(x, grid.height - 1);
     }
     for (int y = 0; y < grid.height; y++)
     {
-        newGrid(y, 0) = grid(y, 0);
-        newGrid(y, grid.width - 1) = grid(y, grid.width - 1);
+        newGrid(0, y) = grid(0, y);
+        newGrid(grid.width - 1, y) = grid(grid.width - 1, y);
     }
     grid = newGrid;
 }
