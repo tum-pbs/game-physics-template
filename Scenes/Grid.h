@@ -11,4 +11,6 @@ public:
     std::vector<float> data;
     float &operator()(size_t x, size_t y, size_t z = 0);
     friend std::ostream &operator<<(std::ostream &os, Grid &grid);
+    bool isBorder(size_t x, size_t y, size_t z = 0);
+    size_t indexOf(size_t x, size_t y, size_t z = 0);
 };

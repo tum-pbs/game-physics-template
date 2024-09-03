@@ -25,7 +25,7 @@ public:
     /// @brief Define the GUI for the scene. Gets called every frame after onDraw.
     virtual void onGUI();
     virtual ~Scene() = default;
-    Grid grid = Grid(0, 0);
+    Grid grid = Grid(0, 0, 0);
 
 protected:
     void randomInit(size_t width, size_t height, size_t depth = 1);
@@ -33,5 +33,7 @@ protected:
     float dt = 0.01;
     int drawRadius = 5;
     size_t resolution = 50;
-    void resetGrid();
+    virtual void resetGrid();
+    void diffuseImplicit(float dt);
+    void diffuseExplicit(float dt);
 };
