@@ -22,6 +22,8 @@ float Camera::aspectRatio()
 
 void Camera::update()
 {
+    if (ImGui::GetIO().WantCaptureMouse)
+        return;
     ImVec2 screenDelta = ImGui::GetMouseDragDelta();
     vec2 angleDelta = vec2(-screenDelta.x, screenDelta.y) * cameraSensitivity;
     vec2 tmpAngles = cameraAngles + angleDelta;
