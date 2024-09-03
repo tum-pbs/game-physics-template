@@ -10,6 +10,7 @@ public:
     void addCube(ResourceManager::InstancedVertexAttributes cube);
     void addSphere(ResourceManager::InstancedVertexAttributes sphere);
     void addQuad(ResourceManager::InstancedVertexAttributes quad);
+    void sortDepth();
     void clearAll() override;
     void commit() override;
     void terminate() override;

@@ -12,24 +12,23 @@ struct VertexOutput {
 //
 // A structure holding the value of our uniforms
 //
-struct MyUniforms {
+struct RenderUniforms {
 	projectionMatrix: mat4x4f,
 	viewMatrix: mat4x4f,
 	cameraWorldPosition: vec3f,
 	time: f32,
-	cullingNormal: vec3f,
-	cullingDistance: vec3f,
+	cullingOffsets: vec3f,
 	flags: u32,
 };
 
-@group(0) @binding(0) var<uniform> uMyUniforms: MyUniforms;
+@group(0) @binding(0) var<uniform> renderUniforms: RenderUniforms;
 
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
 
-    out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * vec4f(in.position, 1.0);
+    out.position = renderUniforms.projectionMatrix * renderUniforms.viewMatrix * vec4f(in.position, 1.0);
     out.color = in.color;
     return out;
 }
