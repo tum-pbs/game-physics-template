@@ -29,7 +29,8 @@ void Scene::onGUI()
     if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse)
     {
         ImVec2 mousePos = ImGui::GetMousePos();
-        ImVec2 normalizedMousePos = ImVec2((mousePos.x) / (float)Renderer::camera.width, (mousePos.y) / (float)Renderer::camera.height);
+        ImVec2 windowSize = ImGui::GetIO().DisplaySize;
+        ImVec2 normalizedMousePos = ImVec2(mousePos.x / (float)windowSize.x, mousePos.y / (float)windowSize.y);
         float x = normalizedMousePos.x * grid.width;
         float y = normalizedMousePos.y * grid.height;
         for (int i = -drawRadius; i < drawRadius; i++)
