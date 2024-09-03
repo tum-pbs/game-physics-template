@@ -9,6 +9,7 @@
 #include <backends/imgui_impl_glfw.h>
 
 #include "Primitives.h"
+#include <algorithm>
 
 using namespace wgpu;
 
