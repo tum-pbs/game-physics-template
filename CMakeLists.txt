@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.1...3.25)
+
 project(
 	GamePhysicsTemplate
 	VERSION 0.1.0
 	LANGUAGES CXX C
-)
+	)
+	
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED On)
+set(CMAKE_CXX_EXTENSIONS Off)
 
 option(DEV_MODE "Set up development helper settings" ON)
 
@@ -52,11 +57,6 @@ file(GLOB_RECURSE PIPELINE_HEADERS
 )
 target_sources(Template PRIVATE ${PIPELINE_SOURCES} ${PIPELINE_HEADERS})
 
-
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 if(DEV_MODE)
 	# In dev mode, we load resources from the source tree, so that when we
 	# dynamically edit resources (like shaders), these are correctly
@@ -80,7 +80,6 @@ target_link_libraries(Template PRIVATE glfw webgpu glfw3webgpu imgui)
 
 set_target_properties(Template PROPERTIES
 	CXX_STANDARD 17
-	VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1"
 )
 
 target_copy_webgpu_binaries(Template)
