@@ -1,5 +1,6 @@
 #include "InstancingPipeline.h"
 #include "Renderer.h"
+#include <numeric>
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
@@ -174,6 +175,44 @@ void InstancingPipeline::addSphere(ResourceManager::InstancedVertexAttributes sp
 void InstancingPipeline::addQuad(ResourceManager::InstancedVertexAttributes quad)
 {
     instances[2].push_back(quad);
+}
+
+template <typename T>
+std::vector<size_t> sort_indices(const std::vector<T> &v)
+{
+    using namespace std;
+    vector<size_t>
+        idx(v.size());
+    iota(idx.begin(), idx.end(), 0);
+
+    stable_sort(idx.begin(), idx.end(),
+                [&v](size_t i1, size_t i2)
+                { return v[i1] < v[i2]; });
+
+    return idx;
+}
+
+void InstancingPipeline::sortDepth()
+{
+    for (auto &instanceList : instances)
+    {
+        std::vector<float> depths;
+        depths.reserve(instanceList.size());
+        for (auto &instance : instanceList)
+        {
+            glm::vec3 delta = Renderer::camera.position - instance.position;
+            float depth = -glm::dot(delta, delta);
+            depths.push_back(depth);
+        }
+        auto indices = sort_indices(depths);
+        std::vector<ResourceManager::InstancedVertexAttributes> newOrder;
+        newOrder.resize(instanceList.size());
+        for (auto &index : indices)
+        {
+            newOrder.push_back(instanceList[index]);
+        }
+        instanceList = newOrder;
+    }
 }
 
 void InstancingPipeline::clearAll()

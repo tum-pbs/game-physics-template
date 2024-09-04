@@ -22,13 +22,12 @@ struct VertexOutput {
     @location(4) flags: u32
 };
 
-struct MyUniforms {
+struct RenderUniforms {
 	projectionMatrix: mat4x4f,
 	viewMatrix: mat4x4f,
 	cameraWorldPosition: vec3f,
 	time: f32,
-    cullingNormal: vec3f,
-    cullingDistance: f32,
+    cullingOffsets: vec3f,
     flags: u32,
 };
 
@@ -42,7 +41,7 @@ struct LightingUniforms {
     alpha: f32
 };
 
-@group(0) @binding(0) var<uniform> myUniforms: MyUniforms;
+@group(0) @binding(0) var<uniform> renderUniforms: RenderUniforms;
 @group(0) @binding(1) var<uniform> lightingUniforms: LightingUniforms;
 
 fn quatDot(q1: vec4f, q2: vec4f) -> vec4f {
@@ -71,7 +70,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     let worldpos = transform(in.world_pos, in.rotation, in.scale, in.position);
 
-    out.position = myUniforms.projectionMatrix * myUniforms.viewMatrix * vec4f(worldpos, 1.0);
+    out.position = renderUniforms.projectionMatrix * renderUniforms.viewMatrix * vec4f(worldpos, 1.0);
     out.normal = quatMul(in.rotation, in.normal);
     out.color = in.color;
     out.id = in.id;
@@ -83,9 +82,9 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
-    if (myUniforms.flags & UNIFORM_CULLING_PLANE) != 0u && (in.flags & INSTANCE_NO_CULLING_PLANE) == 0u {
-        let distance = myUniforms.cullingDistance - dot(in.worldpos, myUniforms.cullingNormal);
-        if distance < 0.0 {
+    if (renderUniforms.flags & UNIFORM_CULLING_PLANE) != 0u && (in.flags & INSTANCE_NO_CULLING_PLANE) == 0u {
+        let delta = in.worldpos.xyz - renderUniforms.cullingOffsets;
+        if delta.x > 0.0 && delta.y > 0.0 && delta.z > 0.0 {
         discard;
         }
     }
@@ -98,7 +97,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
         let light_dir = normalize(lightingUniforms.direction);
         let normal = normalize(in.normal);
         let diffuse_color = diffuse * lightingUniforms.diffuse_intensity * max(dot(normal, light_dir), 0.0);
-        let specular_color = lightingUniforms.specular * lightingUniforms.specular_intensity * pow(max(dot(reflect(-light_dir, normal), normalize(myUniforms.cameraWorldPosition - in.worldpos)), 0.0), lightingUniforms.alpha);
+        let specular_color = lightingUniforms.specular * lightingUniforms.specular_intensity * pow(max(dot(reflect(-light_dir, normal), normalize(renderUniforms.cameraWorldPosition - in.worldpos)), 0.0), lightingUniforms.alpha);
 
         color = lightingUniforms.ambient * lightingUniforms.ambient_intensity + diffuse_color + specular_color;
     }

@@ -192,6 +192,14 @@ public:
 	///  The size of the image on the screen. (1,1) will fill the whole screen.
 	void drawImage(std::vector<float> data, int height, int width, float vmin, float vmax, Colormap colormap = Colormap("hot"), glm::vec2 screenPosition = {0, 0}, glm::vec2 screenSize = {1, 1});
 
+	/// @brief Enable culling planes for the next frame.
+	///
+	/// Don't draw any pixels with positions greater than the values in offsets.
+	/// Looks like three planes, where one octant is excluded from rendering
+	/// @param offsets
+	///		The axis offets for the individual axes
+	void drawCullingPlanes(const glm::vec3 &offsets = glm::vec3(0));
+
 	/// @brief The background color of the scene
 	glm::vec3 backgroundColor = {0.05f, 0.05f, 0.05f};
 
@@ -230,6 +238,13 @@ public:
 	/// @brief Enable or disable frame rate synchronization
 	void setPresentMode(wgpu::PresentMode mode);
 
+	/// @brief Enables depth sorting for the current frame.
+	///
+	/// When enabled, all primitives get drawn in order from back to front, respective to their centers and the camera.
+	///
+	/// Enable this only when drawing transparent objects, it is slow.
+	void enableDepthSorting();
+
 	/// @brief This function is called once per frame inside an ImGui context.
 	std::function<void()> defineGUI = nullptr;
 
@@ -265,16 +280,12 @@ public:
 		glm::vec3 cameraWorldPosition;
 		/// @brief The time since the start of the application in seconds
 		float time;
-		/// @brief The normal of the culling plane
-		glm::vec3 cullingNormal;
-		/// @brief The offset of the culling plane from (0,0,0)
-		float cullingOffset;
+		/// @brief The offsets of the culling plane
+		glm::vec3 cullingOffsets;
 		/// @brief Renderer::UniformFlags. Can be combined with bitwise OR. Possible flags:
 		///
 		///         - cullingPlane: The culling plane will be drawn
 		uint32_t flags;
-		/// @brief Padding to align the struct to 16 bytes, required by the GPU
-		float _pad[3];
 	};
 	static_assert(sizeof(RenderUniforms) % 16 == 0);
 
@@ -338,6 +349,8 @@ private:
 	int width, height;
 	wgpu::PresentMode presentMode = wgpu::PresentMode::Fifo;
 	bool reinitSwapChain = false;
+
+	bool sortDepth = false;
 
 	GLFWwindow *window = nullptr;
 	wgpu::Instance instance = nullptr;
