@@ -9,6 +9,7 @@
 #include <backends/imgui_impl_glfw.h>
 
 #include "Primitives.h"
+#include <algorithm>
 
 using namespace wgpu;
 
@@ -50,10 +51,11 @@ void Renderer::onFrame()
 	renderUniforms.time = static_cast<float>(glfwGetTime());
 	updateViewMatrix();
 	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, time), &renderUniforms.time, sizeof(RenderUniforms::time));
-	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, cullingNormal), &renderUniforms.cullingNormal, sizeof(RenderUniforms::cullingNormal));
-	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, cullingOffset), &renderUniforms.cullingOffset, sizeof(RenderUniforms::cullingOffset));
+	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, cullingOffsets), &renderUniforms.cullingOffsets, sizeof(RenderUniforms::cullingOffsets));
 	queue.writeBuffer(uniformBuffer, offsetof(RenderUniforms, flags), &renderUniforms.flags, sizeof(RenderUniforms::flags));
 
+	if (sortDepth)
+		instancingPipeline.sortDepth();
 	// prepare instanced draw calls
 	instancingPipeline.commit();
 
@@ -298,6 +300,11 @@ void Renderer::setPresentMode(PresentMode mode)
 	reinitSwapChain = true;
 }
 
+void Renderer::enableDepthSorting()
+{
+	sortDepth = true;
+}
+
 void Renderer::initSwapChain()
 {
 	SwapChainDescriptor swapChainDesc;
@@ -396,6 +403,8 @@ void Renderer::clearScene()
 	linePipeline.clearAll();
 	imagePipeline.clearAll();
 	current_id = 0;
+	renderUniforms.flags = 0;
+	sortDepth = false;
 }
 
 void Renderer::initUniforms()
@@ -408,8 +417,7 @@ void Renderer::initUniforms()
 	renderUniforms.viewMatrix = camera.viewMatrix;
 	renderUniforms.projectionMatrix = camera.projectionMatrix();
 	renderUniforms.time = 1.0f;
-	renderUniforms.cullingNormal = {0.0f, 0.0f, 1.0f};
-	renderUniforms.cullingOffset = 0.0f;
+	renderUniforms.cullingOffsets = {0.0f, 0.0f, 1.0f};
 	renderUniforms.flags = 0;
 	queue.writeBuffer(uniformBuffer, 0, &renderUniforms, sizeof(RenderUniforms));
 
@@ -624,4 +632,10 @@ void Renderer::drawImage(std::vector<float> data, int height, int width, float v
 		value = (value - vmin) / (vmax - vmin);
 	}
 	imagePipeline.addImage(data, screenPosition, screenSize, width, height, colormap);
+}
+
+void Renderer::drawCullingPlanes(const glm::vec3 &offsets)
+{
+	renderUniforms.flags |= UniformFlags::cullingPlane;
+	renderUniforms.cullingOffsets = offsets;
 }
