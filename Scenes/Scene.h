@@ -1,6 +1,9 @@
 #pragma once
 #include "Renderer.h"
 
+#include <glm/glm.hpp>
+#include <vector>
+
 /// @brief Scene base class. **Run `cmake . -B build` after adding new files to the scenes folder**
 ///
 /// This class is the base class for all scenes in the application.
@@ -20,8 +23,15 @@ public:
     /// @brief Draw the scene. Gets called every frame after simulateStep.
     ///
     /// This is where you should call the Renderer draw functions.
-    virtual void onDraw(Renderer &renderer);
+    virtual void onDraw(Renderer &renderer) {};
     /// @brief Define the GUI for the scene. Gets called every frame after onDraw.
     virtual void onGUI() {};
     virtual ~Scene() = default;
+
+protected:
+    using vec3 = glm::vec3;
+    using quat = glm::quat;
+    using vec4 = glm::vec4;
+    using mat4 = glm::mat4;
+    using mat3 = glm::mat3;
 };
