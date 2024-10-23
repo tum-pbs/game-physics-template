@@ -22,9 +22,12 @@ After doing this you should see a drop down by the CMake extension asking for a 
 
 ![alt text](https://github.com/user-attachments/assets/64d42b7e-009f-4776-a0e7-3b93dee80af6)
 
-If this dropdown did not appear or you did not manage to click on the right option, you can open this menu manually by searching for 'CMake: Select a Kit' in the command prompt (ctrl + shift + p hotkey on windows by default) and then manually picking the option
+If this dropdown did not appear or you did not manage to click on the right option, you can open this menu manually by searching for 'CMake: Select a Kit' in the command prompt (ctrl + shift + p hotkey on windows by default, command + shift + p on mac o) and then manually picking the option
 
 ![alt text](https://github.com/user-attachments/assets/d1eaf2ab-f7f0-4469-88b9-5bca6559d11a)
+
+For MacOS choose Clang for your respective architecture, e.g., arm64 for M series processors:
+![alt text](https://github.com/user-attachments/assets/c05deee4-74ba-4379-9c42-011e32d97d44)
 
 Doing this should open an output window at the bottom with CMake/Build selected and cmake will setup the kit, which will take a moment to complete
 
@@ -59,13 +62,13 @@ void Scene::onDraw(Renderer &renderer)
     renderer.drawWireCube(glm::vec3(0), glm::vec3(5), glm::vec3(1));
     renderer.drawCube(
         glm::vec3(0,0,0), // center position
-        glm::angleAxis(glm::radians(45.0f), glm::vec3(1.0f, 1.0f, 0.0f)), // rotation
+        glm::angleAxis(glm::radians(45.0f), glm::vec3(1.0f / sqrtf(2.f), 1.0f / sqrtf(2.f), 0.0f)), // rotation
         glm::vec3(0.5,0.5,0.5), // scale
         glm::vec4(1,0,0,1)); // color
 }
 ```
 
-This new call will draw a cube at the origin, rotated by 45 degrees along some axis, with a scale of 0.5 in all directions and 100% red colored:
+This new call will draw a cube at the origin, rotated by 45 degrees along some axis (note that glm expects angles to be in radians for this function, and the axis should be normalized, that being said, it works fine in most cases without normalization until it doesn't so be careful with functons that require an axis input!), with a scale of 0.5 in all directions and 100% red colored:
 
 ![alt text](https://github.com/user-attachments/assets/709e7e33-8501-4478-ab3c-994a645e28e8)
 
@@ -97,7 +100,45 @@ If we now want to add/modify our own Scene we have to take a look at Scene1.h an
 class Scene1 : public Scene{}
 ``` 
 
-The scenes are registered with a name in the SceneIndex.h file (here in line 16). To give a scene its own _onDraw_ method we need to override it in the header file:
+The scenes are registered with a name in the SceneIndex.h file (here in line 16):
+```cpp
+// SceneIndex.h
+#include "Scene1.h"
+// ...
+
+std::map<std::string, SceneCreator> scenesCreators = {
+    {"Demo Scene", creator<Scene1>()},
+    // add more Scene types here
+};
+```
+
+If you want to add more scenes you need to first create a new scene header and implementation (Scene2.h and Scene2.cpp) with contents, e.g., like this:
+```cpp
+// Scene2.h
+#include "Scene.h"
+
+class Scene2 : public Scene // Make sure to use a different class name!
+{
+};
+// Scene2.cpp
+/* Empty */
+```
+
+After you have created these you need to rerun CMake configure (Use the command prompt from VSCode) and register them in the map by adding the include and label:
+```cpp
+// SceneIndex.h
+#include "Scene1.h"
+#include "Scene2.h"
+// ...
+
+std::map<std::string, SceneCreator> scenesCreators = {
+    {"Demo Scene", creator<Scene1>()},
+    {"Demo Scene 2", creator<Scene2>()},
+    // add more Scene types here
+};
+```
+
+But for now we only need to deal with a single Scene. To give a scene its own _onDraw_ method we need to override it in the header file:
 ```cpp
 #include "Scene.h"
 
@@ -181,6 +222,12 @@ void Scene1::onDraw(Renderer& renderer){
 }
 ```
 
+You also need to add an include to be able to use the glm::toMat4 function:
+```cpp
+// At the top of Scene1.cpp
+#include <glm/gtx/quaternion.hpp>
+```
+
 Which will now show this:
 
 ![alt text](https://github.com/user-attachments/assets/9e5408aa-dfe4-41c4-a8bb-b318f8cec333)
@@ -211,6 +258,11 @@ void Scene1::onGUI(){
     ImGui::SliderFloat("Roll Increment", &roll_increment, -0.01f, 0.01f);
     ImGui::SliderFloat("Yaw Increment", &yaw_increment, -0.01f, 0.01f);
 }
+```
+
+Which also requires including the imgui header:
+```cpp
+#include <imgui.h>
 ```
 
 And we now have an interactive "simulation":
@@ -245,6 +297,8 @@ class Scene1 : public Scene{
 To have some interesting behavior we want to randomly set the colors of each particle using a random number generator. Random Number Generation (RNG) is a difficult topic in general but within the C++11 vernacular we have a distribution of values we want to generate (for our purposes a uniform distribution from 0 to 1 of floats), a generator that creates _random_ values and an initial seed from some random device on our system. This means we need to include the random header and add three additional members to the Scene1 class:
 
 ```cpp
+#include <random>
+
 class Scene1 : public Scene{
     //...
     std::random_device rd;
@@ -266,24 +320,35 @@ public:
 
 To now launch particles we add a _launch_ button to our GUI in the onGUI function:
 ```cpp
-auto launch = ImGui::Button("Launch");
+// Scene1.cpp
+void Scene1::onGUI(){
+    //...
+    auto launch = ImGui::Button("Launch");
+}
 ``` 
 
 Where launch is true when the button is pressed (launch is only true on the initial press and not while the button is held down). Based on the launch variable we can then create a new particle by first computing the forward direction of the cube (as done before) and then creating a particle at the origin moving with 5 units per second in the forward direction per _time_ and a random color by drawing samples from our distribution:
 
 ```cpp
-if(launch){
-    glm::mat4 rotation = glm::toMat4(glm::quat(glm::vec3(pitch, roll, yaw)));
-    glm::vec3 forward = glm::vec3(rotation * glm::vec4(0, 0, 1, 0));
+// Scene1.cpp
+void Scene1::onGUI(){
+    //...
+    auto launch = ImGui::Button("Launch");
 
-    particles.push_back(Particle{
-        glm::vec3(0), // Initial Position
-        forward * 5, // Initial Velocity
-        glm::vec4(dis(gen), dis(gen), dis(gen), 1), // Color
-        .0 // Particles are created with their own time counter set to 0
-    });
-}
+    if(launch){
+        glm::mat4 rotation = glm::toMat4(glm::quat(glm::vec3(pitch, roll, yaw)));
+        glm::vec3 forward = glm::vec3(rotation * glm::vec4(0, 0, 1, 0));
+
+        particles.push_back(Particle{
+            glm::vec3(0), // Initial Position
+            forward * 5.f, // Initial Velocity
+            glm::vec4(dis(gen), dis(gen), dis(gen), 1), // Color
+            .0 // Particles are created with their own time counter set to 0
+        });
+    }
 ```
+
+An important note here is the multiplication with 5.f. On Windows this code will work with 5 due to differences in integer casting behavior but on MacOS and Linux it will require an actual float value! If you want to multiply something with something else, __always make sure you use the right type!__ It is very easy to get accidental behavior or strange behavior due to implicit casting, or to simply lose performance from using double precision floating point numbers (5.0 is a double, 5.0f is a float).
 
 To render these particles we then need to modify the onDraw method using the drawSphere function (which requires position, radius and color):
 
@@ -332,4 +397,154 @@ Which gives us our final physics system:
 
 ![alt text](https://github.com/user-attachments/assets/34273fe0-48a0-46e9-b9e3-f3da85563a85)
 
-Which completes this tutorial!
+To make this a bit more interesting we can now add keyboard controls, which is the last part of this tutorial. Before we do this, however, its a good idea to clean up our code a bit, which we can do by moving the launch functionality into a new function of its own and adding a delay to the launch to limit how many spheres we can create and we also set the default values for the increments to 0.005 for future use!
+```cpp
+// Scene1.h
+class Scene1 : public Scene{
+    //...
+    float pitch_increment = 0.005f;
+    float roll_increment = 0.005f;
+    float yaw_increment = 0.005f;
+
+    int32_t launch_delay = 32;
+    int32_t lastLaunch = 0;
+    void launchSphere();
+    //...
+}
+
+// Scene1.cpp
+void Scene1::simulateStep(){
+    //...
+    lastLaunch++;
+}
+
+void Scene1::launchSphere(){
+    if( lastLaunch < launch_delay)
+        return;
+    lastLaunch = 0;
+    glm::mat4 rotation = glm::toMat4(glm::quat(glm::vec3(pitch, roll, yaw)));
+    glm::vec3 forward = glm::vec3(rotation * glm::vec4(0, 0, 1, 0));
+    glm::vec3 right = glm::vec3(rotation * glm::vec4(1, 0, 0, 0));
+    glm::vec3 up = glm::vec3(rotation * glm::vec4(0, 1, 0, 0));
+
+    glm::vec4 color = glm::vec4(dis(gen), dis(gen), dis(gen), 1);
+    float velocityMagnitude = 4.5f + dis(gen);
+    glm::vec3 velocity = forward * velocityMagnitude;
+
+    velocity += right * (dis(gen) - 0.5f) * 2.f;
+    velocity += up * (dis(gen) - 0.5f) * 2.f;
+
+    particles.push_back(Particle{glm::vec3(0), velocity, color, .0});
+}
+```
+
+We have also used this opportunity to randomize the launched spheres a bit to keep things interesting by randomizing the velocity (which is now uniform in magnitude in [4.5,5.5] ). We then added some _spray_ functionality that randomly changes the velocity with respect to the two other local coordinate axes of the cube, i.e., the forward and up direction. In this case this is a simple uniform noise in the range [-0.5,0.5]. Can you think of any improvements here? Hint: Should spray be uniform in x and y or should it be shaped in some way?
+
+Now, while this is a nice change, the limit in launching spheres was mostly how fast we can press the button whereas we now would like to just hold down a button to keep firing spheres, for which we will use the GLFW key inputs ([more information here](https://www.glfw.org/docs/3.3/input_guide.html#input_key)).
+
+To do this we need to override the onKeyInput function of the parent scene and create a structure to keep track of the currently pressed inputs (more on this later):
+
+```cpp
+// Scene1.h
+class Scene1 : public Scene{
+    //...
+    struct inputState{
+        bool space = false;
+        bool w = false, a = false, s = false, d = false;
+        bool e = false, q = false;
+    };
+    inputState keyState;
+
+    virtual void onKeyInput(GLFWwindow *window, int key, int scancode, int action, int mods) override;
+    //...
+}
+```
+
+Key input in GLFW works by sending events whenever a key is pressed. To find out which key is being pressed we can look at the _key_ argument, e.g., if we press spacebar then key is equal to `GLFW_KEY_SPACE`. _mods_ contains any modifiers, i.e., shift, alt and control, whereas scancode is an internal value that we do not need to worry about too much. The important part for us now is the action which can have three values:
+
+- GLFW_KEY_PRESS
+- GLFW_KEY_HELD
+- GLFW_KEY_REPEAT
+
+The first value is sent on the initial press of the button and the repeat value is sent once we release the button, note that if a user tabs out of the program and releases the key without the games window being in focus, no release event will be sent and the input is _stuck_. We could naively use the held event to shoot spheres but this would not be fun on most systems as there is a multiple second delay before this event is triggered. In most applications this is beneficial (try pressing a key on your keyboard in an editor and notice the delay), but for us this is not ideal. 
+
+Instead we will key track of which key is currently held manually:
+```cpp
+// Scene1.cpp
+void Scene1::onKeyInput(GLFWwindow* window,  int key, int scancode, int action, int mods){
+    if(action == GLFW_PRESS){
+        if(key == GLFW_KEY_W)
+            keyState.w = true;
+        if(key == GLFW_KEY_A)
+            keyState.a = true;
+        if(key == GLFW_KEY_S)
+            keyState.s = true;        
+        if(key == GLFW_KEY_D)
+            keyState.d = true;        
+        if(key == GLFW_KEY_E)
+            keyState.e = true;        
+        if(key == GLFW_KEY_Q)
+            keyState.q = true;
+        if(key == GLFW_KEY_SPACE)
+            keyState.space = true;
+    }
+    if(action == GLFW_RELEASE){
+        if(key == GLFW_KEY_W)
+            keyState.w = false;
+        if(key == GLFW_KEY_A)
+            keyState.a = false;
+        if(key == GLFW_KEY_S)
+            keyState.s = false;        
+        if(key == GLFW_KEY_D)
+            keyState.d = false;        
+        if(key == GLFW_KEY_E)
+            keyState.e = false;        
+        if(key == GLFW_KEY_Q)
+            keyState.q = false;
+        if(key == GLFW_KEY_SPACE)
+            keyState.space = false;
+    }
+}
+```
+
+Which is repetetive and error prone so try avoiding code like this if possible. We then modify our simulateStep function to no longer automatically rotate the cube and shoot a sphere when the spacebar is held down:
+```cpp
+// Scene1.cpp
+void Scene1::simulateStep(){
+    // pitch += pitch_increment;
+    // roll += roll_increment;
+    // yaw += yaw_increment;
+
+    glm::vec3 gravityAccel = glm::vec3(0, -9.81f, 0);
+
+    for (auto& particle : particles){
+        particle.position += 0.01f * particle.velocity;
+        particle.lifetime += 0.01f;
+        particle.velocity += gravityAccel * 0.01f;
+    }
+    
+    particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& particle){
+        return particle.lifetime > 1.f;
+    }), particles.end());
+
+    if(keyState.space)
+        launchSphere();
+    if(keyState.w)
+        pitch += pitch_increment;
+    if(keyState.s)
+        pitch -= pitch_increment;
+    if(keyState.a)
+        roll += roll_increment;
+    if(keyState.d)
+        roll -= roll_increment;
+    if(keyState.q)
+        yaw += yaw_increment;
+    if(keyState.e)
+        yaw -= yaw_increment;
+    lastLaunch++;
+}
+``` 
+
+Which gives us our final interactive program that covers all relevant aspects of the framework!
+
+![Example image of the final result showing a spray of many spheres](https://github.com/user-attachments/assets/fb85a57d-fec7-451e-8d85-3baa0d8e38a3)
