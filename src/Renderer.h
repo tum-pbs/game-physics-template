@@ -1,6 +1,7 @@
 #pragma once
 #include <webgpu/webgpu.hpp>
 #include <glm/glm.hpp>
+#include <algorithm>
 #include "ResourceManager.h"
 #include "pipelines/InstancingPipeline.h"
 #include "pipelines/LinePipeline.h"
