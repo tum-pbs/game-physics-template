@@ -50,7 +50,7 @@ jobs:
     - name: Install dependencies
       uses: ConorMacBride/install-package@v1
       with:
-        apt: libxrandr-dev libxinerama-dev libxcursor-dev
+        apt: libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
