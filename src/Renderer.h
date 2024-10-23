@@ -8,6 +8,7 @@
 #include "pipelines/ImagePipeline.h"
 #include "Camera.h"
 #include "Colormap.h"
+#include <GLFW/glfw3.h>
 
 // Forward declare
 struct GLFWwindow;
@@ -26,6 +27,12 @@ class Renderer
 public:
 	Renderer();
 	~Renderer();
+
+	/// Return the current GLFWwindow pointer
+	///
+	/// @return 
+	///	 The current GLFWwindow pointer
+	GLFWwindow* getWindow(){return window;}
 
 	/// @brief Draw a cube in the next frame
 	///
