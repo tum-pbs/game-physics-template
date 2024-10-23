@@ -213,8 +213,8 @@ void Renderer::initWindowAndDevice()
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-	window = glfwCreateWindow(640, 480, "Game Physics Template", NULL, NULL);
+	glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
+	window = glfwCreateWindow(1280, 720, "Game Physics Template", NULL, NULL);
 	if (!window)
 		throw std::runtime_error("Could not open window!");
 
