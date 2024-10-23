@@ -8,7 +8,7 @@ Optionally if you want to be able to run cmake commands manually (you should not
 
 Within VsCode you can then install the CMake and C++ Extensions from the extensions menu on the left, Git should be supported by default. To install them just search for the extension name, click on them and press install on the extension page, these are the two relevant extensions:
 
-![alt text](image-10.png)
+![alt text](https://github.com/user-attachments/assets/cbfb3374-ba4f-4d48-8ddf-8a9fb52b441c)
 
 Next step is to download the framework. To do this clone the git repository from a terminal:
 
@@ -20,23 +20,23 @@ And Open the folder in VsCode (Chose Open Folder... when launching VsCode and br
 
 After doing this you should see a drop down by the CMake extension asking for a _kit_, which is a combination of compiler and build system, where you can pick which compiler you want to use. For Windows choose Visual Studio Community Release with either amd64_x86 or x86_amd64 in the name:
 
-![alt text](image.png)
+![alt text](https://github.com/user-attachments/assets/64d42b7e-009f-4776-a0e7-3b93dee80af6)
 
 If this dropdown did not appear or you did not manage to click on the right option, you can open this menu manually by searching for 'CMake: Select a Kit' in the command prompt (ctrl + shift + p hotkey on windows by default) and then manually picking the option
 
-![alt text](image-1.png)
+![alt text](https://github.com/user-attachments/assets/d1eaf2ab-f7f0-4469-88b9-5bca6559d11a)
 
 Doing this should open an output window at the bottom with CMake/Build selected and cmake will setup the kit, which will take a moment to complete
 
-![alt text](image-2.png)
+![alt text](https://github.com/user-attachments/assets/dc97b615-25c8-402f-8fbd-a25e05d8ae1f)
 
 When this is done you can run 'CMake: configure' from the command prompt, which will create the build system, which should finish with a line similar to 'Build files have been written':
 
-![alt text](image-3.png)
+![alt text](https://github.com/user-attachments/assets/763e0cc8-e43d-47fd-8b33-895236faf4b8)
 
 Now that the project is configured we can build the program using the F7 hotkey (CMake: Build) or Build and Launch (Ctrl + F5 | CMake: Run without Debugging), which will open the demo window in full screen and show something similar to this:
 
-![alt text](image-4.png)
+![alt text](https://github.com/user-attachments/assets/976e470c-fad2-4ab4-9e6f-ec230f565cb4)
 
 For the structure of the project there are _Scenes_ within the _Scenes_ subfolder with a parent Scene in Scene.h/Scene.cpp, which is the default scene that should not be directly used in general but for simplicity we can look into the Scene.cpp file and find this:
 
@@ -67,7 +67,7 @@ void Scene::onDraw(Renderer &renderer)
 
 This new call will draw a cube at the origin, rotated by 45 degrees along some axis, with a scale of 0.5 in all directions and 100% red colored:
 
-![alt text](image-5.png)
+![alt text](https://github.com/user-attachments/assets/709e7e33-8501-4478-ab3c-994a645e28e8)
 
 A quick note: If you do not want to launch the program as full screen every time you need to modify the src/Renderer.cpp file and change the initWindowAndDevice function from this:
 
@@ -183,7 +183,7 @@ void Scene1::onDraw(Renderer& renderer){
 
 Which will now show this:
 
-![alt text](image-11.png)
+![alt text](https://github.com/user-attachments/assets/9e5408aa-dfe4-41c4-a8bb-b318f8cec333)
 
 We now want to add some interactivity to our program, e.g., we want to change how quickly the cube rotates. To do this we need to override the onGUI member of the Scene class and add calls to ImGui (the GUI backend we use for our framework). ImGui is an intermediate mode backend that is fairly straight forward to utilize and we simply need to create a member of the Scene1 class to represent the increments for pitch, roll and yaw and add the override:
 
@@ -215,11 +215,11 @@ void Scene1::onGUI(){
 
 And we now have an interactive "simulation":
 
-![alt text](image-6.png)
+![alt text](https://github.com/user-attachments/assets/f35c7849-da3a-45fd-b78b-27295b643ad5)
 
 Note that you can ctrl + left mouse button to directly input values into the sliders as well.
 
-![alt text](image-12.png)
+![alt text](https://github.com/user-attachments/assets/7f955773-0833-43a1-a74c-bc0430999348)
 
 As a final step we want to implement some new objects and see how we can handle resources and state in a more _complex_ setup. To do this we would like to _shoot_ spheres from the cube towards the forward direction. Each of these spheres will have a set of physical attributes, i.e., position, velocity, color and a lifetime. We can add a Plain Old Datastructure (POD) to the Scene1.h file:
 
@@ -314,7 +314,7 @@ To remove particles after 1 second we add this call to the end of the simulateSt
 ```
 All of this gives us this interactive physics simulation:
 
-![alt text](image-9.png)
+![alt text](https://github.com/user-attachments/assets/c8728def-ad8a-4d0d-8359-18c4081714c7)
 
 If we want to add gravity we can simply add a gravitational field in the simulateStep function and update the velocity accordingly:
 
@@ -330,6 +330,6 @@ for (auto& particle : particles){
 
 Which gives us our final physics system:
 
-![alt text](image-8.png)
+![alt text](https://github.com/user-attachments/assets/34273fe0-48a0-46e9-b9e3-f3da85563a85)
 
 Which completes this tutorial!
