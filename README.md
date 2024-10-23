@@ -11,9 +11,9 @@
     ... or whatever you prefer
 
 3. install [Git](https://git-scm.com/downloads)
-4. clone this repository **TODO replace this with the real location** 
+4. clone this repository
     ```
-    git clone https://github.com/Davidxdydz/GamePhysicsTemplate.git
+    git clone https://github.com/tum-pbs/game-physics-template.git
     ```
 5. Open the project in your IDE, for example [Visual Studio Code]
 (https://code.visualstudio.com/), and add [src](src) and [thirdparty](thirdparty) to the include directories. This is just for autocomplete. The build will work without it.
