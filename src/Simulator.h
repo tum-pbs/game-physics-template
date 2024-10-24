@@ -2,6 +2,7 @@
 #include "Renderer.h"
 #include "glm/glm.hpp"
 #include "Scenes/Scene.h"
+#include <GLFW/glfw3.h>
 
 /// @brief Backend for running and selecting different scenes.
 class Simulator
@@ -22,6 +23,7 @@ public:
 
     void init();
 
+
 private:
     using vec3 = glm::vec3;
     using vec2 = glm::vec2;
@@ -34,4 +36,6 @@ private:
     double lastStepTime = 0;
     double lastDrawPrepTime = 0;
     bool limitFPS = true;
+    
+    void onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods);
 };

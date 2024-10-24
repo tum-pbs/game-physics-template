@@ -24,4 +24,5 @@ public:
     /// @brief Define the GUI for the scene. Gets called every frame after onDraw.
     virtual void onGUI() {};
     virtual ~Scene() = default;
+    virtual void onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods){}
 };
