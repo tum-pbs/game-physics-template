@@ -1,6 +1,7 @@
 #include "InstancingPipeline.h"
 #include "Renderer.h"
 #include <numeric>
+#include <algorithm>
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
