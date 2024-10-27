@@ -1,3 +1,6 @@
+# Demo Project for Game Physics
+
+## Setting up the environment
 Requirements:
 
 - VsCode: https://code.visualstudio.com/
@@ -41,6 +44,8 @@ Now that the project is configured we can build the program using the F7 hotkey 
 
 ![alt text](https://github.com/user-attachments/assets/976e470c-fad2-4ab4-9e6f-ec230f565cb4)
 
+## Drawing additional objects
+
 For the structure of the project there are _Scenes_ within the _Scenes_ subfolder with a parent Scene in Scene.h/Scene.cpp, which is the default scene that should not be directly used in general but for simplicity we can look into the Scene.cpp file and find this:
 
 ```cpp
@@ -72,6 +77,8 @@ This new call will draw a cube at the origin, rotated by 45 degrees along some a
 
 ![alt text](https://github.com/user-attachments/assets/709e7e33-8501-4478-ab3c-994a645e28e8)
 
+## To Fullscreen or not to fullscreen
+
 A quick note: If you do not want to launch the program as full screen every time you need to modify the src/Renderer.cpp file and change the initWindowAndDevice function from this:
 
 ```cpp
@@ -94,6 +101,8 @@ To this:
 Where 1280 is the width of the window, 720 the height of the window (in pixels) and the window is not maximized by default. 
 
 __Please note that this file is not part of the code you are submitting when completing your tasks and any changes outside of the scenes folder can NOT be taken into account when grading your submissions!__
+
+## Adding Scenes
 
 If we now want to add/modify our own Scene we have to take a look at Scene1.h and Scene1.hpp. A custom scene inherits from the parent scene by default and is not required to override anything:
 ```cpp
@@ -138,6 +147,8 @@ std::map<std::string, SceneCreator> scenesCreators = {
 };
 ```
 
+## Implementing something in our custom scene
+
 But for now we only need to deal with a single Scene. To give a scene its own _onDraw_ method we need to override it in the header file:
 ```cpp
 #include "Scene.h"
@@ -161,6 +172,8 @@ void Scene1::onDraw(Renderer& renderer){
 ```
 
 Which will produce the same exact output as before!
+
+## Rotating Cube
 
 To add some animation we need to modify the simulateStep() function which performs the integration of the physics system. In this example we create a pitch roll and yaw member in the Scene1 class to represent the rotation of the cube and override the simulateStep function from the parent class:
 
@@ -232,6 +245,8 @@ Which will now show this:
 
 ![alt text](https://github.com/user-attachments/assets/9e5408aa-dfe4-41c4-a8bb-b318f8cec333)
 
+## User interaction via the GUI
+
 We now want to add some interactivity to our program, e.g., we want to change how quickly the cube rotates. To do this we need to override the onGUI member of the Scene class and add calls to ImGui (the GUI backend we use for our framework). ImGui is an intermediate mode backend that is fairly straight forward to utilize and we simply need to create a member of the Scene1 class to represent the increments for pitch, roll and yaw and add the override:
 
 ```cpp
@@ -272,6 +287,8 @@ And we now have an interactive "simulation":
 Note that you can ctrl + left mouse button to directly input values into the sliders as well.
 
 ![alt text](https://github.com/user-attachments/assets/7f955773-0833-43a1-a74c-bc0430999348)
+
+## Shooting Particles
 
 As a final step we want to implement some new objects and see how we can handle resources and state in a more _complex_ setup. To do this we would like to _shoot_ spheres from the cube towards the forward direction. Each of these spheres will have a set of physical attributes, i.e., position, velocity, color and a lifetime. We can add a Plain Old Datastructure (POD) to the Scene1.h file:
 
@@ -381,6 +398,8 @@ All of this gives us this interactive physics simulation:
 
 ![alt text](https://github.com/user-attachments/assets/c8728def-ad8a-4d0d-8359-18c4081714c7)
 
+## Gravity
+
 If we want to add gravity we can simply add a gravitational field in the simulateStep function and update the velocity accordingly:
 
 ```cpp
@@ -396,6 +415,8 @@ for (auto& particle : particles){
 Which gives us our final physics system:
 
 ![alt text](https://github.com/user-attachments/assets/34273fe0-48a0-46e9-b9e3-f3da85563a85)
+
+## Keyboard input
 
 To make this a bit more interesting we can now add keyboard controls, which is the last part of this tutorial. Before we do this, however, its a good idea to clean up our code a bit, which we can do by moving the launch functionality into a new function of its own and adding a delay to the launch to limit how many spheres we can create and we also set the default values for the increments to 0.005 for future use!
 ```cpp
@@ -440,9 +461,96 @@ void Scene1::launchSphere(){
 
 We have also used this opportunity to randomize the launched spheres a bit to keep things interesting by randomizing the velocity (which is now uniform in magnitude in [4.5,5.5] ). We then added some _spray_ functionality that randomly changes the velocity with respect to the two other local coordinate axes of the cube, i.e., the forward and up direction. In this case this is a simple uniform noise in the range [-0.5,0.5]. Can you think of any improvements here? Hint: Should spray be uniform in x and y or should it be shaped in some way?
 
-Now, while this is a nice change, the limit in launching spheres was mostly how fast we can press the button whereas we now would like to just hold down a button to keep firing spheres, for which we will use the GLFW key inputs ([more information here](https://www.glfw.org/docs/3.3/input_guide.html#input_key)).
+## Keyboard input
 
-To do this we need to override the onKeyInput function of the parent scene and create a structure to keep track of the currently pressed inputs (more on this later):
+While this is a nice change, the limit in launching spheres was mostly how fast we can press the button whereas we now would like to just hold down a button to keep firing spheres, for which we will use either immediate mode input via ImGUI (recommended) or an event based input mode via GLFW key inputs ([more information here](https://www.glfw.org/docs/3.3/input_guide.html#input_key)).
+
+Now, what is event based and what is immediate mode input? In general any key on a keyboard (ignoring analog keyboards) can have four stats:
+- Held down
+- Not Held down
+- Was just pressed
+- Was just released
+
+The first two states are self-explanatory and describe the state of a key after it was pressed and the state of a key at rest. Note that with most input systems a key is only considered as _held_ down after a short delay, e.g., imagine trying to type a sentence if you could only hold down a key for a single frame. More interesting are the key being pressed and released.
+
+A key being pressed and released is an _event_, i.e., it is a change of state of the keyboard and if we only look at the _state_ of a key then we cannot detect this single event, however, we can utilize our operating system or window system to send us a notification if this _event_ occured and we have to write functions that react to events instead of checking the state of keys. This has some other convenient advantages, e.g., if our game is running at 1 fps then we have to hold a key for an entire second to make sure the key is being pressed while _some_ function checks for input and there is no way to queue events, whereas for an event based system we only need to make sure that the event is sent at _some_ point which is then queued up for processing. While this may be an extreme example, there can be weird interactions or situations where two functions check for key state during a frame and one sees a key as being held and one sees a key as not being held, leading to very subtle and hard to reproduce bugs. On the other hand, for an event based system a common bug is someone _tabbing_ out of the game while holding a key such that the key _release_ event is never sent. Can you think of other issues?
+
+If you want to use input during any submission __DO NOT USE THE GLFW VARIANT__. The GLFW variant requires changes to files outside of the Scene folder which are not part of the code you submit. (Note that this will only mean that the tutor grading your exercise wont be able to press buttons for any interactive element you chose to implement, and you will not be able to use this during the exam)
+
+### ImGUI Immediate mode inputs
+
+Adding inputs via ImGUI is very straightforward due to the immediate design of ImGUI. Accordingly, we can simply check at any point of our code (after including the imgui header) if a key is being held down and adding input handling is as simple as adding a few lines of code to the simulateStep function:
+
+```cpp
+// Scene1.cpp
+void Scene1::simulateStep(){
+    // pitch += pitch_increment;
+    // roll += roll_increment;
+    // yaw += yaw_increment;
+
+    glm::vec3 gravityAccel = glm::vec3(0, -9.81f, 0);
+
+    for (auto& particle : particles){
+        particle.position += 0.01f * particle.velocity;
+        particle.lifetime += 0.01f;
+        particle.velocity += gravityAccel * 0.01f;
+    }
+    
+    particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& particle){
+        return particle.lifetime > 1.f;
+    }), particles.end());
+
+
+    if(ImGui::IsKeyDown(ImGuiKey_Space))
+        launchSphere();
+    if(ImGui::IsKeyDown(ImGuiKey_W))
+        pitch += pitch_increment;
+    if(ImGui::IsKeyDown(ImGuiKey_S))
+        pitch -= pitch_increment;
+    if(ImGui::IsKeyDown(ImGuiKey_A))
+        roll += roll_increment;
+    if(ImGui::IsKeyDown(ImGuiKey_D))
+        roll -= roll_increment;
+    if(ImGui::IsKeyDown(ImGuiKey_Q))
+        yaw += yaw_increment;
+    lastLaunch++;
+}
+``` 
+
+Which are all necessary changes. You may still want to try the GLFW based variant as it shows some further C++ features and might be useful in general.
+
+![Example image of the final result showing a spray of many spheres](https://github.com/user-attachments/assets/fb85a57d-fec7-451e-8d85-3baa0d8e38a3)
+
+
+### GLFW Event based Input
+
+Adding the GLFW event based input is significantly more involved as we first need to tell GLFW to send all key inputs to a custom function instead of letting ImGUI handle everything. To do this we need to make changes in the src folder (reminder: you do not submit these files!):
+```cpp
+// src/Simulator.cpp
+void Simulator::init(){
+    //...
+    glfwSetWindowUserPointer(renderer.getWindow(), this);
+
+    glfwSetKeyCallback(renderer.getWindow(), [](GLFWwindow *window, int key, int scancode, int action, int mods) {
+        auto simulator = static_cast<Simulator *>(glfwGetWindowUserPointer(window));
+        simulator->onKeyInput(window, key, scancode, action, mods);
+    });
+}
+```
+
+What we do here is to first set a _user_ pointer in the GLFW window state, which is useful as the event function cannot otherwise access the simulator instance. Note that we could also do this by using a Singleton design pattern for the simulator, which may be something you want to do in your own code. Also note that this requires some _C_ wizardry via void-pointers. Please try to avoid this as much as possible in your own code as casting things to and from void-pointers is very error prone with unpredictable and unexpected behavior, e.g., if things go wrong your code might order some pizza online.
+
+We also need to actually add this onKeyInput function to the parent scene class
+
+```cpp
+//Scene.h
+class Scene{
+    //...
+    virtual void onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods){}
+}
+```
+
+To do this we need to override the onKeyInput function of the actual scene and create a structure to keep track of the currently pressed inputs (more on this later):
 
 ```cpp
 // Scene1.h
