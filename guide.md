@@ -106,7 +106,7 @@ __Please note that this file is not part of the code you are submitting when com
 
 If we now want to add/modify our own Scene we have to take a look at Scene1.h and Scene1.hpp. A custom scene inherits from the parent scene by default and is not required to override anything:
 ```cpp
-class Scene1 : public Scene{}
+class Scene1 : public Scene{};
 ``` 
 
 The scenes are registered with a name in the SceneIndex.h file (here in line 16):
