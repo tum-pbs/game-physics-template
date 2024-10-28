@@ -21,7 +21,7 @@ git clone https://github.com/tum-pbs/game-physics-template
 
 And Open the folder in VsCode (Chose Open Folder... when launching VsCode and browse to the folder you cloned the repository into).
 
-After doing this you should see a drop down by the CMake extension asking for a _kit_, which is a combination of compiler and build system, where you can pick which compiler you want to use. For Windows choose Visual Studio Community Release with either amd64_x86 or x86_amd64 in the name:
+After doing this you should see a drop down by the CMake extension asking for a _kit_, which is a combination of compiler and build system, where you can pick which compiler you want to use. For Windows choose Visual Studio Community Release with x86_amd64 in the name or pick [Unspecified] to let CMake figure it out (should you get some strange linker errors pick the x86_amd64 one manually and make sure to not use the amd64_x86 as this can lead to issues on some systems):
 
 ![alt text](https://github.com/user-attachments/assets/64d42b7e-009f-4776-a0e7-3b93dee80af6)
 
@@ -29,8 +29,11 @@ If this dropdown did not appear or you did not manage to click on the right opti
 
 ![alt text](https://github.com/user-attachments/assets/d1eaf2ab-f7f0-4469-88b9-5bca6559d11a)
 
-For MacOS choose Clang for your respective architecture, e.g., arm64 for M series processors:
+For MacOS choose Clang for your respective architecture, e.g., arm64 for M series processors (or leave it as [Unspecified]):
 ![alt text](https://github.com/user-attachments/assets/c05deee4-74ba-4379-9c42-011e32d97d44)
+
+For Linux chose the newest version of your compiler (or leave it as unspecified):
+![alt-text](https://github.com/user-attachments/assets/13a3ca61-b72c-4e76-bc4c-cb7d578ace66)
 
 Doing this should open an output window at the bottom with CMake/Build selected and cmake will setup the kit, which will take a moment to complete
 
