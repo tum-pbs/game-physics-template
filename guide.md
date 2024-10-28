@@ -430,7 +430,7 @@ class Scene1 : public Scene{
     float roll_increment = 0.005f;
     float yaw_increment = 0.005f;
 
-    int32_t launch_delay = 32;
+    int32_t launch_delay = 8;
     int32_t lastLaunch = 0;
     void launchSphere();
     //...
@@ -459,6 +459,11 @@ void Scene1::launchSphere(){
     velocity += up * (dis(gen) - 0.5f) * 2.f;
 
     particles.push_back(Particle{glm::vec3(0), velocity, color, .0});
+}
+
+void Scene1::onGUI(){
+    // ...
+    ImGui::SliderInt("Launch Delay", &launch_delay, 0, 100);
 }
 ```
 
@@ -516,6 +521,8 @@ void Scene1::simulateStep(){
         roll -= roll_increment;
     if(ImGui::IsKeyDown(ImGuiKey_Q))
         yaw += yaw_increment;
+    if(ImGui::IsKeyDown(ImGuiKey_E))
+        yaw -= yaw_increment;
     lastLaunch++;
 }
 ``` 
