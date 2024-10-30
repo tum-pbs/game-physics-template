@@ -32,15 +32,15 @@ public:
     glm::mat4 viewMatrix;
     /// The projection matrix of the camera
     glm::mat4 projectionMatrix();
-    /// Update the camera view matrix by looking at the target from the current position with the up vector (0,0,1)
+    /// Update the camera view matrix by looking at the target from the current position with the up vector (0,1,0)
     void lookAt(glm::vec3 target);
     /// Compute the aspect ratio of the window
     float aspectRatio();
 
 private:
     const glm::vec3 worldRight = glm::vec3(1, 0, 0);
-    const glm::vec3 worldForward = glm::vec3(0, 1, 0);
-    const glm::vec3 worldUp = glm::vec3(0, 0, 1);
+    const glm::vec3 worldForward = glm::vec3(0, 0, 1);
+    const glm::vec3 worldUp = glm::vec3(0, 1, 0);
 
     glm::vec2 cameraAngles = glm::vec2(-0.1, 0.2);
     float zoom = -2;
