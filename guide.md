@@ -394,7 +394,7 @@ void Scene1::simulateStep(){
 To remove particles after 1 second we add this call to the end of the simulateStep function where we remove particles if a conditional is true for the respective entry:
 ```cpp
     particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& particle){
-        return particle.lifetime > 1.f;
+        return particle.lifetime > 1.5f;
     }), particles.end());
 ```
 All of this gives us this interactive physics simulation:
@@ -406,7 +406,7 @@ All of this gives us this interactive physics simulation:
 If we want to add gravity we can simply add a gravitational field in the simulateStep function and update the velocity accordingly:
 
 ```cpp
-glm::vec3 gravityAccel = glm::vec3(0, -9.81f, 0);
+glm::vec3 gravityAccel = glm::vec3(0, 0, -9.81f);
 
 for (auto& particle : particles){
     particle.position += 0.01f * particle.velocity;
@@ -415,9 +415,11 @@ for (auto& particle : particles){
 }
 ```
 
+In this case we set the gravity to be pointing down in the z-direction. Note that some physics engines assign the "down" direction to be the negative y-coordinate (this is an interesting legacy development, e.g., consider 2D games where the down direction is naturally y). Within this framework we always set the z-direction to be up and down and chose the gravity accordingly.
+
 Which gives us our final physics system:
 
-![alt text](https://github.com/user-attachments/assets/34273fe0-48a0-46e9-b9e3-f3da85563a85)
+![alt text](https://github.com/user-attachments/assets/80a47bc6-8266-4144-9ec2-74f4447f74cf)
 
 ## Keyboard input
 
@@ -496,7 +498,7 @@ void Scene1::simulateStep(){
     // roll += roll_increment;
     // yaw += yaw_increment;
 
-    glm::vec3 gravityAccel = glm::vec3(0, -9.81f, 0);
+    glm::vec3 gravityAccel = glm::vec3(0, 0, -9.81f);
 
     for (auto& particle : particles){
         particle.position += 0.01f * particle.velocity;
@@ -505,7 +507,7 @@ void Scene1::simulateStep(){
     }
     
     particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& particle){
-        return particle.lifetime > 1.f;
+        return particle.lifetime > 1.5f;
     }), particles.end());
 
 
@@ -567,14 +569,14 @@ void Scene1::onDraw(Renderer& renderer){
     auto cmap = Colormap("viridis");
 
     for (auto& particle : particles){
-        renderer.drawSphere(particle.position, 0.1f, glm::vec4(cmap(particle.lifetime), 1));
+        renderer.drawSphere(particle.position, 0.1f, glm::vec4(cmap(particle.lifetime / 1.5f), 1));
     }
 }
 ```
 
 Note that the colormap returns no alpha channel so we need to expand the returned color to be RGBA.
 
-![image](https://github.com/user-attachments/assets/da2bd20a-e738-41c9-87fd-8cd58c23c928)
+![image](https://github.com/user-attachments/assets/37f5c448-ea09-4c0f-884b-21101b8f02dd)
 
 ## Mouse Input
 
