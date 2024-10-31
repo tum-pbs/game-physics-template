@@ -552,32 +552,6 @@ void Scene1::simulateStep(){
 }
 ```
 
-## Colormapping
-
-If you would like to color things in your simulation based on some attribute then color mapping is a useful approach where our framework supports most common matplotlib colormaps you can find [here](https://matplotlib.org/stable/users/explain/colors/colormaps.html). A colormap within framework is consturcted by giving it a string for the colormap name and then calling it with a float in the range 0 to 1 (the input is clamped to this value, so you need to manually map the inputs), e.g.,
-```cpp
-auto cmap = Colormap("viridis");
-glm::vec3 color = cmap(0.5);
-```
-
-A way we can incorporate this into our example is by coloring spheres not randomly but based on their lifetime:
-
-```cpp
-// Scene1.cpp
-void Scene1::onDraw(Renderer& renderer){
-// ...
-    auto cmap = Colormap("viridis");
-
-    for (auto& particle : particles){
-        renderer.drawSphere(particle.position, 0.1f, glm::vec4(cmap(particle.lifetime / 1.5f), 1));
-    }
-}
-```
-
-Note that the colormap returns no alpha channel so we need to expand the returned color to be RGBA.
-
-![image](https://github.com/user-attachments/assets/37f5c448-ea09-4c0f-884b-21101b8f02dd)
-
 ## Mouse Input
 
 
