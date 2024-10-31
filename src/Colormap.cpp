@@ -18,7 +18,6 @@ Colormap::Colormap(std::string name)
         init();
     }
     index = indices[name];
-    std::cout << index << std::endl;
 }
 
 float Colormap::textureOffset()
@@ -55,14 +54,8 @@ void Colormap::init()
     int offset = 0;
     while (std::getline(file, line))
     {
-        line.erase(std::remove(line.begin(), line.end(), '\r' ), line.end());
-        line.erase(std::remove(line.begin(), line.end(), '\n' ), line.end());
-
         names.push_back(line);
         indices[line] = offset;
-
-
-        // std::cout << "line: " << line << "\n offset " << offset << std::endl;
         offset++;
     }
     path = RESOURCE_DIR "/colormaps.png";
