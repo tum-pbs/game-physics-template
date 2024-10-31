@@ -531,138 +531,113 @@ Which are all necessary changes. You may still want to try the GLFW based varian
 
 ![Example image of the final result showing a spray of many spheres](https://github.com/user-attachments/assets/fb85a57d-fec7-451e-8d85-3baa0d8e38a3)
 
+## Real Time Integration
 
-### GLFW Event based Input
+So far we only used a fixed hardcoded timestep, but this may not be the most appropriate solution for your game. A common way to do physics is to instead implement an adaptive timestepping that takes the framerate of the game into account, which you can simply get via ImGui using `ImGui::GetIO().DeltaTime`. Implementing this in our demo code then is straight forward:
 
-Adding the GLFW event based input is significantly more involved as we first need to tell GLFW to send all key inputs to a custom function instead of letting ImGUI handle everything. To do this we need to make changes in the src folder (reminder: you do not submit these files!):
-```cpp
-// src/Simulator.cpp
-void Simulator::init(){
-    //...
-    glfwSetWindowUserPointer(renderer.getWindow(), this);
-
-    glfwSetKeyCallback(renderer.getWindow(), [](GLFWwindow *window, int key, int scancode, int action, int mods) {
-        auto simulator = static_cast<Simulator *>(glfwGetWindowUserPointer(window));
-        simulator->onKeyInput(window, key, scancode, action, mods);
-    });
-}
-```
-
-What we do here is to first set a _user_ pointer in the GLFW window state, which is useful as the event function cannot otherwise access the simulator instance. Note that we could also do this by using a Singleton design pattern for the simulator, which may be something you want to do in your own code. Also note that this requires some _C_ wizardry via void-pointers. Please try to avoid this as much as possible in your own code as casting things to and from void-pointers is very error prone with unpredictable and unexpected behavior, e.g., if things go wrong your code might order some pizza online.
-
-We also need to actually add this onKeyInput function to the parent scene class
-
-```cpp
-//Scene.h
-class Scene{
-    //...
-    virtual void onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods){}
-}
-```
-
-To do this we need to override the onKeyInput function of the actual scene and create a structure to keep track of the currently pressed inputs (more on this later):
-
-```cpp
-// Scene1.h
-class Scene1 : public Scene{
-    //...
-    struct inputState{
-        bool space = false;
-        bool w = false, a = false, s = false, d = false;
-        bool e = false, q = false;
-    };
-    inputState keyState;
-
-    virtual void onKeyInput(GLFWwindow *window, int key, int scancode, int action, int mods) override;
-    //...
-}
-```
-
-Key input in GLFW works by sending events whenever a key is pressed. To find out which key is being pressed we can look at the _key_ argument, e.g., if we press spacebar then key is equal to `GLFW_KEY_SPACE`. _mods_ contains any modifiers, i.e., shift, alt and control, whereas scancode is an internal value that we do not need to worry about too much. The important part for us now is the action which can have three values:
-
-- GLFW_KEY_PRESS
-- GLFW_KEY_HELD
-- GLFW_KEY_REPEAT
-
-The first value is sent on the initial press of the button and the repeat value is sent once we release the button, note that if a user tabs out of the program and releases the key without the games window being in focus, no release event will be sent and the input is _stuck_. We could naively use the held event to shoot spheres but this would not be fun on most systems as there is a multiple second delay before this event is triggered. In most applications this is beneficial (try pressing a key on your keyboard in an editor and notice the delay), but for us this is not ideal. 
-
-Instead we will key track of which key is currently held manually:
 ```cpp
 // Scene1.cpp
-void Scene1::onKeyInput(GLFWwindow* window,  int key, int scancode, int action, int mods){
-    if(action == GLFW_PRESS){
-        if(key == GLFW_KEY_W)
-            keyState.w = true;
-        if(key == GLFW_KEY_A)
-            keyState.a = true;
-        if(key == GLFW_KEY_S)
-            keyState.s = true;        
-        if(key == GLFW_KEY_D)
-            keyState.d = true;        
-        if(key == GLFW_KEY_E)
-            keyState.e = true;        
-        if(key == GLFW_KEY_Q)
-            keyState.q = true;
-        if(key == GLFW_KEY_SPACE)
-            keyState.space = true;
-    }
-    if(action == GLFW_RELEASE){
-        if(key == GLFW_KEY_W)
-            keyState.w = false;
-        if(key == GLFW_KEY_A)
-            keyState.a = false;
-        if(key == GLFW_KEY_S)
-            keyState.s = false;        
-        if(key == GLFW_KEY_D)
-            keyState.d = false;        
-        if(key == GLFW_KEY_E)
-            keyState.e = false;        
-        if(key == GLFW_KEY_Q)
-            keyState.q = false;
-        if(key == GLFW_KEY_SPACE)
-            keyState.space = false;
-    }
-}
-```
 
-Which is repetetive and error prone so try avoiding code like this if possible. We then modify our simulateStep function to no longer automatically rotate the cube and shoot a sphere when the spacebar is held down:
-```cpp
-// Scene1.cpp
 void Scene1::simulateStep(){
-    // pitch += pitch_increment;
-    // roll += roll_increment;
-    // yaw += yaw_increment;
+    float realtimeDt = ImGui::GetIO().DeltaTime;
+    // ...    
+    for (auto& particle : particles){
+        particle.position += realtimeDt * particle.velocity;
+        particle.lifetime += realtimeDt;
+        particle.velocity += gravityAccel * realtimeDt;
+    }
+    // ...
+}
+```
 
-    glm::vec3 gravityAccel = glm::vec3(0, -9.81f, 0);
+## Colormapping
+
+If you would like to color things in your simulation based on some attribute then color mapping is a useful approach where our framework supports most common matplotlib colormaps you can find [here](https://matplotlib.org/stable/users/explain/colors/colormaps.html). A colormap within framework is consturcted by giving it a string for the colormap name and then calling it with a float in the range 0 to 1 (the input is clamped to this value, so you need to manually map the inputs), e.g.,
+```cpp
+auto cmap = Colormap("viridis");
+glm::vec3 color = cmap(0.5);
+```
+
+A way we can incorporate this into our example is by coloring spheres not randomly but based on their lifetime:
+
+```cpp
+// Scene1.cpp
+void Scene1::onDraw(Renderer& renderer){
+// ...
+    auto cmap = Colormap("viridis");
 
     for (auto& particle : particles){
-        particle.position += 0.01f * particle.velocity;
-        particle.lifetime += 0.01f;
-        particle.velocity += gravityAccel * 0.01f;
+        renderer.drawSphere(particle.position, 0.1f, glm::vec4(cmap(particle.lifetime), 1));
     }
-    
-    particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& particle){
-        return particle.lifetime > 1.f;
-    }), particles.end());
-
-    if(keyState.space)
-        launchSphere();
-    if(keyState.w)
-        pitch += pitch_increment;
-    if(keyState.s)
-        pitch -= pitch_increment;
-    if(keyState.a)
-        roll += roll_increment;
-    if(keyState.d)
-        roll -= roll_increment;
-    if(keyState.q)
-        yaw += yaw_increment;
-    if(keyState.e)
-        yaw -= yaw_increment;
-    lastLaunch++;
 }
-``` 
+```
 
-Which gives us our final interactive program that covers all relevant aspects of the framework!
+Note that the colormap returns no alpha channel so we need to expand the returned color to be RGBA.
 
-![Example image of the final result showing a spray of many spheres](https://github.com/user-attachments/assets/fb85a57d-fec7-451e-8d85-3baa0d8e38a3)
+![image](https://github.com/user-attachments/assets/da2bd20a-e738-41c9-87fd-8cd58c23c928)
+
+## Mouse Input
+
+
+Something that may come in handy is having the ability to have a user click and drag on the screen to apply a force to the objects in the scene, even though it is not that useful for this demo example. 
+
+This can be done as well in our framework but is a bit more involved as this requires camera information that is not readily available during the simulator (a simulation does not have the concept of a camera in most cases). Accordingly we need to save all relevant information during a part of the render process where it is available to make it available during the simulation.
+
+To do this we add a few members to our _Scene_ class:
+```cpp
+// Scene.h
+class Scene{
+    //...
+    glm::mat4 cameraMatrix = glm::mat4(1);
+    glm::vec3 fwd = glm::vec3(1, 0, 0);
+    glm::vec3 right = glm::vec3(0, 1, 0);
+    glm::vec3 up = glm::vec3(0, 0, 1);
+}
+```
+
+Which are then used to store all relevant information. In these members we will store the camera matrix and from this also derive the forward (the direction _into_ the screen) and the right and up vectors (relative to the camera coordinate system). The forward direction could also be used to _shoot_ objects into the scene, whereas the right and up will be used for a dragging interaction.
+
+To capture this information we need to modify the _onDraw_ function (make sure to do this in the child scenes if they override the parent function too!):
+```cpp
+// Scene.cpp
+void onDraw(Renderer& renderer){
+    //...
+    cameraMatrix = renderer.camera.viewMatrix;
+    fwd = inverse(cameraMatrix) * vec4(0, 0, 1, 0);
+    right = inverse(cameraMatrix) * vec4(1, 0, 0, 0);
+    up = inverse(cameraMatrix) * vec4(0, 1, 0, 0);
+}
+```
+
+To then add a dragging interaction for the right mouse button (the left is used for camera interactivity) we can check if the mouse button was released before the current frame using 
+```cpp
+ImGui::IsMouseReleased(ImGuiMouseButton_Right)
+```
+
+Which returns true in this case (we could also add interactivity where the button is _held_ down instead of released but this is left to the reader as an exercise). We can then get the amount of _pixels_ the mouse was dragged by using 
+```cpp
+auto drag = ImGui::GetMouseDragDelta(1);
+```
+Note the 1 in the argument to get the drag delta for the _right_ mouse button. If the drag distance was zero we skip adding a force to an object, e.g., if this is done during a loop over all objects:
+```cpp
+if(ImGui::IsMouseReleased(ImGuiMouseButton_Right)){   
+    auto drag = ImGui::GetMouseDragDelta(1);
+    if(drag.x == 0 && drag.y == 0)
+        continue;
+    //...
+}
+```
+
+To now calculate the mouse force we multiply the drag in the x-direction with the _right_ vector of the camera and the drag in y-direction with the _up_ vector of the camera. Due to conventions and preferences some users may prefer inverting certain components, e.g., should the mouse being moved left move the object to the left (this makes a lot of sense for dragging interactions) or should we use a _spring_ like interaction where we move the mouse to the right and on releasing the button the distance we moved influences the force applied to the object in the opposite direction (this makes a lot of sense for on release interactions). In a full game engine it makes sense to make this configurable for the user but here we invert the y-coordinate (due to screen coordinate systems) and keep the x as is:
+```cpp
+if(ImGui::IsMouseReleased(ImGuiMouseButton_Right)){   
+    auto drag = ImGui::GetMouseDragDelta(1);
+    if(drag.x == 0 && drag.y == 0)
+        continue;
+    auto dx = drag.x * right;
+    auto dy = -drag.y * up;
+    object.force += dx + dy;
+}
+```
+
+You might also want to scale this force or precompute the value once outside of looping over all objects to avoid recomputing the same values over and over again. Also make sure to apply this force in every substep of multistep integrators!
