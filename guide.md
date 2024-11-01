@@ -579,9 +579,9 @@ To capture this information we need to modify the _onDraw_ function (make sure t
 void onDraw(Renderer& renderer){
     //...
     cameraMatrix = renderer.camera.viewMatrix;
-    fwd = inverse(cameraMatrix) * vec4(0, 0, 1, 0);
-    right = inverse(cameraMatrix) * vec4(1, 0, 0, 0);
-    up = inverse(cameraMatrix) * vec4(0, 1, 0, 0);
+    fwd = inverse(cameraMatrix) * glm::vec4(0, 0, 1, 0);
+    right = inverse(cameraMatrix) * glm::vec4(1, 0, 0, 0);
+    up = inverse(cameraMatrix) * glm::vec4(0, 1, 0, 0);
 }
 ```
 
