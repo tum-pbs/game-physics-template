@@ -19,6 +19,10 @@ void Scene1::onDraw(Renderer& renderer){
     for (auto& particle : particles){
         renderer.drawSphere(particle.position, 0.1f, particle.color);
     }
+    cameraMatrix = renderer.camera.viewMatrix;
+    fwd = inverse(cameraMatrix) * glm::vec4(0, 0, 1, 0);
+    right = inverse(cameraMatrix) * glm::vec4(1, 0, 0, 0);
+    up = inverse(cameraMatrix) * glm::vec4(0, 1, 0, 0);
 }
 
 void Scene1::simulateStep(){
@@ -26,16 +30,25 @@ void Scene1::simulateStep(){
     // roll += roll_increment;
     // yaw += yaw_increment;
 
-    glm::vec3 gravityAccel = glm::vec3(0, -9.81f, 0);
+    glm::vec3 gravityAccel = glm::vec3(0, 0, -9.81f);
 
     for (auto& particle : particles){
         particle.position += 0.01f * particle.velocity;
         particle.lifetime += 0.01f;
         particle.velocity += gravityAccel * 0.01f;
     }
-    
+    if(ImGui::IsMouseReleased(ImGuiMouseButton_Right)){   
+        auto drag = ImGui::GetMouseDragDelta(1);
+        if(!(drag.x == 0 && drag.y == 0)){
+            auto dx = drag.x * right;
+            auto dy = -drag.y * up;
+            for (auto& particle : particles){
+                particle.velocity += (dx + dy) * 0.01f;
+            }
+        }
+    }
     particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& particle){
-        return particle.lifetime > 1.f;
+        return particle.lifetime > 2.f;
     }), particles.end());
 
     if(keyState.space)
