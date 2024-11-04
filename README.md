@@ -18,6 +18,8 @@
 5. Open the project in your IDE, for example [Visual Studio Code]
 (https://code.visualstudio.com/), and add [src](src) and [thirdparty](thirdparty) to the include directories. This is just for autocomplete. The build will work without it.
 
+Note that currently _WSL2 on Windows is not supported_ as there are issues with using webGPU on it, however, both Visual Studio 17 (2022) directly on Windows and MinGW are supported as alternatives. If you are facing issues on Windows in general, try cloning the repository again into a path _without any spaces_ and retry the build process. We will be adding a compatibility and common issues list soon.
+
 ## Building and Running the Project
 1. Everytime you add new files, and once in the beginning, run
 ```
