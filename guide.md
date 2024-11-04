@@ -485,7 +485,7 @@ The first two states are self-explanatory and describe the state of a key after 
 
 A key being pressed and released is an _event_, i.e., it is a change of state of the keyboard and if we only look at the _state_ of a key then we cannot detect this single event, however, we can utilize our operating system or window system to send us a notification if this _event_ occured and we have to write functions that react to events instead of checking the state of keys. This has some other convenient advantages, e.g., if our game is running at 1 fps then we have to hold a key for an entire second to make sure the key is being pressed while _some_ function checks for input and there is no way to queue events, whereas for an event based system we only need to make sure that the event is sent at _some_ point which is then queued up for processing. While this may be an extreme example, there can be weird interactions or situations where two functions check for key state during a frame and one sees a key as being held and one sees a key as not being held, leading to very subtle and hard to reproduce bugs. On the other hand, for an event based system a common bug is someone _tabbing_ out of the game while holding a key such that the key _release_ event is never sent. Can you think of other issues?
 
-If you want to use input during any submission __DO NOT USE THE GLFW VARIANT__. The GLFW variant requires changes to files outside of the Scene folder which are not part of the code you submit. (Note that this will only mean that the tutor grading your exercise wont be able to press buttons for any interactive element you chose to implement, and you will not be able to use this during the exam)
+Implementing an event based input, e.g., using GLFW key callbacks or ImGUI events, requires changes to files outside of the Scene folder which are not part of the code you submit. (Note that this will mean that the tutor grading your exercise wont be able to press buttons for any interactive element you chose to implement, and you will not be able to use this during the exam so we stronlgy recommend using immediate inputs).
 
 ### ImGUI Immediate mode inputs
 
@@ -529,7 +529,7 @@ void Scene1::simulateStep(){
 }
 ``` 
 
-Which are all necessary changes. You may still want to try the GLFW based variant as it shows some further C++ features and might be useful in general.
+Which are all necessary changes. If you are very curious about input handling then implementing a GLFW event based version can be quite a challenge as it requires changes to multiple files, even outside of the Scenes folder, and potentially some manual tracking of inputs, however, this is not necessary as immediate mode inputs will suffice for all features for this course.
 
 ![Example image of the final result showing a spray of many spheres](https://github.com/user-attachments/assets/fb85a57d-fec7-451e-8d85-3baa0d8e38a3)
 
@@ -617,3 +617,33 @@ if(ImGui::IsMouseReleased(ImGuiMouseButton_Right)){
 ```
 
 You might also want to scale this force or precompute the value once outside of looping over all objects to avoid recomputing the same values over and over again. Also make sure to apply this force in every substep of multistep integrators!
+
+Applying this to our particle shooter is straight forward by modifying the simulateStep function (after including the changes to the Scene1 class and the onDraw function):
+```cpp
+void Scene1::simulateStep(){
+    // ...
+    if(ImGui::IsMouseReleased(ImGuiMouseButton_Right)){   
+        auto drag = ImGui::GetMouseDragDelta(1);
+        if(!(drag.x == 0 && drag.y == 0)){
+            auto dx = drag.x * right;
+            auto dy = -drag.y * up;
+            for (auto& particle : particles){
+                particle.velocity += (dx + dy) * 0.01f;
+            }
+        }
+    }
+}
+```
+
+And an example of the behavior this leads to after dragging particles to the right:
+
+![Image showing mouse interaciton](https://github.com/user-attachments/assets/2f770c5c-f35d-4ff2-86c7-fcab37bfa1e0)
+
+While this interaction is not _physical_ it allows us to add some fun interactivity. If you make these changes you may also want to change how long particles exist as they vanish very quickly which you can do by updating
+```cpp
+particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& particle){
+    return particle.lifetime > 1.5f;
+}), particles.end());
+``` 
+
+You may also want to consider making the lifetime a GUI element or updating it based on the interactions, e.g., a particle that was dragged around has the lifetime counter reset.
