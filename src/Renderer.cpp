@@ -225,6 +225,10 @@ void Renderer::initWindowAndDevice()
 
 	RequestAdapterOptions adapterOpts{};
 	adapterOpts.compatibleSurface = surface;
+#ifdef WGPU_GPU_HIGH_PERFORMANCE
+	adapterOpts.powerPreference = WGPUPowerPreference_HighPerformance;
+#endif
+
 	Adapter adapter = instance.requestAdapter(adapterOpts);
 
 	SupportedLimits supportedLimits;
