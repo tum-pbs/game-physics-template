@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1...3.25)
+cmake_minimum_required(VERSION 3.16...3.25)
 
 project(
 	GamePhysicsTemplate
@@ -10,12 +10,28 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 set(CMAKE_CXX_EXTENSIONS Off)
 
-option(DEV_MODE "Set up development helper settings" ON)
 
-add_subdirectory(thirdparty/glfw)
+
+if(UNIX)
+	if ($ENV{XDG_SESSION_TYPE} STREQUAL "x11")
+		set(display_server_x11 TRUE)
+		message(" Using X11" )
+	else()
+		set(display_server_x11 FALSE)
+		set(GLFW_USE_WAYLAND TRUE)
+	endif()
+endif(UNIX)
+
+option(DEV_MODE "Set up development helper settings" ON)
 add_subdirectory(thirdparty/webgpu)
+add_subdirectory(thirdparty/glfw)
 add_subdirectory(thirdparty/glfw3webgpu)
 add_subdirectory(thirdparty/imgui)
+
+option(USE_HIGH_PERFORMANCE_GPU " Use high performance gpu by default, mostly the discrete GPU" ON)
+if (USE_HIGH_PERFORMANCE_GPU)
+	add_compile_definitions(WGPU_GPU_HIGH_PERFORMANCE="ON")
+endif()
 
 add_executable(Template
 	src/implementations.cpp
@@ -33,6 +49,21 @@ add_executable(Template
 	src/Colormap.h
 	src/Colormap.cpp
 )
+
+if(UNIX)
+	if ($ENV{XDG_SESSION_TYPE} STREQUAL "x11")
+		set(display_server_x11 TRUE)
+		message(" Using X11" )
+	else()
+		set(display_server_x11 FALSE)
+		set(GLFW_USE_WAYLAND TRUE)
+		# add_compile_definitions(_GLFW_WAYLAND=1)
+		target_compile_definitions(Template PUBLIC _GLFW_WAYLAND=1)
+		target_compile_definitions(imgui PUBLIC _GLFW_WAYLAND=1)
+		target_compile_definitions(glfw3webgpu PUBLIC _GLFW_WAYLAND=1)
+		message("Using Wayland!")
+	endif()
+endif(UNIX)
 
 target_compile_definitions(Template PRIVATE
 		GLM_FORCE_RIGHT_HANDED
