@@ -20,12 +20,12 @@ void Simulator::init()
         currentScene->init();
     }
 
-    glfwSetWindowUserPointer(renderer.getWindow(), this);
+    // glfwSetWindowUserPointer(renderer.getWindow(), this);
 
-    glfwSetKeyCallback(renderer.getWindow(), [](GLFWwindow *window, int key, int scancode, int action, int mods) {
-        auto simulator = static_cast<Simulator *>(glfwGetWindowUserPointer(window));
-        simulator->onKeyInput(window, key, scancode, action, mods);
-    });
+    // glfwSetKeyCallback(renderer.getWindow(), [](GLFWwindow *window, int key, int scancode, int action, int mods) {
+    //     auto simulator = static_cast<Simulator *>(glfwGetWindowUserPointer(window));
+    //     simulator->onKeyInput(window, key, scancode, action, mods);
+    // });
 }
 
 void Simulator::simulateStep()
@@ -118,7 +118,7 @@ void Simulator::onDraw()
     lastDrawPrepTime = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - startTime).count();
 };
 
-void Simulator::onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods){
-    if (currentScene != nullptr)
-        currentScene->onKeyInput(window, key, scancode, action, mods);
-}
+// void Simulator::onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods){
+//     if (currentScene != nullptr)
+//         currentScene->onKeyInput(window, key, scancode, action, mods);
+// }

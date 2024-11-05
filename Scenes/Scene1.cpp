@@ -51,19 +51,19 @@ void Scene1::simulateStep(){
         return particle.lifetime > 2.f;
     }), particles.end());
 
-    if(keyState.space)
+    if(ImGui::IsKeyDown(ImGuiKey_Space))
         launchSphere();
-    if(keyState.w)
+    if(ImGui::IsKeyDown(ImGuiKey_W))
         pitch += pitch_increment;
-    if(keyState.s)
+    if(ImGui::IsKeyDown(ImGuiKey_S))
         pitch -= pitch_increment;
-    if(keyState.a)
+    if(ImGui::IsKeyDown(ImGuiKey_A))
         roll += roll_increment;
-    if(keyState.d)
+    if(ImGui::IsKeyDown(ImGuiKey_D))
         roll -= roll_increment;
-    if(keyState.q)
+    if(ImGui::IsKeyDown(ImGuiKey_Q))
         yaw += yaw_increment;
-    if(keyState.e)
+    if(ImGui::IsKeyDown(ImGuiKey_E))
         yaw -= yaw_increment;
     lastLaunch++;
 }
@@ -99,38 +99,4 @@ void Scene1::onGUI(){
         launchSphere();
     }
 
-}
-void Scene1::onKeyInput(GLFWwindow* window,  int key, int scancode, int action, int mods){
-    if(action == GLFW_PRESS){
-        if(key == GLFW_KEY_W)
-            keyState.w = true;
-        if(key == GLFW_KEY_A)
-            keyState.a = true;
-        if(key == GLFW_KEY_S)
-            keyState.s = true;        
-        if(key == GLFW_KEY_D)
-            keyState.d = true;        
-        if(key == GLFW_KEY_E)
-            keyState.e = true;        
-        if(key == GLFW_KEY_Q)
-            keyState.q = true;
-        if(key == GLFW_KEY_SPACE)
-            keyState.space = true;
-    }
-    if(action == GLFW_RELEASE){
-        if(key == GLFW_KEY_W)
-            keyState.w = false;
-        if(key == GLFW_KEY_A)
-            keyState.a = false;
-        if(key == GLFW_KEY_S)
-            keyState.s = false;        
-        if(key == GLFW_KEY_D)
-            keyState.d = false;        
-        if(key == GLFW_KEY_E)
-            keyState.e = false;        
-        if(key == GLFW_KEY_Q)
-            keyState.q = false;
-        if(key == GLFW_KEY_SPACE)
-            keyState.space = false;
-    }
 }

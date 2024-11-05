@@ -38,15 +38,6 @@ class Scene1 : public Scene
     virtual void simulateStep() override;
     virtual void onGUI() override;
 
-    struct inputState{
-        bool space = false;
-        bool w = false, a = false, s = false, d = false;
-        bool e = false, q = false;
-    };
-    inputState keyState;
-
-    virtual void onKeyInput(GLFWwindow *window, int key, int scancode, int action, int mods) override;
-
 public:
     Scene1() : gen(rd()), dis(0.f, 1.f) {}
 };

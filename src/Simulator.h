@@ -37,5 +37,5 @@ private:
     double lastDrawPrepTime = 0;
     bool limitFPS = true;
     
-    void onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods);
+    // void onKeyInput(GLFWwindow* window, int key, int scancode, int action, int mods);
 };
