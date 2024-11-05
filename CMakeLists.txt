@@ -12,7 +12,7 @@ set(CMAKE_CXX_EXTENSIONS Off)
 
 
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
 	if (DEFINED ENV{XDG_SESSION_TYPE})
 		if ($ENV{XDG_SESSION_TYPE} STREQUAL "x11")
 			set(display_server_x11 TRUE)
@@ -32,7 +32,7 @@ if(UNIX)
 		set(GLFW_BUILD_X11 FALSE)
 		message("Odd Configuration detected, XDG_SESSION_TYPE not set! If you are on WSL2 this is expected, otherwise make sure your display settings are sane.")
 	endif()
-endif(UNIX)
+endif(UNIX AND NOT APPLE)
 
 option(DEV_MODE "Set up development helper settings" ON)
 add_subdirectory(thirdparty/webgpu)
@@ -62,7 +62,7 @@ add_executable(Template
 	src/Colormap.cpp
 )
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
 	if (DEFINED ENV{XDG_SESSION_TYPE})
 		if ($ENV{XDG_SESSION_TYPE} STREQUAL "x11")
 			target_compile_definitions(Template PUBLIC _GLFW_X11=1)
@@ -79,7 +79,7 @@ if(UNIX)
 		target_compile_definitions(imgui PUBLIC _GLFW_WAYLAND=1)
 		target_compile_definitions(glfw3webgpu PUBLIC _GLFW_WAYLAND=1)
 	endif()
-endif(UNIX)
+endif(UNIX AND NOT APPLE)
 
 target_compile_definitions(Template PRIVATE
 		GLM_FORCE_RIGHT_HANDED
