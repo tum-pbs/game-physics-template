@@ -124,3 +124,6 @@ public:
 1. Add the source file to the [Scenes](Scenes) directory.
 2. Run `cmake . -B build` again before building the project.
 
+## Further reading:
+
+If you would like to know more, or work through a demo example look at our guide in this repository, which you can find in the [guide.md file](https://github.com/tum-pbs/game-physics-template/blob/main/guide.md). This guide works through input handling, extending scenes and further details like adaptive timestepping and will be updated over time too.
