@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1...3.25)
+cmake_minimum_required(VERSION 3.16...3.25)
 
 project(
 	GamePhysicsTemplate
@@ -10,12 +10,63 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 set(CMAKE_CXX_EXTENSIONS Off)
 
-option(DEV_MODE "Set up development helper settings" ON)
+option(USE_WAYLAND "Use Wayland instead of X11" OFF)
+option(USE_X11 "Use X11 instead of Wayland" OFF)
+if (USE_WAYLAND AND USE_X11)
+	message(FATAL_ERROR "You can't use both Wayland and X11 at the same time")
+endif()
 
-add_subdirectory(thirdparty/glfw)
+if(UNIX AND NOT APPLE)
+	if (DEFINED ENV{XDG_SESSION_TYPE})
+		if ($ENV{XDG_SESSION_TYPE} STREQUAL "x11")
+			set(GLFW_BUILD_X11 TRUE)
+			set(GLFW_BUILD_WAYLAND FALSE)
+			message(" Using X11 (detected via XDG_SESSION_TYPE)" )
+		else()
+			set(GLFW_BUILD_X11 FALSE)
+			set(GLFW_BUILD_WAYLAND TRUE)
+			message("Using Wayland (detected via XDG_SESSION_TYPE)")
+		endif()
+	else()
+		set(GLFW_BUILD_WAYLAND TRUE)
+		set(GLFW_BUILD_X11 FALSE)
+		message("Odd Configuration detected, XDG_SESSION_TYPE not set! If you are on WSL2 this is expected, otherwise make sure your display settings are sane.")
+	endif()
+endif(UNIX AND NOT APPLE)
+
+# Compatibility fixes for GLFW
+# Older versions used GLFW_USE_WAYLAND and GLFW_USE_X11
+# Newer versions use GLFW_BUILD_WAYLAND and GLFW_BUILD_X11
+# We need to make sure that the correct one is set for older versions
+if (DEFINED CACHE{GLFW_USE_WAYLAND})
+	unset(GLFW_USE_WAYLAND)
+	set(GLFW_BUILD_WAYLAND TRUE)
+	set(GLFW_BUILD_X11 FALSE)
+elseif(DEFINED CACHE{GLFW_USE_X11})
+	unset(GLFW_USE_X11)
+	set(GLFW_BUILD_X11 TRUE)
+	set(GLFW_BUILD_WAYLAND FALSE)
+endif()
+
+if(USE_WAYLAND)
+	set(GLFW_BUILD_WAYLAND TRUE)
+	set(GLFW_BUILD_X11 FALSE)
+elseif(USE_X11)
+	set(GLFW_BUILD_X11 TRUE)
+	set(GLFW_BUILD_WAYLAND FALSE)
+endif()
+
+
+option(DEV_MODE "Set up development helper settings" ON)
 add_subdirectory(thirdparty/webgpu)
+add_subdirectory(thirdparty/glfw)
 add_subdirectory(thirdparty/glfw3webgpu)
 add_subdirectory(thirdparty/imgui)
+
+option(USE_HIGH_PERFORMANCE_GPU " Use high performance gpu by default, mostly the discrete GPU" ON)
+if (USE_HIGH_PERFORMANCE_GPU)
+	add_compile_definitions(WGPU_GPU_HIGH_PERFORMANCE="ON")
+endif()
 
 add_executable(Template
 	src/implementations.cpp
@@ -33,6 +84,25 @@ add_executable(Template
 	src/Colormap.h
 	src/Colormap.cpp
 )
+
+if(UNIX AND NOT APPLE)
+	if (DEFINED ENV{XDG_SESSION_TYPE})
+		if ($ENV{XDG_SESSION_TYPE} STREQUAL "x11")
+			target_compile_definitions(Template PUBLIC _GLFW_X11=1)
+			target_compile_definitions(imgui PUBLIC _GLFW_X11=1)
+			target_compile_definitions(glfw3webgpu PUBLIC _GLFW_X11=1)
+		else()
+			target_compile_definitions(Template PUBLIC _GLFW_WAYLAND=1)
+			target_compile_definitions(imgui PUBLIC _GLFW_WAYLAND=1)
+			target_compile_definitions(glfw3webgpu PUBLIC _GLFW_WAYLAND=1)
+			message("Using Wayland!")
+		endif()
+	else()
+		target_compile_definitions(Template PUBLIC _GLFW_WAYLAND=1)
+		target_compile_definitions(imgui PUBLIC _GLFW_WAYLAND=1)
+		target_compile_definitions(glfw3webgpu PUBLIC _GLFW_WAYLAND=1)
+	endif()
+endif(UNIX AND NOT APPLE)
 
 target_compile_definitions(Template PRIVATE
 		GLM_FORCE_RIGHT_HANDED
