@@ -17,6 +17,11 @@ add_subdirectory(thirdparty/webgpu)
 add_subdirectory(thirdparty/glfw3webgpu)
 add_subdirectory(thirdparty/imgui)
 
+option(USE_HIGH_PERFORMANCE_GPU "Use high performance GPU, most likely a discrete GPU, should be left ON except for trouble shooting purposes." ON)
+if (USE_HIGH_PERFORMANCE_GPU)
+    add_compile_definitions(WGPU_GPU_HIGH_PERFORMANCE="ON")
+endif()
+
 add_executable(Template
 	src/implementations.cpp
 	src/main.cpp
