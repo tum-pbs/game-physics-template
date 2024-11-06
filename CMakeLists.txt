@@ -38,12 +38,12 @@ endif(UNIX AND NOT APPLE)
 # Older versions used GLFW_USE_WAYLAND and GLFW_USE_X11
 # Newer versions use GLFW_BUILD_WAYLAND and GLFW_BUILD_X11
 # We need to make sure that the correct one is set for older versions
-if (DEFINED CACHE{GLFW_USE_WAYLAND})
-	unset(GLFW_USE_WAYLAND)
+if (DEFINED GLFW_USE_WAYLAND)
+	unset(GLFW_USE_WAYLAND CACHE)
 	set(GLFW_BUILD_WAYLAND TRUE)
 	set(GLFW_BUILD_X11 FALSE)
-elseif(DEFINED CACHE{GLFW_USE_X11})
-	unset(GLFW_USE_X11)
+elseif(DEFINED GLFW_USE_X11)
+	unset(GLFW_USE_X11 CACHE)
 	set(GLFW_BUILD_X11 TRUE)
 	set(GLFW_BUILD_WAYLAND FALSE)
 endif()

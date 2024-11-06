@@ -77,13 +77,18 @@ void Simulator::onGUI()
     Separator();
     if (CollapsingHeader("Rendering"))
     {
-        if (Checkbox("Limit FPS", &limitFPS))
-        {
+#ifdef _GLFW_WAYLAND
+        ImGui::BeginDisabled();
+        if (Checkbox("Limit FPS (disabled on Wayland)", &limitFPS));
+        ImGui::EndDisabled();
+#else
+        if (Checkbox("Limit FPS", &limitFPS)){
             if (limitFPS)
                 renderer.setPresentMode(wgpu::PresentMode::Fifo);
             else
                 renderer.setPresentMode(wgpu::PresentMode::Immediate);
         }
+#endif
 
         ColorEdit3("Background Color", glm::value_ptr(renderer.backgroundColor));
         Separator();
