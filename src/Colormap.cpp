@@ -53,7 +53,11 @@ void Colormap::init()
     std::string line;
     int offset = 0;
     while (std::getline(file, line))
-    {
+    {        
+        // Sanitize inputs in case the file contains windows line endings, i.e. \r\n instead of \n
+        line.erase(std::remove(line.begin(), line.end(), '\r' ), line.end());
+        line.erase(std::remove(line.begin(), line.end(), '\n' ), line.end());
+
         names.push_back(line);
         indices[line] = offset;
         offset++;
