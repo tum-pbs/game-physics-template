@@ -25,7 +25,7 @@ class Renderer
 {
 
 public:
-	Renderer();
+	Renderer(bool verbose = false);
 	~Renderer();
 
 	/// @brief Draw a cube in the next frame
@@ -314,6 +314,7 @@ public:
 
 	RenderUniforms renderUniforms;
 	LightingUniforms lightingUniforms;
+	std::map<int64_t, bool> supportedPresentModes;
 
 private:
 	void initWindowAndDevice();
@@ -352,15 +353,18 @@ private:
 	bool reinitSwapChain = false;
 
 	bool sortDepth = false;
+	bool verbose = false;
 
 	GLFWwindow *window = nullptr;
 	wgpu::Instance instance = nullptr;
 	wgpu::Surface surface = nullptr;
+	wgpu::Adapter adapter = nullptr;
 	wgpu::Device device = nullptr;
 	wgpu::Queue queue = nullptr;
 	wgpu::TextureFormat swapChainFormat = wgpu::TextureFormat::Undefined;
 	std::unique_ptr<wgpu::ErrorCallback> errorCallbackHandle;
-	wgpu::SwapChain swapChain = nullptr;
+	// wgpu::SwapChain swapChain = nullptr;
+	wgpu::TextureView GetNextSurfaceTextureView();
 
 	InstancingPipeline instancingPipeline;
 	LinePipeline linePipeline;

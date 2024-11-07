@@ -77,18 +77,30 @@ void Simulator::onGUI()
     Separator();
     if (CollapsingHeader("Rendering"))
     {
-#ifdef _GLFW_WAYLAND
-        ImGui::BeginDisabled();
-        if (Checkbox("Limit FPS (disabled on Wayland)", &limitFPS));
-        ImGui::EndDisabled();
-#else
-        if (Checkbox("Limit FPS", &limitFPS)){
-            if (limitFPS)
-                renderer.setPresentMode(wgpu::PresentMode::Fifo);
-            else
-                renderer.setPresentMode(wgpu::PresentMode::Immediate);
+        if ((renderer.supportedPresentModes.find(wgpu::PresentMode::Mailbox) == renderer.supportedPresentModes.end()) &&
+            (renderer.supportedPresentModes.find(wgpu::PresentMode::FifoRelaxed) == renderer.supportedPresentModes.end()) &&
+            (renderer.supportedPresentModes.find(wgpu::PresentMode::Immediate) == renderer.supportedPresentModes.end()))
+        {
+            ImGui::BeginDisabled();
+            if (Checkbox("Limit FPS (no supported modes)", &limitFPS))
+                ;
+            ImGui::EndDisabled();
         }
-#endif
+        else
+            if (Checkbox("Limit FPS", &limitFPS)){
+                if (limitFPS)
+                    renderer.setPresentMode(wgpu::PresentMode::Fifo);
+                else{
+                    if (renderer.supportedPresentModes.find(wgpu::PresentMode::Mailbox) != renderer.supportedPresentModes.end())
+                        renderer.setPresentMode(wgpu::PresentMode::Mailbox);
+                    else if(renderer.supportedPresentModes.find(wgpu::PresentMode::FifoRelaxed) != renderer.supportedPresentModes.end())
+                        renderer.setPresentMode(wgpu::PresentMode::Immediate);
+                    else if (renderer.supportedPresentModes.find(wgpu::PresentMode::Immediate) != renderer.supportedPresentModes.end())
+                        renderer.setPresentMode(wgpu::PresentMode::Immediate);
+                    else
+                        renderer.setPresentMode(wgpu::PresentMode::Fifo);
+                }
+            }
 
         ColorEdit3("Background Color", glm::value_ptr(renderer.backgroundColor));
         Separator();
