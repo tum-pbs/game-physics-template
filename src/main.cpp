@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "Simulator.h"
+#include <GLFW/glfw3.h>
 
 int main(int, char **)
 {
@@ -18,8 +19,10 @@ int main(int, char **)
 	{
 		simulator.simulateStep();
 		simulator.onDraw();
+		glfwPollEvents();
 		renderer.onFrame();
 		renderer.clearScene();
+
 	}
 	return 0;
 }

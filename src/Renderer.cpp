@@ -94,8 +94,8 @@ Camera Renderer::camera = Camera();
 void Renderer::onFrame()
 {
 	auto startTime = std::chrono::high_resolution_clock::now();
-	glfwPollEvents();
 	updateLightingUniforms();
+
 	if (reinitSwapChain)
 	{
 		terminateSwapChain();
@@ -122,8 +122,9 @@ void Renderer::onFrame()
 	imagePipeline.commit();
 
 	// std::cout << "Preparing to draw" << std::endl;
-
 	TextureView nextTextureView = GetNextSurfaceTextureView();
+
+	// TextureView nextTextureView = GetNextSurfaceTextureView();
 	// SurfaceTexture surfaceTexture;
 	// surface.getCurrentTexture(&surfaceTexture);
 	// if (surfaceTexture.status != SurfaceGetCurrentTextureStatus::Success) {
@@ -243,7 +244,16 @@ void Renderer::onFrame()
 	// Check for pending error callbacks
 	device.tick();
 #endif
-	device.poll(false);
+	// device.poll(false);
+
+	// glfwPollEvents();
+	// if (reinitSwapChain)
+	// {
+	// 	terminateSwapChain();
+	// 	initSwapChain();
+	// 	reinitSwapChain = false;
+	// }
+
 }
 
 TextureView Renderer::GetNextSurfaceTextureView() {
@@ -254,6 +264,7 @@ TextureView Renderer::GetNextSurfaceTextureView() {
 		return nullptr;
 	}
 	Texture texture = surfaceTexture.texture;
+	// texture.
 
 	// Create a view for this surface texture
 	TextureViewDescriptor viewDescriptor;
@@ -266,6 +277,16 @@ TextureView Renderer::GetNextSurfaceTextureView() {
 	viewDescriptor.arrayLayerCount = 1;
 	viewDescriptor.aspect = TextureAspect::All;
 	TextureView targetView = texture.createView(viewDescriptor);
+	// if(texture.getWidth() != width || texture.getHeight() != height){
+	// 	if(verbose){
+	// 		std::cout << "Resizing texture" << std::endl;
+	// 		std::cout << "Old width: " << texture.getWidth() << std::endl;
+	// 		std::cout << "Old height: " << texture.getHeight() << std::endl;
+	// 		std::cout << "New width: " << width << std::endl;
+	// 		std::cout << "New height: " << height << std::endl;
+	// 	}
+	// 	reinitSwapChain = true;
+	// }
 
 #ifndef WEBGPU_BACKEND_WGPU
 	// We no longer need the texture, only its view
@@ -297,12 +318,21 @@ bool Renderer::isRunning()
 
 void Renderer::onResize()
 {
+	if(verbose){
+		std::cout << "Resizing window" << std::endl;
+		std::cout << "Old width: " << width << std::endl;
+		std::cout << "Old height: " << height << std::endl;
+	}
 	glfwGetFramebufferSize(window, &width, &height);
+	if(verbose){
+		std::cout << "New width: " << width << std::endl;
+		std::cout << "New height: " << height << std::endl;
+	}
 	if (width == 0 || height == 0)
 		return;
 	terminateDepthBuffer();
-	terminateSwapChain();
 	terminateRenderTexture();
+	terminateSwapChain();
 
 	initSwapChain();
 	initDepthBuffer();
@@ -426,7 +456,10 @@ void Renderer::enableDepthSorting()
 void Renderer::initSwapChain()
 {	
 	if(verbose)
+	{	
+		std::cout << "##########################################################" << std::endl;
 		std::cout << "Initializing Swapchain" << std::endl;
+	}
 	SurfaceConfiguration config = {};
 	// SwapChainDescriptor swapChainDesc;
 	config.width = static_cast<uint32_t>(width);
@@ -465,7 +498,8 @@ void Renderer::initSwapChain()
 
 void Renderer::terminateSwapChain()
 {
-	std::cout << "Releasing surface" << std::endl;
+	if(verbose)
+		std::cout << "Releasing surface" << std::endl;
 	// swapChain.release();
 	surface.unconfigure();
 }
@@ -530,7 +564,7 @@ void Renderer::terminateRenderTexture()
 }
 void Renderer::initDepthBuffer()
 {
-	glfwGetFramebufferSize(window, &width, &height);
+	// glfwGetFramebufferSize(window, &width, &height);
 
 	TextureDescriptor depthTextureDesc;
 	depthTextureDesc.dimension = TextureDimension::_2D;
@@ -639,7 +673,9 @@ void Renderer::updateLightingUniforms()
 
 void Renderer::updateProjectionMatrix()
 {
-	glfwGetFramebufferSize(window, &camera.width, &camera.height);
+	// glfwGetFramebufferSize(window, &camera.width, &camera.height);
+	camera.width = width;
+	camera.height = height;
 	renderUniforms.projectionMatrix = camera.projectionMatrix();
 	queue.writeBuffer(
 		uniformBuffer,
@@ -730,6 +766,7 @@ void Renderer::updateGui(RenderPassEncoder renderPass)
 	ImGui::EndFrame();
 
 	ImGui::Render();
+
 	ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
 }
 
