@@ -62,6 +62,15 @@ file(GLOB_RECURSE PIPELINE_HEADERS
 )
 target_sources(Template PRIVATE ${PIPELINE_SOURCES} ${PIPELINE_HEADERS})
 
+file(GLOB_RECURSE UTIL_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp
+)
+
+file(GLOB_RECURSE UTIL_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.h
+)
+target_sources(Template PRIVATE ${UTIL_SOURCES} ${UTIL_HEADERS})
+
 if(DEV_MODE)
 	# In dev mode, we load resources from the source tree, so that when we
 	# dynamically edit resources (like shaders), these are correctly
