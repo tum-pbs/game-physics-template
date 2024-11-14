@@ -9,9 +9,7 @@
 #include "pipelines/ImagePipeline.h"
 #include "Camera.h"
 #include "Colormap.h"
-
-// Forward declare
-struct GLFWwindow;
+#include <GLFW/glfw3.h>
 
 /// @brief Renderer
 ///
