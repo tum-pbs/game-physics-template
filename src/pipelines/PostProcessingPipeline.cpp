@@ -1,16 +1,13 @@
 #include "PostProcessingPipeline.h"
 #include "ResourceManager.h"
-
-#ifndef RESOURCE_DIR
-#define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
-#endif
+#include "PathFinder.h"
 
 using namespace wgpu;
 
 bool PostProcessingPipeline::init(Device &device, TextureFormat &swapChainFormat, TextureView &textureView)
 {
     this->device = device;
-    shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/post_processing.wgsl", device);
+    shaderModule = ResourceManager::loadShaderModule(resolveFile("resources/post_processing.wgsl"), device);
     RenderPipelineDescriptor pipelineDesc;
     pipelineDesc.label = "Post process pipeline";
 

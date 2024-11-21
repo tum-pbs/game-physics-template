@@ -21,6 +21,7 @@ option(USE_HIGH_PERFORMANCE_GPU "Use high performance GPU, most likely a discret
 if (USE_HIGH_PERFORMANCE_GPU)
     add_compile_definitions(WGPU_GPU_HIGH_PERFORMANCE="ON")
 endif()
+configure_file(resources/config.h.in config/config.h) 
 
 add_executable(Template
 	src/implementations.cpp
@@ -37,6 +38,7 @@ add_executable(Template
 	src/Camera.cpp
 	src/Colormap.h
 	src/Colormap.cpp
+	src/PathFinder.cpp
 )
 
 target_compile_definitions(Template PRIVATE
@@ -71,24 +73,12 @@ file(GLOB_RECURSE UTIL_HEADERS
 )
 target_sources(Template PRIVATE ${UTIL_SOURCES} ${UTIL_HEADERS})
 
-if(DEV_MODE)
-	# In dev mode, we load resources from the source tree, so that when we
-	# dynamically edit resources (like shaders), these are correctly
-	# versionned.
-	target_compile_definitions(Template PRIVATE
-		RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
-	)
-else()
-	# In release mode, we just load resources relatively to wherever the
-	# executable is launched from, so that the binary is portable
-	target_compile_definitions(Template PRIVATE
-		RESOURCE_DIR="./resources"
-	)
-endif()
-
 target_include_directories(Template PRIVATE .)
 target_include_directories(Template PRIVATE src)
 target_include_directories(Template PRIVATE thirdparty)
+target_include_directories(Template PRIVATE ${CMAKE_BINARY_DIR})
+# message(STATUS  ${CMAKE_CURRENT_SOURCE_DIR})
+# message(STATUS  ${CMAKE_BINARY_DIR})
 
 target_link_libraries(Template PRIVATE glfw webgpu glfw3webgpu imgui)
 

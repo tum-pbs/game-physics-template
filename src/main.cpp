@@ -1,8 +1,13 @@
 #include "Renderer.h"
 #include "Simulator.h"
+#include "PathFinder.h"
 
-int main(int, char **)
+int main(int argc, char ** argv)
 {
+	namespace fs = std::filesystem;
+	workingDirectory = fs::absolute(fs::path(argv[0])).remove_filename();
+    binaryDirectory = fs::current_path();
+
 	Renderer renderer = Renderer();
 	Simulator simulator(renderer);
 

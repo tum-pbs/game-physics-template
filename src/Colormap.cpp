@@ -3,10 +3,6 @@
 #include <iostream>
 #include <algorithm>
 
-#ifndef RESOURCE_DIR
-#define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
-#endif
-
 std::map<std::string, int> Colormap::indices;
 std::vector<std::string> Colormap::names;
 ResourceManager::Image Colormap::colormaps;
@@ -42,9 +38,10 @@ glm::vec3 Colormap::operator()(float value)
     return color(value);
 }
 
+#include "PathFinder.h"
 void Colormap::init()
 {
-    std::filesystem::path path = RESOURCE_DIR "/colormaps.txt";
+    std::filesystem::path path = resolveFile("resources/colormaps.txt");
     std::ifstream file(path);
     if (!file.is_open())
     {
@@ -62,6 +59,6 @@ void Colormap::init()
         indices[line] = offset;
         offset++;
     }
-    path = RESOURCE_DIR "/colormaps.png";
+    path = resolveFile("resources/colormaps.png");
     colormaps = ResourceManager::loadImage(path);
 }
