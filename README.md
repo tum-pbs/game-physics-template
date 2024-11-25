@@ -29,7 +29,7 @@ cmake . -B build
 ```
 cmake --build build
 ```
-The output will tel you where the executable is located. You can run it from the command line or from your IDE.
+The output will tell you where the executable is located. You can run it from the command line or from your IDE.
 
 # Project Structure
 Each exercise has its own branch, usually only providing some additional code needed for the exercise.  
