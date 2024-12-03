@@ -31,6 +31,7 @@
  */
 
 #include "glfw3webgpu.h"
+// #include "../thirdparty/glfw/src/glfw_config.h"
 
 #include <webgpu/webgpu.h>
 
