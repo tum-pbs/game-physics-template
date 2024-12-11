@@ -184,14 +184,14 @@ namespace collisionTools
         }
     }
 
-    vec3 handleVertexToface(const mat4 &worldFromObj, const vec3 &toCenter)
-    {
+    vec3 handleVertexToface(const mat4 &worldFromObj, const vec3 &toCenter, const vec3 &normal)    {
         std::vector<vec3> corners = getCorners(worldFromObj);
-        float min = 1000;
+        float min = std::numeric_limits<float>::max();
         vec3 vertex;
         for (int i = 0; i < corners.size(); i++)
         {
-            float value = glm::dot(corners[i], toCenter);
+            auto relativePosition = corners[i] - toCenter;
+            float value = glm::dot(relativePosition, normal);
             if (value < min)
             {
                 vertex = corners[i];
@@ -213,25 +213,33 @@ namespace collisionTools
         int fromWhere = -1;
         bool bestSingleAxis = false;
         vec3 toCenter = getVectorConnnectingCenters(worldFromObj_A, worldFromObj_B);
+        const vec3 worldCenter_A = worldFromObj_A * vec4(0, 0, 0, 1);
+        const vec3 worldCenter_B = worldFromObj_B * vec4(0, 0, 0, 1);
+        
         std::vector<vec3> axes1 = getAxisNormalToFaces(worldFromObj_A);
         std::vector<vec3> axes2 = getAxisNormalToFaces(worldFromObj_B);
         std::vector<vec3> axes3 = getPairOfEdges(worldFromObj_A, worldFromObj_B);
         // loop over the axes1
+        std::vector<int32_t> overlappingAxes;
+        std::vector<float> overlaps;
         for (int i = 0; i < axes1.size(); i++)
         {
             // project both shapes onto the axis
             Projection p1 = project(worldFromObj_A, axes1[i]);
             Projection p2 = project(worldFromObj_B, axes1[i]);
             // do the projections overlap?
-            if (!overlap(p1, p2))
+            auto overlapping = overlap(p1, p2);
+            if (!overlapping)
             {
                 // then we can guarantee that the shapes do not overlap
-                return info;
+                //return info;
             }
             else
             {
                 // get the overlap
                 float o = getOverlap(p1, p2);
+                overlaps.push_back(o);
+                overlappingAxes.push_back(i);
                 // check for minimum
                 if (o < smallOverlap)
                 {
@@ -253,12 +261,14 @@ namespace collisionTools
             if (!overlap(p1, p2))
             {
                 // then we can guarantee that the shapes do not overlap
-                return info;
+                // return info;
             }
             else
             {
                 // get the overlap
                 float o = getOverlap(p1, p2);
+                overlaps.push_back(o);
+                overlappingAxes.push_back(i + axes1.size());
                 // check for minimum
                 if (o < smallOverlap)
                 {
@@ -282,12 +292,14 @@ namespace collisionTools
             if (!overlap(p1, p2))
             {
                 // then we can guarantee that the shapes do not overlap
-                return info;
+                // return info;
             }
             else
             {
                 // get the overlap
                 float o = getOverlap(p1, p2);
+                overlaps.push_back(o);
+                overlappingAxes.push_back(i + axes1.size() + axes2.size());
                 // check for minimum
                 if (o < smallOverlap)
                 {
@@ -300,6 +312,10 @@ namespace collisionTools
                 }
             }
         }
+        if (overlappingAxes.size() != axes1.size() + axes2.size() + axes3.size())
+        {
+            return info;
+        }
         // if we get here then we know that every axis had overlap on it
         // so we can guarantee an intersection
         vec3 normal;
@@ -308,11 +324,11 @@ namespace collisionTools
         case 0:
         {
             normal = axis;
-            if (glm::dot(axis, toCenter) <= 0)
+            if (glm::dot(axis, toCenter) >= 0)
             {
                 normal = -normal;
             }
-            collisionPoint = handleVertexToface(worldFromObj_B, toCenter);
+            collisionPoint = handleVertexToface(worldFromObj_B, worldCenter_A, -normal);
         }
         break;
         case 1:
@@ -322,7 +338,7 @@ namespace collisionTools
             {
                 normal = -normal;
             }
-            collisionPoint = handleVertexToface(worldFromObj_A, toCenter * -1.0f);
+            collisionPoint = handleVertexToface(worldFromObj_A, worldCenter_B, -normal);
         }
         break;
         case 2:
