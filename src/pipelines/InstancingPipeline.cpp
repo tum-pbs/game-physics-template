@@ -1,11 +1,8 @@
 #include "InstancingPipeline.h"
 #include "Renderer.h"
+#include "PathFinder.h"
 #include <numeric>
 #include <algorithm>
-
-#ifndef RESOURCE_DIR
-#define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
-#endif
 
 using namespace wgpu;
 using PrimitiveVertexAttributes = ResourceManager::PrimitiveVertexAttributes;
@@ -17,7 +14,7 @@ void InstancingPipeline::init(Device &device, Queue &queue, TextureFormat &swapC
     this->lightingUniforms = lightingUniforms;
     this->device = device;
     this->queue = queue;
-    shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/instancing_shader.wgsl", device);
+    shaderModule = ResourceManager::loadShaderModule(resolveFile("resources/instancing_shader.wgsl"), device);
     RenderPipelineDescriptor pipelineDesc;
 
     std::vector<VertexAttribute> lineVertexAttribs(2);
