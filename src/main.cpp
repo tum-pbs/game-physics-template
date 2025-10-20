@@ -1,9 +1,14 @@
 #include "Renderer.h"
 #include "Simulator.h"
+#include "PathFinder.h"
 #include <GLFW/glfw3.h>
 
-int main(int, char **)
+int main(int argc, char ** argv)
 {
+	namespace fs = std::filesystem;
+	workingDirectory = fs::absolute(fs::path(argv[0])).remove_filename();
+    binaryDirectory = fs::current_path();
+  
 	bool verbose = false;
 	Renderer renderer = Renderer(verbose);
 	if(verbose)	

@@ -1,9 +1,6 @@
 #include "ImagePipeline.h"
 #include "Colormap.h"
-
-#ifndef RESOURCE_DIR
-#define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
-#endif
+#include "PathFinder.h"
 
 using namespace wgpu;
 
@@ -12,7 +9,7 @@ bool ImagePipeline::init(Device &device, TextureFormat &swapChainFormat, Queue &
     this->device = device;
     this->queue = queue;
     this->swapChainFormat = swapChainFormat;
-    shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/image_shader.wgsl", device);
+    shaderModule = ResourceManager::loadShaderModule(resolveFile("resources/image_shader.wgsl"), device);
     RenderPipelineDescriptor pipelineDesc;
     pipelineDesc.label = "Image pipeline";
 

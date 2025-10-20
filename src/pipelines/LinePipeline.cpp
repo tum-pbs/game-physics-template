@@ -1,9 +1,6 @@
 #include "LinePipeline.h"
 #include "Renderer.h"
-
-#ifndef RESOURCE_DIR
-#define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
-#endif
+#include "PathFinder.h"
 
 using namespace wgpu;
 using LineVertexAttributes = ResourceManager::LineVertexAttributes;
@@ -14,7 +11,7 @@ void LinePipeline::init(Device &device, Queue &queue, TextureFormat &swapChainFo
     this->lightingUniforms = lightingUniforms;
     this->device = device;
     this->queue = queue;
-    shaderModule = ResourceManager::loadShaderModule(RESOURCE_DIR "/line_shader.wgsl", device);
+    shaderModule = ResourceManager::loadShaderModule(resolveFile("resources/line_shader.wgsl"), device);
     RenderPipelineDescriptor pipelineDesc;
 
     // This is for instanced rendering

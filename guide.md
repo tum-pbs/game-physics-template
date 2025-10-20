@@ -671,3 +671,26 @@ void Scene1::onDraw(Renderer& renderer){
 ```
 Note that the colormap returns no alpha channel so we need to expand the returned color to be RGBA. Also note the division by 1.5, the expected maximum lifetime of a particle before deletion and needs to be kept in sync with other lifetime based parts of the code, which could be ensured by using a member of the Scene class to represent the maximum lifetime of a particle instead of hardcoding it.
 ![image](https://github.com/user-attachments/assets/37f5c448-ea09-4c0f-884b-21101b8f02dd)
+
+## Loading files
+
+Finding the correct file to open when adding interesting features can be troublesome in C++. This framework contains a small helper function that makes this a lot easier. The default options should be to add files to a specific resources folder (the template already contains one with shaders and colormaps) and to include this directory with the executable when sending it to someone else.
+
+To now look for files in this directory you can simply
+```cpp
+#include "PathFinder.h"
+//...
+
+std::filesystem::path p = resolveFile("resources/yourFile.ending");
+```
+
+The resolveFile function will check four locations: (a) the current working directory (b) the directory where the executable is located (c) the source directory and (d) the build directory. Note that the last two options are not portable and will not work on other peoples' systems. To restrict the search to portable paths only you can use the portable option of resolveFile, e.g.,
+
+```cpp
+#include "PathFinder.h"
+//...
+
+std::filesystem::path p = resolveFile("resources/yourFile.ending",{},true);
+```
+
+The second argument here can also be used to provide additional manual search paths (which are also most likely not portable).
