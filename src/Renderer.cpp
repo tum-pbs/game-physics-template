@@ -13,20 +13,80 @@
 
 using namespace wgpu;
 
-Renderer::Renderer()
-{
+#ifndef RESOURCE_DIR
+#define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
+#endif
+
+Renderer::Renderer(bool _verbose): verbose(_verbose){
 	initWindowAndDevice();
+	if(verbose)
+		std::cout << "Initialized Window and Device" << std::endl;
 	glfwGetFramebufferSize(window, &width, &height);
+	if(verbose)
+		std::cout << "Framebuffer size: " << width << "x" << height << std::endl;
 	initSwapChain();
+	if(verbose)
+		std::cout << "Initialized Swapchain" << std::endl;
 	initDepthBuffer();
+	if(verbose)
+		std::cout << "Initialized Depth Buffer" << std::endl;
 	initRenderTexture();
+	if(verbose)
+		std::cout << "Initialized Render Texture" << std::endl;
 	initUniforms();
+	if(verbose)
+		std::cout << "Initialized Uniforms" << std::endl;
 	initLightingUniforms();
+	if(verbose)
+		std::cout << "Initialized Lighting Uniforms" << std::endl;
 	instancingPipeline.init(device, queue, swapChainFormat, depthTextureFormat, uniformBuffer, lightingUniformBuffer);
+	if(verbose)
+		std::cout << "Initialized Instancing Pipeline" << std::endl;
 	linePipeline.init(device, queue, swapChainFormat, depthTextureFormat, uniformBuffer, lightingUniformBuffer);
+	if(verbose)
+		std::cout << "Initialized Line Pipeline" << std::endl;
 	postProcessingPipeline.init(device, swapChainFormat, postTextureView);
+	if(verbose)
+		std::cout << "Initialized Post Processing Pipeline" << std::endl;
 	imagePipeline.init(device, swapChainFormat, queue);
+	if(verbose)
+		std::cout << "Initialized Image Pipeline" << std::endl;
 	initGui();
+	if(verbose)
+		std::cout << "Initialized GUI" << std::endl;
+
+	wgpu::SurfaceCapabilities capabilities;
+	surface.getCapabilities(adapter, &capabilities);
+	// std::map<int64_t, bool> supportedPresentModes;
+	for (uint32_t i = 0; i < capabilities.presentModeCount; i++){
+		supportedPresentModes[capabilities.presentModes[i]] = true;
+	}
+
+	if(verbose){
+		std::cout << "Capabilities: " << std::endl;
+		std::cout << "Next in chain: " << capabilities.nextInChain << std::endl;
+		std::cout << "Number of formats: " << capabilities.formatCount << std::endl;
+		for (uint32_t i = 0; i < capabilities.formatCount; i++)
+			std::cout << "Format [" << i << "] : " << capabilities.formats[i] << std::endl;
+		std::cout << "Number of present modes: " << capabilities.presentModeCount << std::endl;
+		if(supportedPresentModes.find(WGPUPresentMode_Fifo) != supportedPresentModes.end()){
+			std::cout << "Fifo is supported" << std::endl;
+		}
+		if(supportedPresentModes.find(WGPUPresentMode_FifoRelaxed) != supportedPresentModes.end()){
+			std::cout << "Fifo Relaxed is supported" << std::endl;
+		}
+		if(supportedPresentModes.find(WGPUPresentMode_Immediate) != supportedPresentModes.end()){
+			std::cout << "Immediate is supported" << std::endl;
+		}
+		if(supportedPresentModes.find(WGPUPresentMode_Mailbox) != supportedPresentModes.end()){
+			std::cout << "Mailbox is supported" << std::endl;
+		}
+		for (uint32_t i = 0; i < capabilities.presentModeCount; i++)
+			std::cout << "Capability << [" << i << "] : " << capabilities.presentModes[i] << std::endl;
+		std::cout << "Number of alpha modes: " << capabilities.alphaModeCount << std::endl;
+		for (uint32_t i = 0; i < capabilities.alphaModeCount; i++)
+			std::cout << "Alpha mode [" << i << "] : " << capabilities.alphaModes[i] << std::endl;
+	}
 }
 
 Camera Renderer::camera = Camera();
@@ -34,8 +94,8 @@ Camera Renderer::camera = Camera();
 void Renderer::onFrame()
 {
 	auto startTime = std::chrono::high_resolution_clock::now();
-	glfwPollEvents();
 	updateLightingUniforms();
+
 	if (reinitSwapChain)
 	{
 		terminateSwapChain();
@@ -61,9 +121,16 @@ void Renderer::onFrame()
 	// prepare image buffers
 	imagePipeline.commit();
 
-	TextureView nextTexture = swapChain.getCurrentTextureView();
-	if (!nextTexture)
-		throw std::runtime_error("Could not get next texture!");
+	// std::cout << "Preparing to draw" << std::endl;
+	TextureView nextTextureView = GetNextSurfaceTextureView();
+
+	// TextureView nextTextureView = GetNextSurfaceTextureView();
+	// SurfaceTexture surfaceTexture;
+	// surface.getCurrentTexture(&surfaceTexture);
+	// if (surfaceTexture.status != SurfaceGetCurrentTextureStatus::Success) {
+	// 	throw std::runtime_error("Could not get next texture!");
+	// }
+	// Texture nextTexture = surfaceTexture.texture;
 
 	CommandEncoderDescriptor commandEncoderDesc;
 	commandEncoderDesc.label = "Command Encoder";
@@ -82,6 +149,7 @@ void Renderer::onFrame()
 	postProcessTextureViewDesc.mipLevelCount = 1;
 	postProcessTextureViewDesc.dimension = TextureViewDimension::_2D;
 	postProcessTextureViewDesc.format = swapChainFormat;
+	// std::cout << "Creating post process texture view" << std::endl;
 
 	RenderPassColorAttachment renderPassColorAttachment{};
 	renderPassColorAttachment.view = postTextureView;
@@ -111,19 +179,24 @@ void Renderer::onFrame()
 
 	renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
 
-	renderPassDesc.timestampWriteCount = 0;
+	// renderPassDesc.timestampWriteCount = 0;
 	renderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPass = encoder.beginRenderPass(renderPassDesc);
 
 	linePipeline.draw(renderPass);
+	// std::cout << "Drawing lines" << std::endl;
 
 	instancingPipeline.draw(renderPass);
+	// std::cout << "Drawing instanced objects" << std::endl;
 
 	renderPass.end();
 	renderPass.release();
+	// std::cout << "Ending render pass" << std::endl;
+
+	// auto nextTextureView = nextTexture.createView();
 
 	RenderPassColorAttachment renderPassColorAttachment2{};
-	renderPassColorAttachment2.view = nextTexture;
+	renderPassColorAttachment2.view = nextTextureView;
 	renderPassColorAttachment2.resolveTarget = nullptr;
 	renderPassColorAttachment2.loadOp = LoadOp::Clear;
 	renderPassColorAttachment2.storeOp = StoreOp::Store;
@@ -131,35 +204,97 @@ void Renderer::onFrame()
 	RenderPassDescriptor postProcessRenderPassDesc{};
 	postProcessRenderPassDesc.colorAttachmentCount = 1;
 	postProcessRenderPassDesc.colorAttachments = &renderPassColorAttachment2;
-	postProcessRenderPassDesc.timestampWriteCount = 0;
+	// postProcessRenderPassDesc.timestampWriteCount = 0;
 	postProcessRenderPassDesc.timestampWrites = nullptr;
 	RenderPassEncoder renderPassPost = encoder.beginRenderPass(postProcessRenderPassDesc);
 
 	postProcessingPipeline.draw(renderPassPost);
+	// std::cout << "Drawing post processing" << std::endl;
 
 	imagePipeline.draw(renderPassPost);
+	// std::cout << "Drawing images" << std::endl;
 
 	updateGui(renderPassPost);
+	// std::cout << "Updating GUI" << std::endl;
 
 	renderPassPost.end();
 	renderPassPost.release();
-
-	nextTexture.release();
+	// std::cout << "Ending post process render pass" << std::endl;
 
 	CommandBufferDescriptor cmdBufferDescriptor{};
 	cmdBufferDescriptor.label = "Command buffer";
 	CommandBuffer command = encoder.finish(cmdBufferDescriptor);
 	encoder.release();
-	queue.submit(command);
+	// std::cout << "Finishing command buffer" << std::endl;
+	queue.submit(1, &command);
+	// std::cout << "Submitting command buffer" << std::endl;
 	command.release();
+	// std::cout << "Releasing command buffer" << std::endl;
 
-	swapChain.present();
+	nextTextureView.release();
+	// std::cout << "Releasing next texture" << std::endl;
+
+	// targetView.release();
+	// swapChain.present();
 	lastDrawTime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - startTime).count();
+
+	surface.present();
 
 #ifdef WEBGPU_BACKEND_DAWN
 	// Check for pending error callbacks
 	device.tick();
 #endif
+	// device.poll(false);
+
+	// glfwPollEvents();
+	// if (reinitSwapChain)
+	// {
+	// 	terminateSwapChain();
+	// 	initSwapChain();
+	// 	reinitSwapChain = false;
+	// }
+
+}
+
+TextureView Renderer::GetNextSurfaceTextureView() {
+	// Get the surface texture
+	SurfaceTexture surfaceTexture;
+	surface.getCurrentTexture(&surfaceTexture);
+	if (surfaceTexture.status != SurfaceGetCurrentTextureStatus::Success) {
+		return nullptr;
+	}
+	Texture texture = surfaceTexture.texture;
+	// texture.
+
+	// Create a view for this surface texture
+	TextureViewDescriptor viewDescriptor;
+	viewDescriptor.label = "Surface texture view";
+	viewDescriptor.format = texture.getFormat();
+	viewDescriptor.dimension = TextureViewDimension::_2D;
+	viewDescriptor.baseMipLevel = 0;
+	viewDescriptor.mipLevelCount = 1;
+	viewDescriptor.baseArrayLayer = 0;
+	viewDescriptor.arrayLayerCount = 1;
+	viewDescriptor.aspect = TextureAspect::All;
+	TextureView targetView = texture.createView(viewDescriptor);
+	// if(texture.getWidth() != width || texture.getHeight() != height){
+	// 	if(verbose){
+	// 		std::cout << "Resizing texture" << std::endl;
+	// 		std::cout << "Old width: " << texture.getWidth() << std::endl;
+	// 		std::cout << "Old height: " << texture.getHeight() << std::endl;
+	// 		std::cout << "New width: " << width << std::endl;
+	// 		std::cout << "New height: " << height << std::endl;
+	// 	}
+	// 	reinitSwapChain = true;
+	// }
+
+#ifndef WEBGPU_BACKEND_WGPU
+	// We no longer need the texture, only its view
+	// (NB: with wgpu-native, surface textures must not be manually released)
+	Texture(surfaceTexture.texture).release();
+#endif // WEBGPU_BACKEND_WGPU
+
+	return targetView;
 }
 
 Renderer::~Renderer()
@@ -183,12 +318,21 @@ bool Renderer::isRunning()
 
 void Renderer::onResize()
 {
+	if(verbose){
+		std::cout << "Resizing window" << std::endl;
+		std::cout << "Old width: " << width << std::endl;
+		std::cout << "Old height: " << height << std::endl;
+	}
 	glfwGetFramebufferSize(window, &width, &height);
+	if(verbose){
+		std::cout << "New width: " << width << std::endl;
+		std::cout << "New height: " << height << std::endl;
+	}
 	if (width == 0 || height == 0)
 		return;
 	terminateDepthBuffer();
-	terminateSwapChain();
 	terminateRenderTexture();
+	terminateSwapChain();
 
 	initSwapChain();
 	initDepthBuffer();
@@ -224,7 +368,7 @@ void Renderer::initWindowAndDevice()
 #ifdef WGPU_GPU_HIGH_PERFORMANCE
     adapterOpts.powerPreference = WGPUPowerPreference_HighPerformance;
 #endif
-	Adapter adapter = instance.requestAdapter(adapterOpts);
+	adapter = instance.requestAdapter(adapterOpts);
 
 	SupportedLimits supportedLimits;
 	adapter.getLimits(&supportedLimits);
@@ -250,7 +394,7 @@ void Renderer::initWindowAndDevice()
 
 	DeviceDescriptor deviceDesc;
 	deviceDesc.label = "My Device";
-	deviceDesc.requiredFeaturesCount = 0;
+	deviceDesc.requiredFeatureCount = 0;
 	deviceDesc.requiredLimits = &requiredLimits;
 	deviceDesc.defaultQueue.label = "The default queue";
 	device = adapter.requestDevice(deviceDesc);
@@ -268,6 +412,7 @@ void Renderer::initWindowAndDevice()
 #else
 	swapChainFormat = TextureFormat::BGRA8Unorm;
 #endif
+	// swapChainFormat = TextureFormat::BGRA8Unorm;
 
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int, int)
@@ -275,7 +420,7 @@ void Renderer::initWindowAndDevice()
 		auto that = reinterpret_cast<Renderer*>(glfwGetWindowUserPointer(window));
 		if (that != nullptr) that->onResize(); });
 
-	adapter.release();
+	// adapter.release();
 	if (device == nullptr)
 		throw std::runtime_error("Could not create device!");
 }
@@ -295,6 +440,10 @@ void Renderer::setPresentMode(PresentMode mode)
 {
 	if (mode == presentMode)
 		return;
+	if (supportedPresentModes.find(mode) == supportedPresentModes.end()){
+		std::cerr << "Present mode "<< mode << " not supported!" << std::endl;
+		return;
+	}
 	presentMode = mode;
 	reinitSwapChain = true;
 }
@@ -305,24 +454,56 @@ void Renderer::enableDepthSorting()
 }
 
 void Renderer::initSwapChain()
-{
-	SwapChainDescriptor swapChainDesc;
-	swapChainDesc.width = static_cast<uint32_t>(width);
-	swapChainDesc.height = static_cast<uint32_t>(height);
-	swapChainDesc.usage = TextureUsage::RenderAttachment;
-	swapChainDesc.format = swapChainFormat;
-	swapChainDesc.presentMode = presentMode;
-	swapChain = device.createSwapChain(surface, swapChainDesc);
+{	
+	if(verbose)
+	{	
+		std::cout << "##########################################################" << std::endl;
+		std::cout << "Initializing Swapchain" << std::endl;
+	}
+	SurfaceConfiguration config = {};
+	// SwapChainDescriptor swapChainDesc;
+	config.width = static_cast<uint32_t>(width);
+	config.height = static_cast<uint32_t>(height);
+	config.usage = TextureUsage::RenderAttachment;
 
-	if (!swapChain)
-		throw std::runtime_error("Could not create swap chain!");
+	// WGPUTextureFormat surfaceFormat = wgpuSurfaceGetPreferredFormat(surface, adapter);
+	// std::cout << "Surface Format: " << surfaceFormat << std::endl;
+	auto surfaceFormat = surface.getPreferredFormat(adapter);
+	config.format = surfaceFormat;
+	config.device = device;
+	config.presentMode = presentMode;
+	config.alphaMode = CompositeAlphaMode::Auto;
+	// swapChain = device.createSwapChain(surface, swapChainDesc);
+
+	// if (!swapChain)
+	// 	throw std::runtime_error("Could not create swap chain!");
+	if(verbose){
+		std::cout << "Configuring surface" << std::endl;
+		std::cout << "Width: " << config.width << std::endl;
+		std::cout << "Height: " << config.height << std::endl;
+		std::cout << "Format: " << config.format << std::endl;
+		std::cout << "Usage: " << config.usage << std::endl;
+		std::cout << "Present Mode: " << config.presentMode << std::endl;
+		std::cout << "Alpha Mode: " << config.alphaMode << std::endl;
+		std::cout << "Device: " << config.device << std::endl;
+		std::cout << "Surface: " << surface << std::endl;
+	}
+
+	surface.configure(config);
+	if(verbose)
+		std::cout << "Done" << std::endl;
+
+
 }
 
 void Renderer::terminateSwapChain()
 {
-	swapChain.release();
+	if(verbose)
+		std::cout << "Releasing surface" << std::endl;
+	// swapChain.release();
+	surface.unconfigure();
 }
-
+ 
 void Renderer::initRenderTexture()
 {
 	TextureDescriptor postProcessTextureDesc;
@@ -334,7 +515,21 @@ void Renderer::initRenderTexture()
 	postProcessTextureDesc.mipLevelCount = 1;
 	postProcessTextureDesc.viewFormatCount = 1;
 	postProcessTextureDesc.viewFormats = (WGPUTextureFormat *)&swapChainFormat;
+	if(verbose){
+		std::cout << "Creating post process texture" << std::endl;
+		std::cout << "Dimension: " << postProcessTextureDesc.dimension << std::endl;
+		std::cout << "Format: " << postProcessTextureDesc.format << std::endl;
+		std::cout << "Size: " << postProcessTextureDesc.size.width << "x" << postProcessTextureDesc.size.height << "x" << postProcessTextureDesc.size.depthOrArrayLayers << std::endl;
+		std::cout << "Usage: " << postProcessTextureDesc.usage << std::endl;
+		std::cout << "Sample Count: " << postProcessTextureDesc.sampleCount << std::endl;
+		std::cout << "Mip Level Count: " << postProcessTextureDesc.mipLevelCount << std::endl;
+		std::cout << "View Format Count: " << postProcessTextureDesc.viewFormatCount << std::endl;
+		std::cout << "View Formats: " << postProcessTextureDesc.viewFormats << std::endl;
+	}
 	postTexture = device.createTexture(postProcessTextureDesc);
+
+	if (postTexture == nullptr)
+		throw std::runtime_error("Could not create post process texture!");
 
 	TextureViewDescriptor postProcessTextureViewDesc;
 	postProcessTextureViewDesc.aspect = TextureAspect::All;
@@ -344,22 +539,32 @@ void Renderer::initRenderTexture()
 	postProcessTextureViewDesc.mipLevelCount = 1;
 	postProcessTextureViewDesc.dimension = TextureViewDimension::_2D;
 	postProcessTextureViewDesc.format = postTexture.getFormat();
-	postTextureView = postTexture.createView(postProcessTextureViewDesc);
 
-	if (postTexture == nullptr)
-		throw std::runtime_error("Could not create post process texture!");
+	if(verbose){
+		std::cout << "Creating post process texture view" << std::endl;
+		std::cout << "Aspect: " << postProcessTextureViewDesc.aspect << std::endl;
+		std::cout << "Base Array Layer: " << postProcessTextureViewDesc.baseArrayLayer << std::endl;
+		std::cout << "Array Layer Count: " << postProcessTextureViewDesc.arrayLayerCount << std::endl;
+		std::cout << "Base Mip Level: " << postProcessTextureViewDesc.baseMipLevel << std::endl;
+		std::cout << "Mip Level Count: " << postProcessTextureViewDesc.mipLevelCount << std::endl;
+		std::cout << "Dimension: " << postProcessTextureViewDesc.dimension << std::endl;
+		std::cout << "Format: " << postProcessTextureViewDesc.format << std::endl;
+	}
+	postTextureView = postTexture.createView(postProcessTextureViewDesc);
 	if (postTextureView == nullptr)
 		throw std::runtime_error("Could not create post process texture view!");
 }
 
 void Renderer::terminateRenderTexture()
 {
+	if(verbose)
+		std::cout << "Releasing post process texture view and destroying post texture" << std::endl;
 	postTexture.destroy();
 	postTexture.release();
 }
 void Renderer::initDepthBuffer()
 {
-	glfwGetFramebufferSize(window, &width, &height);
+	// glfwGetFramebufferSize(window, &width, &height);
 
 	TextureDescriptor depthTextureDesc;
 	depthTextureDesc.dimension = TextureDimension::_2D;
@@ -468,7 +673,9 @@ void Renderer::updateLightingUniforms()
 
 void Renderer::updateProjectionMatrix()
 {
-	glfwGetFramebufferSize(window, &camera.width, &camera.height);
+	// glfwGetFramebufferSize(window, &camera.width, &camera.height);
+	camera.width = width;
+	camera.height = height;
 	renderUniforms.projectionMatrix = camera.projectionMatrix();
 	queue.writeBuffer(
 		uniformBuffer,
@@ -559,6 +766,7 @@ void Renderer::updateGui(RenderPassEncoder renderPass)
 	ImGui::EndFrame();
 
 	ImGui::Render();
+
 	ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
 }
 
