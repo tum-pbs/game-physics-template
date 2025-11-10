@@ -17,68 +17,75 @@ using namespace wgpu;
 #define RESOURCE_DIR "this will be defined by cmake depending on the build type. This define is to disable error squiggles"
 #endif
 
-Renderer::Renderer(bool _verbose): verbose(_verbose){
+Renderer::Renderer(bool _verbose) : verbose(_verbose)
+{
 	initWindowAndDevice();
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Window and Device" << std::endl;
 	glfwGetFramebufferSize(window, &width, &height);
-	if(verbose)
+	if (verbose)
 		std::cout << "Framebuffer size: " << width << "x" << height << std::endl;
 	initSwapChain();
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Swapchain" << std::endl;
 	initDepthBuffer();
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Depth Buffer" << std::endl;
 	initRenderTexture();
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Render Texture" << std::endl;
 	initUniforms();
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Uniforms" << std::endl;
 	initLightingUniforms();
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Lighting Uniforms" << std::endl;
 	instancingPipeline.init(device, queue, swapChainFormat, depthTextureFormat, uniformBuffer, lightingUniformBuffer);
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Instancing Pipeline" << std::endl;
 	linePipeline.init(device, queue, swapChainFormat, depthTextureFormat, uniformBuffer, lightingUniformBuffer);
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Line Pipeline" << std::endl;
 	postProcessingPipeline.init(device, swapChainFormat, postTextureView);
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Post Processing Pipeline" << std::endl;
 	imagePipeline.init(device, swapChainFormat, queue);
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized Image Pipeline" << std::endl;
 	initGui();
-	if(verbose)
+	if (verbose)
 		std::cout << "Initialized GUI" << std::endl;
 
 	wgpu::SurfaceCapabilities capabilities;
 	surface.getCapabilities(adapter, &capabilities);
 	// std::map<int64_t, bool> supportedPresentModes;
-	for (uint32_t i = 0; i < capabilities.presentModeCount; i++){
+	for (uint32_t i = 0; i < capabilities.presentModeCount; i++)
+	{
 		supportedPresentModes[capabilities.presentModes[i]] = true;
 	}
 
-	if(verbose){
+	if (verbose)
+	{
 		std::cout << "Capabilities: " << std::endl;
 		std::cout << "Next in chain: " << capabilities.nextInChain << std::endl;
 		std::cout << "Number of formats: " << capabilities.formatCount << std::endl;
 		for (uint32_t i = 0; i < capabilities.formatCount; i++)
 			std::cout << "Format [" << i << "] : " << capabilities.formats[i] << std::endl;
 		std::cout << "Number of present modes: " << capabilities.presentModeCount << std::endl;
-		if(supportedPresentModes.find(WGPUPresentMode_Fifo) != supportedPresentModes.end()){
+		if (supportedPresentModes.find(WGPUPresentMode_Fifo) != supportedPresentModes.end())
+		{
 			std::cout << "Fifo is supported" << std::endl;
 		}
-		if(supportedPresentModes.find(WGPUPresentMode_FifoRelaxed) != supportedPresentModes.end()){
+		if (supportedPresentModes.find(WGPUPresentMode_FifoRelaxed) != supportedPresentModes.end())
+		{
 			std::cout << "Fifo Relaxed is supported" << std::endl;
 		}
-		if(supportedPresentModes.find(WGPUPresentMode_Immediate) != supportedPresentModes.end()){
+		if (supportedPresentModes.find(WGPUPresentMode_Immediate) != supportedPresentModes.end())
+		{
 			std::cout << "Immediate is supported" << std::endl;
 		}
-		if(supportedPresentModes.find(WGPUPresentMode_Mailbox) != supportedPresentModes.end()){
+		if (supportedPresentModes.find(WGPUPresentMode_Mailbox) != supportedPresentModes.end())
+		{
 			std::cout << "Mailbox is supported" << std::endl;
 		}
 		for (uint32_t i = 0; i < capabilities.presentModeCount; i++)
@@ -120,6 +127,14 @@ void Renderer::onFrame()
 
 	// prepare image buffers
 	imagePipeline.commit();
+
+	int fbw = 0, fbh = 0;
+	glfwGetFramebufferSize(window, &fbw, &fbh);
+	if (fbw == 0 || fbh == 0)
+	{
+		// Window minimized, we can skip this frame.
+		return;
+	}
 
 	// std::cout << "Preparing to draw" << std::endl;
 	TextureView nextTextureView = GetNextSurfaceTextureView();
@@ -253,14 +268,15 @@ void Renderer::onFrame()
 	// 	initSwapChain();
 	// 	reinitSwapChain = false;
 	// }
-
 }
 
-TextureView Renderer::GetNextSurfaceTextureView() {
+TextureView Renderer::GetNextSurfaceTextureView()
+{
 	// Get the surface texture
 	SurfaceTexture surfaceTexture;
 	surface.getCurrentTexture(&surfaceTexture);
-	if (surfaceTexture.status != SurfaceGetCurrentTextureStatus::Success) {
+	if (surfaceTexture.status != SurfaceGetCurrentTextureStatus::Success)
+	{
 		return nullptr;
 	}
 	Texture texture = surfaceTexture.texture;
@@ -318,13 +334,15 @@ bool Renderer::isRunning()
 
 void Renderer::onResize()
 {
-	if(verbose){
+	if (verbose)
+	{
 		std::cout << "Resizing window" << std::endl;
 		std::cout << "Old width: " << width << std::endl;
 		std::cout << "Old height: " << height << std::endl;
 	}
 	glfwGetFramebufferSize(window, &width, &height);
-	if(verbose){
+	if (verbose)
+	{
 		std::cout << "New width: " << width << std::endl;
 		std::cout << "New height: " << height << std::endl;
 	}
@@ -366,7 +384,7 @@ void Renderer::initWindowAndDevice()
 	RequestAdapterOptions adapterOpts{};
 	adapterOpts.compatibleSurface = surface;
 #ifdef WGPU_GPU_HIGH_PERFORMANCE
-    adapterOpts.powerPreference = WGPUPowerPreference_HighPerformance;
+	adapterOpts.powerPreference = WGPUPowerPreference_HighPerformance;
 #endif
 	adapter = instance.requestAdapter(adapterOpts);
 
@@ -440,8 +458,9 @@ void Renderer::setPresentMode(PresentMode mode)
 {
 	if (mode == presentMode)
 		return;
-	if (supportedPresentModes.find(mode) == supportedPresentModes.end()){
-		std::cerr << "Present mode "<< mode << " not supported!" << std::endl;
+	if (supportedPresentModes.find(mode) == supportedPresentModes.end())
+	{
+		std::cerr << "Present mode " << mode << " not supported!" << std::endl;
 		return;
 	}
 	presentMode = mode;
@@ -454,9 +473,9 @@ void Renderer::enableDepthSorting()
 }
 
 void Renderer::initSwapChain()
-{	
-	if(verbose)
-	{	
+{
+	if (verbose)
+	{
 		std::cout << "##########################################################" << std::endl;
 		std::cout << "Initializing Swapchain" << std::endl;
 	}
@@ -477,7 +496,8 @@ void Renderer::initSwapChain()
 
 	// if (!swapChain)
 	// 	throw std::runtime_error("Could not create swap chain!");
-	if(verbose){
+	if (verbose)
+	{
 		std::cout << "Configuring surface" << std::endl;
 		std::cout << "Width: " << config.width << std::endl;
 		std::cout << "Height: " << config.height << std::endl;
@@ -490,20 +510,18 @@ void Renderer::initSwapChain()
 	}
 
 	surface.configure(config);
-	if(verbose)
+	if (verbose)
 		std::cout << "Done" << std::endl;
-
-
 }
 
 void Renderer::terminateSwapChain()
 {
-	if(verbose)
+	if (verbose)
 		std::cout << "Releasing surface" << std::endl;
 	// swapChain.release();
 	surface.unconfigure();
 }
- 
+
 void Renderer::initRenderTexture()
 {
 	TextureDescriptor postProcessTextureDesc;
@@ -515,7 +533,8 @@ void Renderer::initRenderTexture()
 	postProcessTextureDesc.mipLevelCount = 1;
 	postProcessTextureDesc.viewFormatCount = 1;
 	postProcessTextureDesc.viewFormats = (WGPUTextureFormat *)&swapChainFormat;
-	if(verbose){
+	if (verbose)
+	{
 		std::cout << "Creating post process texture" << std::endl;
 		std::cout << "Dimension: " << postProcessTextureDesc.dimension << std::endl;
 		std::cout << "Format: " << postProcessTextureDesc.format << std::endl;
@@ -540,7 +559,8 @@ void Renderer::initRenderTexture()
 	postProcessTextureViewDesc.dimension = TextureViewDimension::_2D;
 	postProcessTextureViewDesc.format = postTexture.getFormat();
 
-	if(verbose){
+	if (verbose)
+	{
 		std::cout << "Creating post process texture view" << std::endl;
 		std::cout << "Aspect: " << postProcessTextureViewDesc.aspect << std::endl;
 		std::cout << "Base Array Layer: " << postProcessTextureViewDesc.baseArrayLayer << std::endl;
@@ -557,7 +577,7 @@ void Renderer::initRenderTexture()
 
 void Renderer::terminateRenderTexture()
 {
-	if(verbose)
+	if (verbose)
 		std::cout << "Releasing post process texture view and destroying post texture" << std::endl;
 	postTexture.destroy();
 	postTexture.release();
