@@ -100,6 +100,12 @@ Camera Renderer::camera = Camera();
 
 void Renderer::onFrame()
 {
+	// Prevent program crash when minimizing in Windows
+	int fbw = 0, fbh = 0;
+	glfwGetFramebufferSize(window, &fbw, &fbh);
+	if (fbw == 0 || fbh == 0)
+		return;
+
 	auto startTime = std::chrono::high_resolution_clock::now();
 	updateLightingUniforms();
 
@@ -127,14 +133,6 @@ void Renderer::onFrame()
 
 	// prepare image buffers
 	imagePipeline.commit();
-
-	int fbw = 0, fbh = 0;
-	glfwGetFramebufferSize(window, &fbw, &fbh);
-	if (fbw == 0 || fbh == 0)
-	{
-		// Window minimized, we can skip this frame.
-		return;
-	}
 
 	// std::cout << "Preparing to draw" << std::endl;
 	TextureView nextTextureView = GetNextSurfaceTextureView();
