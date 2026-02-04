@@ -368,11 +368,10 @@ namespace collisionTools
         return info;
     }
 
-    CollisionInfo checkCollisionSAT(glm::mat4 &worldFromObj_A, glm::mat4 &worldFromObj_B)
+    CollisionInfo checkCollisionSAT(const glm::mat4 &worldFromObj_A, const glm::mat4 &worldFromObj_B)
     {
-        using namespace collisionTools;
-        vec3 calSizeA = getBoxSize(worldFromObj_A);
-        vec3 calSizeB = getBoxSize(worldFromObj_B);
+        const vec3 calSizeA = getBoxSize(worldFromObj_A);
+        const vec3 calSizeB = getBoxSize(worldFromObj_B);
 
         return checkCollisionSATHelper(worldFromObj_A, worldFromObj_B, calSizeA, calSizeB);
     }

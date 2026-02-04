@@ -49,13 +49,11 @@ namespace collisionTools
 
     glm::vec3 handleVertexToface(const glm::mat4 &worldFromObj, const glm::vec3 &toCenter);
 
-    CollisionInfo checkCollisionSATHelper(const glm::mat4 &worldFromObj_A, const glm::mat4 &worldFromObj_B, glm::vec3 size_A, glm::vec3 size_B);
-
     /* params:
     obj2World_A, the transfer matrix from object space of A to the world space
     obj2World_B, the transfer matrix from object space of B to the world space
     */
-    CollisionInfo checkCollisionSAT(glm::mat4 &worldFromObj_A, glm::mat4 &worldFromObj_B);
+    CollisionInfo checkCollisionSAT(const glm::mat4 &worldFromObj_A, const glm::mat4 &worldFromObj_B);
 
     // example of using the checkCollisionSAT function
     void testCheckCollision(int caseid);
