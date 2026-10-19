@@ -7,7 +7,7 @@ Requirements:
 - Some C++ Compiler, e.g., [Visual Studio on Windows](https://visualstudio.microsoft.com/vs/community/), Xcode on MacOS, or GCC on Linux
 - [Git](https://git-scm.com/)
 
-Optionally if you want to be able to run cmake commands manually (you should not need to do this and if you do not know what this means you should not worry about it) you need to install CMake system wide from [here](https://cmake.org/)
+Optionally, if you want to be able to run `cmake` commands manually (you should not need to do this and if you do not know what this means, you should not worry about it) you need to install CMake system wide from [here](https://cmake.org/)
 
 Within VsCode you can then install the CMake and C++ Extensions from the extensions menu on the left, Git should be supported by default. To install them just search for the extension name, click on them and press install on the extension page, these are the two relevant extensions:
 
@@ -21,11 +21,11 @@ git clone https://github.com/tum-pbs/game-physics-template
 
 And Open the folder in VsCode (Chose Open Folder... when launching VsCode and browse to the folder you cloned the repository into).
 
-After doing this you should see a drop down by the CMake extension asking for a _kit_, which is a combination of compiler and build system, where you can pick which compiler you want to use. For Windows choose Visual Studio Community Release with x86_amd64 in the name or pick [Unspecified] to let CMake figure it out (should you get some strange linker errors pick the x86_amd64 one manually and make sure to not use the amd64_x86 as this can lead to issues on some systems):
+After doing this you should see a drop down by the CMake extension asking for a _kit_, which is a combination of compiler and build system. Here you can pick a compiler -- for Windows, choose Visual Studio Community Release with x86_amd64 in the name or pick [Unspecified] to let CMake figure it out (should you get some strange linker errors pick the x86_amd64 one manually and make sure to not use the amd64_x86 as this can lead to issues on some systems):
 
 ![alt text](https://github.com/user-attachments/assets/64d42b7e-009f-4776-a0e7-3b93dee80af6)
 
-If this dropdown did not appear or you did not manage to click on the right option, you can open this menu manually by searching for 'CMake: Select a Kit' in the command prompt (ctrl + shift + p hotkey on windows by default, command + shift + p on mac o) and then manually picking the option
+If this dropdown did not appear or you did not manage to click on the right option, you can open this menu manually by searching for 'CMake: Select a Kit' in the command prompt (ctrl + shift + p hotkey on windows by default, command + shift + p on macOS) and then manually picking the option
 
 ![alt text](https://github.com/user-attachments/assets/d1eaf2ab-f7f0-4469-88b9-5bca6559d11a)
 
@@ -43,7 +43,7 @@ When this is done you can run 'CMake: configure' from the command prompt, which 
 
 ![alt text](https://github.com/user-attachments/assets/763e0cc8-e43d-47fd-8b33-895236faf4b8)
 
-Now that the project is configured we can build the program using the F7 hotkey (CMake: Build) or Build and Launch (Ctrl + F5 | CMake: Run without Debugging), which will open the demo window in full screen and show something similar to this:
+Now that the project is configured we can build the program using the F7 hotkey (CMake: Build), or Build and Launch (Ctrl + F5 | CMake: Run without Debugging), which will launch the demo window in full screen and show something similar to this:
 
 ![alt text](https://github.com/user-attachments/assets/976e470c-fad2-4ab4-9e6f-ec230f565cb4)
 
@@ -61,7 +61,7 @@ void Scene::onDraw(Renderer &renderer)
 }
 ```
 
-This is a draw call that is called everytime a new frame is to be _rendered_. Here we have created a wire cube with _position_, _scale_ and _color_ - at the origin (`glm::vec3(x)` creates a 3D vector with entries all set to x, i.e., [0,0,0] for this call), a scale of 5 in all directions, and an all white color (colors are given as floats). 
+This is a draw call that is called everytime a new frame is _rendered_. This code creates a wire cube with _position_, _scale_ and _color_ - at the origin (`glm::vec3(x)` creates a 3D vector with entries all set to x, i.e., [0,0,0] for this call), a scale of 5 in all directions, and an all white color (colors are given as floats). 
 
 If we want to render more, we can simply add a new draw call below the `drawWireCube` function within the `onDraw` function. For example:
 
@@ -78,7 +78,7 @@ void Scene::onDraw(Renderer &renderer)
 }
 ```
 
-This new call will draw a cube at the origin, rotated by 45 degrees along some axis (note that glm expects angles to be in radians for this function, and the axis should be normalized. That being said, it works fine in most cases without normalization until it doesn't, so be careful with functons that require an axis input!), with a scale of 0.5 in all direction,s and 100% red colored:
+This new call will draw a cube at the origin, rotated by 45 degrees along some axis (note that glm expects angles to be in radians for this function, and the axis should be normalized. That being said, it works fine in most cases without normalization until it doesn't, so be careful with functons that require an axis input!), with a scale of 0.5 in all directions, and 100% red colored:
 
 ![alt text](https://github.com/user-attachments/assets/709e7e33-8501-4478-ab3c-994a645e28e8)
 
@@ -126,7 +126,7 @@ std::map<std::string, SceneCreator> scenesCreators = {
 };
 ```
 
-If you want to add more scenes, you need to first create a new scene header and implementation (Scene2.h and Scene2.cpp) with contents, e.g., like this:
+If you want to add more scenes, you need to first create a new scene header and implementation (Scene2.h and Scene2.cpp) with contents, e.g.:
 ```cpp
 // Scene2.h
 #include "Scene.h"
@@ -195,7 +195,7 @@ class Scene1 : public Scene
     virtual void simulateStep() override;
 };
 ```
-Then we update the Scene1.cpp file to implement the simulateStep function and update the `onDraw()` function to draw the cube with the given Euler angles:
+Then we update the Scene1.cpp file to implement the `simulateStep()` function and update the `onDraw()` function to draw the cube with the given Euler angles:
 ```cpp
 void Scene1::onDraw(Renderer& renderer){
     renderer.drawWireCube(glm::vec3(0), glm::vec3(5), glm::vec3(1));
@@ -579,7 +579,7 @@ void Scene1::simulateStep(){
 
 Something that may come in handy is having the ability to have a user click and drag on the screen to apply a force to the objects in the scene, even though it is not that useful for this demo example. 
 
-This can be done as well in our framework, but is a bit more involved as this requires camera information that is not readily available during the simulator (a simulation does not have the concept of a camera in most cases). Accordingly, we need to save all relevant information during a part of the render process where it is available, in order to make it available during the simulation.
+This can be done as well in our framework, but is a bit more involved as this requires camera information that is not readily available during the simulator (a simulation does not have the concept of a camera in most cases). Therefore, we need to save all relevant information during a part of the render process when it is available, to make it available during the simulation.
 
 To do this we add a few members to our _Scene_ class:
 ```cpp
@@ -607,7 +607,7 @@ void onDraw(Renderer& renderer){
 }
 ```
 
-To then add a dragging interaction for the right mouse button (the left is used for camera interactivity), we can check if the mouse button was released before the current frame using 
+To then add a dragging interaction for the right mouse button (the left is reserved for camera interactivity), we can check if the mouse button was released before the current frame using 
 ```cpp
 ImGui::IsMouseReleased(ImGuiMouseButton_Right)
 ```
@@ -674,7 +674,7 @@ You may also want to consider making the lifetime a GUI element or updating it b
 
 ## Colormapping
 
-If you would like to color things in your simulation based on some attribute, then color mapping is a useful approach. Our framework supports most common matplotlib colormaps you can find [here](https://matplotlib.org/stable/users/explain/colors/colormaps.html). A colormap is contructed by giving it a string for the colormap name; then it is called with a float in the range 0 to 1 (the input is clamped to this value, so you need to manually map the inputs), e.g.,
+If you would like to color things in your simulation based on some attribute, then color mapping is a useful approach. Our framework supports most [common matplotlib colormaps](https://matplotlib.org/stable/users/explain/colors/colormaps.html). A colormap is contructed by giving it a string for the colormap name; then it is called with a float in the range 0 to 1 (the input is clamped to this value, so you need to manually map the inputs), e.g.,
 ```cpp
 auto cmap = Colormap("viridis");
 glm::vec3 color = cmap(0.5);
